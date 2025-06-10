@@ -22,7 +22,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-import { Notification, NotificationFilters } from '../types/Notification';
+import { Notification as AppNotification, NotificationFilters } from '../types/Notification';
 import { useNotifications } from '../hooks/useNotifications';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -45,11 +45,11 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
   } = useNotifications();
 
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [selectedNotification, setSelectedNotification] = useState<AppNotification | null>(null);
 
   if (!isOpen) return null;
 
-  const getNotificationIcon = (type: Notification['type']) => {
+  const getNotificationIcon = (type: AppNotification['type']) => {
     switch (type) {
       case 'urgent': return <Zap className="w-5 h-5 text-red-600" />;
       case 'alert': return <AlertTriangle className="w-5 h-5 text-orange-600" />;
@@ -60,7 +60,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
     }
   };
 
-  const getCategoryIcon = (category: Notification['category']) => {
+  const getCategoryIcon = (category: AppNotification['category']) => {
     switch (category) {
       case 'medical': return <User className="w-4 h-4" />;
       case 'administrative': return <FileText className="w-4 h-4" />;
@@ -70,7 +70,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
     }
   };
 
-  const getPriorityColor = (priority: Notification['priority']) => {
+  const getPriorityColor = (priority: AppNotification['priority']) => {
     switch (priority) {
       case 'critical': return 'bg-red-100 text-red-800 border-red-200';
       case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
@@ -91,7 +91,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
     return format(notifTime, 'dd/MM/yyyy à HH:mm', { locale: fr });
   };
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = (notification: AppNotification) => {
     if (!notification.isRead) {
       markAsRead(notification.id);
     }

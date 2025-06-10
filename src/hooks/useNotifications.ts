@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Notification, NotificationFilters, NotificationStats } from '../types/Notification';
+import { Notification as AppNotification, NotificationFilters, NotificationStats } from '../types/Notification';
 import { mockNotifications, generateRealtimeNotification } from '../data/mockNotifications';
 
 export const useNotifications = () => {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [notifications, setNotifications] = useState<AppNotification[]>(mockNotifications);
   const [filters, setFilters] = useState<NotificationFilters>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -16,7 +16,7 @@ export const useNotifications = () => {
         setNotifications(prev => [newNotification, ...prev]);
         
         // Show browser notification if permission granted
-        if (Notification.permission === 'granted') {
+        if (window.Notification && window.Notification.permission === 'granted') {
           new window.Notification(newNotification.title, {
             body: newNotification.message,
             icon: '/medical-icon.svg',
@@ -31,8 +31,8 @@ export const useNotifications = () => {
 
   // Request notification permission on mount
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+    if ('Notification' in window && window.Notification.permission === 'default') {
+      window.Notification.requestPermission();
     }
   }, []);
 
@@ -106,8 +106,8 @@ export const useNotifications = () => {
   }, []);
 
   // Add new notification (for testing or manual creation)
-  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp'>) => {
-    const newNotification: Notification = {
+  const addNotification = useCallback((notification: Omit<AppNotification, 'id' | 'timestamp'>) => {
+    const newNotification: AppNotification = {
       ...notification,
       id: `notif-${Date.now()}`,
       timestamp: new Date().toISOString()

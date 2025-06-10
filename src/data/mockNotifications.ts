@@ -1,6 +1,6 @@
-import { Notification } from '../types/Notification';
+import { Notification as AppNotification } from '../types/Notification';
 
-export const mockNotifications: Notification[] = [
+export const mockNotifications: AppNotification[] = [
   {
     id: 'notif-001',
     type: 'urgent',
@@ -153,10 +153,10 @@ export const mockNotifications: Notification[] = [
 ];
 
 // Fonction pour générer des notifications en temps réel
-export const generateRealtimeNotification = (): Notification => {
-  const types: Notification['type'][] = ['alert', 'info', 'warning', 'success', 'urgent'];
-  const priorities: Notification['priority'][] = ['low', 'medium', 'high', 'critical'];
-  const categories: Notification['category'][] = ['medical', 'administrative', 'system', 'security'];
+export const generateRealtimeNotification = (): AppNotification => {
+  const types: AppNotification['type'][] = ['alert', 'info', 'warning', 'success', 'urgent'];
+  const priorities: AppNotification['priority'][] = ['low', 'medium', 'high', 'critical'];
+  const categories: AppNotification['category'][] = ['medical', 'administrative', 'system', 'security'];
   
   const templates = [
     {
