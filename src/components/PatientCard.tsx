@@ -1,0 +1,129 @@
+import React from 'react';
+import { 
+  User, 
+  Calendar, 
+  MapPin, 
+  Phone, 
+  AlertTriangle, 
+  Heart, 
+  Eye,
+  Clock
+} from 'lucide-react';
+import { Patient } from '../types/Patient';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+
+interface PatientCardProps {
+  patient: Patient;
+  onViewDetails: (patient: Patient) => void;
+}
+
+export const PatientCard: React.FC<PatientCardProps> = ({ patient, onViewDetails }) => {
+  const getStatusColor = (statut: string) => {
+    switch (statut) {
+      case 'Urgence': return 'bg-red-100 text-red-800 border-red-200';
+      case 'Actif': return 'bg-green-100 text-green-800 border-green-200';
+      case 'Sorti': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Transfert': return 'bg-blue-100 text-blue-800 border-blue-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getAlertColor = (niveau: string) => {
+    switch (niveau) {
+      case 'rouge': return 'text-red-600 bg-red-100';
+      case 'orange': return 'text-orange-600 bg-orange-100';
+      case 'verte': return 'text-green-600 bg-green-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 overflow-hidden">
+      {/* Alert Banner */}
+      {patient.alerte && patient.alerte.niveau !== 'verte' && (
+        <div className={`px-4 py-2 ${getAlertColor(patient.alerte.niveau)} border-b`}>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            <span className="text-sm font-medium">{patient.alerte.message}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="p-6">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full">
+              <User className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {patient.prenom} {patient.nom}
+              </h3>
+              <p className="text-sm text-gray-500">
+                Dossier #{patient.numeroDossier}
+              </p>
+            </div>
+          </div>
+          <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(patient.statut)}`}>
+            {patient.statut}
+          </div>
+        </div>
+
+        {/* Patient Info Grid */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Calendar className="w-4 h-4" />
+            <span>{patient.age} ans</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Heart className="w-4 h-4" />
+            <span>{patient.groupeSanguin}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <MapPin className="w-4 h-4" />
+            <span>{patient.service}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Clock className="w-4 h-4" />
+            <span>
+              Admis le {format(new Date(patient.dateAdmission), 'dd/MM/yyyy', { locale: fr })}
+            </span>
+          </div>
+        </div>
+
+        {/* Medical Info */}
+        <div className="space-y-2 mb-4">
+          <div className="text-sm">
+            <span className="font-medium text-gray-700">Motif: </span>
+            <span className="text-gray-600">{patient.motifHospitalisation}</span>
+          </div>
+          {patient.allergies.length > 0 && (
+            <div className="text-sm">
+              <span className="font-medium text-red-600">Allergies: </span>
+              <span className="text-red-600">{patient.allergies.join(', ')}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Contact Info */}
+        <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+          <Phone className="w-4 h-4" />
+          <span>{patient.telephone.portable || patient.telephone.fixe}</span>
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-end">
+          <button
+            onClick={() => onViewDetails(patient)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Eye className="w-4 h-4" />
+            Voir le dossier
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
