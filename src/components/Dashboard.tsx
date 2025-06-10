@@ -4,6 +4,7 @@ import { PatientCard } from './PatientCard';
 import { PatientModal } from './PatientModal';
 import { mockPatients } from '../data/mockPatients';
 import { Patient, SearchFilters as SearchFiltersType } from '../types/Patient';
+import { useLanguage } from '../hooks/useLanguage';
 import { 
   Users, 
   UserCheck, 
@@ -16,6 +17,7 @@ import {
 export const Dashboard: React.FC = () => {
   const [filters, setFilters] = useState<SearchFiltersType>({});
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const { t } = useLanguage();
 
   // Filter patients based on search criteria
   const filteredPatients = useMemo(() => {
@@ -78,7 +80,7 @@ export const Dashboard: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Patients</p>
+              <p className="text-sm font-medium text-gray-600">{t('dashboard.stats.total')}</p>
               <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
             </div>
             <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg">
@@ -88,14 +90,14 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center mt-4 text-sm">
             <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
             <span className="text-green-600">+2.5%</span>
-            <span className="text-gray-500 ml-1">cette semaine</span>
+            <span className="text-gray-500 ml-1">{t('dashboard.stats.week')}</span>
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Patients Actifs</p>
+              <p className="text-sm font-medium text-gray-600">{t('dashboard.stats.active')}</p>
               <p className="text-3xl font-bold text-green-600">{stats.actifs}</p>
             </div>
             <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg">
@@ -104,7 +106,7 @@ export const Dashboard: React.FC = () => {
           </div>
           <div className="flex items-center mt-4 text-sm">
             <span className="text-gray-500">
-              {Math.round((stats.actifs / stats.total) * 100)}% du total
+              {Math.round((stats.actifs / stats.total) * 100)}% {t('dashboard.stats.total.percent')}
             </span>
           </div>
         </div>
@@ -112,7 +114,7 @@ export const Dashboard: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Urgences</p>
+              <p className="text-sm font-medium text-gray-600">{t('dashboard.stats.emergency')}</p>
               <p className="text-3xl font-bold text-red-600">{stats.urgences}</p>
             </div>
             <div className="flex items-center justify-center w-12 h-12 bg-red-100 rounded-lg">
@@ -121,14 +123,14 @@ export const Dashboard: React.FC = () => {
           </div>
           <div className="flex items-center mt-4 text-sm">
             <Clock className="w-4 h-4 text-orange-500 mr-1" />
-            <span className="text-orange-600">Surveillance continue</span>
+            <span className="text-orange-600">{t('dashboard.stats.surveillance')}</span>
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Alertes Actives</p>
+              <p className="text-sm font-medium text-gray-600">{t('dashboard.stats.alerts')}</p>
               <p className="text-3xl font-bold text-orange-600">{stats.alertes}</p>
             </div>
             <div className="flex items-center justify-center w-12 h-12 bg-orange-100 rounded-lg">
@@ -136,7 +138,7 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center mt-4 text-sm">
-            <span className="text-gray-500">Nécessitent attention</span>
+            <span className="text-gray-500">{t('dashboard.stats.attention')}</span>
           </div>
         </div>
       </div>
@@ -152,10 +154,10 @@ export const Dashboard: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">
-            Liste des Patients
+            {t('dashboard.title')}
           </h2>
           <p className="text-gray-600">
-            {filteredPatients.length} patient{filteredPatients.length !== 1 ? 's' : ''} trouvé{filteredPatients.length !== 1 ? 's' : ''}
+            {filteredPatients.length} {filteredPatients.length === 1 ? t('dashboard.results.found') : t('dashboard.results.found.plural')}
           </p>
         </div>
       </div>
@@ -176,16 +178,16 @@ export const Dashboard: React.FC = () => {
         <div className="text-center py-12">
           <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Aucun patient trouvé
+            {t('dashboard.empty.title')}
           </h3>
           <p className="text-gray-600 mb-4">
-            Essayez de modifier vos critères de recherche
+            {t('dashboard.empty.subtitle')}
           </p>
           <button
             onClick={resetFilters}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
           >
-            Réinitialiser les filtres
+            {t('dashboard.empty.reset')}
           </button>
         </div>
       )}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Shield, LogOut, User, Bell } from 'lucide-react';
 import { AdminUser } from '../types/Patient';
 import { useNotifications } from '../hooks/useNotifications';
+import { useLanguage } from '../hooks/useLanguage';
 import { NotificationPanel } from './NotificationPanel';
 
 interface HeaderProps {
@@ -12,6 +13,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const { stats } = useNotifications();
+  const { t } = useLanguage();
 
   return (
     <>
@@ -24,8 +26,8 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">MedRecap+</h1>
-                <p className="text-xs text-gray-500">Système Médical Sécurisé</p>
+                <h1 className="text-xl font-bold text-gray-900">{t('header.title')}</h1>
+                <p className="text-xs text-gray-500">{t('header.subtitle')}</p>
               </div>
             </div>
 
@@ -53,15 +55,15 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
                 <div className="absolute right-0 top-full mt-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                   {stats.unread > 0 ? (
                     <>
-                      {stats.unread} notification{stats.unread > 1 ? 's' : ''} non lue{stats.unread > 1 ? 's' : ''}
+                      {stats.unread} {stats.unread === 1 ? t('header.notifications.tooltip.unread') : t('header.notifications.tooltip.unread.plural')}
                       {stats.critical > 0 && (
                         <span className="block text-red-300">
-                          {stats.critical} critique{stats.critical > 1 ? 's' : ''}
+                          {stats.critical} {stats.critical === 1 ? t('header.notifications.tooltip.critical') : t('header.notifications.tooltip.critical.plural')}
                         </span>
                       )}
                     </>
                   ) : (
-                    'Aucune nouvelle notification'
+                    t('header.notifications.tooltip.none')
                   )}
                 </div>
               </button>
@@ -83,7 +85,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               >
                 <LogOut className="w-4 h-4" />
-                Déconnexion
+                {t('header.logout')}
               </button>
             </div>
           </div>

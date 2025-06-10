@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, User, Shield, AlertCircle } from 'lucide-react';
+import { LanguageSelector } from './LanguageSelector';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface LoginFormProps {
   onLogin: (username: string, password: string) => Promise<boolean>;
@@ -10,35 +12,41 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, isLoading }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const { t } = useLanguage();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
     if (!username || !password) {
-      setError('Veuillez remplir tous les champs');
+      setError(t('login.error.empty'));
       return;
     }
 
     const success = await onLogin(username, password);
     if (!success) {
-      setError('Identifiants incorrects');
+      setError(t('login.error.invalid'));
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
+        {/* Language Selector */}
+        <div className="mb-6">
+          <LanguageSelector className="justify-center" />
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl mb-4">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">MedRecap+</h1>
-          <p className="text-gray-600">Système de Gestion Médicale Sécurisé</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('login.title')}</h1>
+          <p className="text-gray-600">{t('login.subtitle')}</p>
           <div className="flex items-center justify-center gap-2 mt-2 text-xs text-gray-500">
             <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>Conforme HDS • ISO 27001 • RGPD</span>
+            <span>{t('login.compliance')}</span>
           </div>
         </div>
 
@@ -48,7 +56,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, isLoading }) => {
             <div className="space-y-4">
               <div>
                 <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                  Nom d'utilisateur
+                  {t('login.username')}
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -58,7 +66,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, isLoading }) => {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    placeholder="Entrez votre nom d'utilisateur"
+                    placeholder={t('login.username.placeholder')}
                     disabled={isLoading}
                   />
                 </div>
@@ -66,7 +74,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, isLoading }) => {
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Mot de passe
+                  {t('login.password')}
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -76,7 +84,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, isLoading }) => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    placeholder="Entrez votre mot de passe"
+                    placeholder={t('login.password.placeholder')}
                     disabled={isLoading}
                   />
                 </div>
@@ -98,12 +106,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, isLoading }) => {
               {isLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Connexion...
+                  {t('login.loading')}
                 </>
               ) : (
                 <>
                   <Shield className="w-5 h-5" />
-                  Connexion Sécurisée
+                  {t('login.button')}
                 </>
               )}
             </button>
@@ -111,18 +119,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, isLoading }) => {
 
           {/* Demo Credentials */}
           <div className="mt-6 pt-6 border-t border-gray-100">
-            <p className="text-xs text-gray-500 mb-3 font-medium">Comptes de démonstration :</p>
+            <p className="text-xs text-gray-500 mb-3 font-medium">{t('login.demo.title')}</p>
             <div className="space-y-2 text-xs text-gray-600">
               <div className="flex justify-between">
-                <span>Super Admin:</span>
+                <span>{t('login.demo.superadmin')}</span>
                 <span className="font-mono bg-gray-100 px-2 py-1 rounded">admin / medrecap2025</span>
               </div>
               <div className="flex justify-between">
-                <span>Admin Tech:</span>
+                <span>{t('login.demo.admin')}</span>
                 <span className="font-mono bg-gray-100 px-2 py-1 rounded">tech / medrecap2025</span>
               </div>
               <div className="flex justify-between">
-                <span>Auditeur:</span>
+                <span>{t('login.demo.auditor')}</span>
                 <span className="font-mono bg-gray-100 px-2 py-1 rounded">audit / medrecap2025</span>
               </div>
             </div>
@@ -131,8 +139,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, isLoading }) => {
 
         {/* Footer */}
         <div className="text-center mt-6 text-sm text-gray-500">
-          <p>Built with ❤️ using <strong>Bolt.new</strong></p>
-          <p className="mt-1">© 2025 MedRecap+ - Nouvelle-Calédonie</p>
+          <p>{t('login.footer.built')} <strong>Bolt.new</strong></p>
+          <p className="mt-1">{t('login.footer.copyright')}</p>
         </div>
       </div>
     </div>

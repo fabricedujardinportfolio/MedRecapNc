@@ -10,8 +10,9 @@ import {
   Clock
 } from 'lucide-react';
 import { Patient } from '../types/Patient';
+import { useLanguage } from '../hooks/useLanguage';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { fr, enUS } from 'date-fns/locale';
 
 interface PatientCardProps {
   patient: Patient;
@@ -19,6 +20,9 @@ interface PatientCardProps {
 }
 
 export const PatientCard: React.FC<PatientCardProps> = ({ patient, onViewDetails }) => {
+  const { t, language } = useLanguage();
+  const locale = language === 'fr' ? fr : enUS;
+
   const getStatusColor = (statut: string) => {
     switch (statut) {
       case 'Urgence': return 'bg-red-100 text-red-800 border-red-200';
@@ -26,6 +30,28 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onViewDetails
       case 'Sorti': return 'bg-gray-100 text-gray-800 border-gray-200';
       case 'Transfert': return 'bg-blue-100 text-blue-800 border-blue-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getStatusText = (statut: string) => {
+    switch (statut) {
+      case 'Actif': return t('status.active');
+      case 'Urgence': return t('status.emergency');
+      case 'Sorti': return t('status.discharged');
+      case 'Transfert': return t('status.transfer');
+      default: return statut;
+    }
+  };
+
+  const getServiceText = (service: string) => {
+    switch (service) {
+      case 'Cardiologie': return t('service.cardiology');
+      case 'Urgences': return t('service.emergency');
+      case 'Obstétrique': return t('service.obstetrics');
+      case 'Néphrologie': return t('service.nephrology');
+      case 'Chirurgie': return t('service.surgery');
+      case 'Médecine interne': return t('service.internal');
+      default: return service;
     }
   };
 
@@ -62,12 +88,12 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onViewDetails
                 {patient.prenom} {patient.nom}
               </h3>
               <p className="text-sm text-gray-500">
-                Dossier #{patient.numeroDossier}
+                {t('patient.file')} #{patient.numeroDossier}
               </p>
             </div>
           </div>
           <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(patient.statut)}`}>
-            {patient.statut}
+            {getStatusText(patient.statut)}
           </div>
         </div>
 
@@ -75,7 +101,7 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onViewDetails
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Calendar className="w-4 h-4" />
-            <span>{patient.age} ans</span>
+            <span>{patient.age} {t('patient.years')}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Heart className="w-4 h-4" />
@@ -83,12 +109,12 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onViewDetails
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <MapPin className="w-4 h-4" />
-            <span>{patient.service}</span>
+            <span>{getServiceText(patient.service)}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Clock className="w-4 h-4" />
             <span>
-              Admis le {format(new Date(patient.dateAdmission), 'dd/MM/yyyy', { locale: fr })}
+              {t('patient.admitted')} {format(new Date(patient.dateAdmission), 'dd/MM/yyyy', { locale })}
             </span>
           </div>
         </div>
@@ -96,12 +122,12 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onViewDetails
         {/* Medical Info */}
         <div className="space-y-2 mb-4">
           <div className="text-sm">
-            <span className="font-medium text-gray-700">Motif: </span>
+            <span className="font-medium text-gray-700">{t('patient.reason')} </span>
             <span className="text-gray-600">{patient.motifHospitalisation}</span>
           </div>
           {patient.allergies.length > 0 && (
             <div className="text-sm">
-              <span className="font-medium text-red-600">Allergies: </span>
+              <span className="font-medium text-red-600">{t('patient.allergies')} </span>
               <span className="text-red-600">{patient.allergies.join(', ')}</span>
             </div>
           )}
@@ -120,7 +146,7 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onViewDetails
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
           >
             <Eye className="w-4 h-4" />
-            Voir le dossier
+            {t('patient.view')}
           </button>
         </div>
       </div>

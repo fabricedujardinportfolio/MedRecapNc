@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search, Filter, Calendar, Users, AlertTriangle } from 'lucide-react';
 import { SearchFilters as SearchFiltersType } from '../types/Patient';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface SearchFiltersProps {
   filters: SearchFiltersType;
@@ -13,6 +14,8 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   onFiltersChange, 
   onReset 
 }) => {
+  const { t } = useLanguage();
+
   const handleFilterChange = (key: keyof SearchFiltersType, value: any) => {
     onFiltersChange({
       ...filters,
@@ -24,14 +27,14 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
       <div className="flex items-center gap-2 mb-4">
         <Filter className="w-5 h-5 text-blue-600" />
-        <h3 className="text-lg font-semibold text-gray-900">Recherche et Filtres</h3>
+        <h3 className="text-lg font-semibold text-gray-900">{t('filters.title')}</h3>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Search by Name */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Nom du patient
+            {t('filters.name')}
           </label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -40,7 +43,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               value={filters.nom || ''}
               onChange={(e) => handleFilterChange('nom', e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Rechercher un nom..."
+              placeholder={t('filters.name.placeholder')}
             />
           </div>
         </div>
@@ -48,7 +51,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         {/* Service Filter */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Service
+            {t('filters.service')}
           </label>
           <div className="relative">
             <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -57,13 +60,13 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               onChange={(e) => handleFilterChange('service', e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
             >
-              <option value="">Tous les services</option>
-              <option value="Cardiologie">Cardiologie</option>
-              <option value="Urgences">Urgences</option>
-              <option value="Obstétrique">Obstétrique</option>
-              <option value="Néphrologie">Néphrologie</option>
-              <option value="Chirurgie">Chirurgie</option>
-              <option value="Médecine interne">Médecine interne</option>
+              <option value="">{t('filters.service.all')}</option>
+              <option value="Cardiologie">{t('service.cardiology')}</option>
+              <option value="Urgences">{t('service.emergency')}</option>
+              <option value="Obstétrique">{t('service.obstetrics')}</option>
+              <option value="Néphrologie">{t('service.nephrology')}</option>
+              <option value="Chirurgie">{t('service.surgery')}</option>
+              <option value="Médecine interne">{t('service.internal')}</option>
             </select>
           </div>
         </div>
@@ -71,7 +74,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         {/* Status Filter */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Statut
+            {t('filters.status')}
           </label>
           <div className="relative">
             <AlertTriangle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -80,11 +83,11 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               onChange={(e) => handleFilterChange('statut', e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
             >
-              <option value="">Tous les statuts</option>
-              <option value="Actif">Actif</option>
-              <option value="Urgence">Urgence</option>
-              <option value="Sorti">Sorti</option>
-              <option value="Transfert">Transfert</option>
+              <option value="">{t('filters.status.all')}</option>
+              <option value="Actif">{t('status.active')}</option>
+              <option value="Urgence">{t('status.emergency')}</option>
+              <option value="Sorti">{t('status.discharged')}</option>
+              <option value="Transfert">{t('status.transfer')}</option>
             </select>
           </div>
         </div>
@@ -92,7 +95,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         {/* Alert Level Filter */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Niveau d'alerte
+            {t('filters.alert')}
           </label>
           <div className="relative">
             <AlertTriangle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -101,10 +104,10 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               onChange={(e) => handleFilterChange('alerte', e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
             >
-              <option value="">Toutes les alertes</option>
-              <option value="verte">Verte (Stable)</option>
-              <option value="orange">Orange (Surveillance)</option>
-              <option value="rouge">Rouge (Critique)</option>
+              <option value="">{t('filters.alert.all')}</option>
+              <option value="verte">{t('filters.alert.green')}</option>
+              <option value="orange">{t('filters.alert.orange')}</option>
+              <option value="rouge">{t('filters.alert.red')}</option>
             </select>
           </div>
         </div>
@@ -112,7 +115,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         {/* Date Range */}
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Période d'admission
+            {t('filters.date')}
           </label>
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -140,7 +143,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         {/* Age Range */}
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tranche d'âge
+            {t('filters.age')}
           </label>
           <div className="flex gap-2">
             <input
@@ -151,7 +154,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                 min: e.target.value ? parseInt(e.target.value) : undefined 
               })}
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Âge min"
+              placeholder={t('filters.age.min')}
               min="0"
               max="120"
             />
@@ -164,7 +167,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                 max: e.target.value ? parseInt(e.target.value) : undefined 
               })}
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Âge max"
+              placeholder={t('filters.age.max')}
               min="0"
               max="120"
             />
@@ -178,7 +181,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           onClick={onReset}
           className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
         >
-          Réinitialiser les filtres
+          {t('filters.reset')}
         </button>
       </div>
     </div>

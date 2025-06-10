@@ -1,7 +1,10 @@
 import React from 'react';
 import { Shield, Heart } from 'lucide-react';
+import { useLanguage } from '../hooks/useLanguage';
 
 export const Footer: React.FC = () => {
+  const { t } = useLanguage();
+
   return (
     <footer className="bg-gray-900 text-white mt-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -13,22 +16,22 @@ export const Footer: React.FC = () => {
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold">MedRecap+</h3>
+                <h3 className="text-xl font-bold">{t('header.title')}</h3>
                 <p className="text-sm text-gray-400">v3.0</p>
               </div>
             </div>
             <p className="text-gray-300 text-sm mb-4">
-              Système professionnel de gestion des dossiers patients pour la Nouvelle-Calédonie.
+              {t('footer.description')}
             </p>
             <div className="flex items-center gap-2 text-sm text-gray-400">
               <Heart className="w-4 h-4 text-red-500" />
-              <span>Built with ❤️ using <strong className="text-white">Bolt.new</strong></span>
+              <span>{t('footer.built')} <strong className="text-white">Bolt.new</strong></span>
             </div>
           </div>
 
           {/* Certifications */}
           <div className="col-span-1">
-            <h4 className="text-lg font-semibold mb-4">Certifications</h4>
+            <h4 className="text-lg font-semibold mb-4">{t('footer.certifications')}</h4>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
@@ -62,13 +65,12 @@ export const Footer: React.FC = () => {
 
           {/* Contact and Legal */}
           <div className="col-span-1">
-            <h4 className="text-lg font-semibold mb-4">Informations légales</h4>
+            <h4 className="text-lg font-semibold mb-4">{t('footer.legal')}</h4>
             <div className="space-y-2 text-sm text-gray-300">
-              <p>© 2025 MedRecap+ NC</p>
-              <p>Nouvelle-Calédonie</p>
+              <p>{t('footer.copyright')}</p>
+              <p>{t('footer.location')}</p>
               <p className="text-xs text-gray-400 mt-4">
-                Ce système respecte les normes médicales internationales et la réglementation locale 
-                en matière de protection des données de santé.
+                {t('footer.compliance')}
               </p>
             </div>
           </div>
@@ -77,15 +79,15 @@ export const Footer: React.FC = () => {
         {/* Bottom Bar */}
         <div className="border-t border-gray-800 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center">
           <div className="text-sm text-gray-400">
-            <p>Dernière mise à jour du système: 15 janvier 2025</p>
+            <p>{t('footer.updated')}</p>
           </div>
           <div className="flex items-center gap-4 mt-4 md:mt-0">
             <div className="flex items-center gap-2 text-xs">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-gray-400">Système opérationnel</span>
+              <span className="text-gray-400">{t('footer.status')}</span>
             </div>
             <div className="text-xs text-gray-400">
-              Latence: {'<150ms'}
+              {t('footer.latency')}
             </div>
           </div>
         </div>
