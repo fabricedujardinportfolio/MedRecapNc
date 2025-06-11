@@ -12,7 +12,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
   const [showNotifications, setShowNotifications] = useState(false);
-  const { stats } = useNotifications();
+  const { stats } = useNotifications(); // ✅ Utilise le hook pour obtenir les stats réactives
   const { t } = useLanguage();
 
   return (
