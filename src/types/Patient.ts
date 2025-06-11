@@ -77,6 +77,97 @@ export interface Patient {
   };
   statut: 'Actif' | 'Sorti' | 'Transfert' | 'Urgence';
   derniereMaj: string;
+
+  // Nouvelles fonctionnalités pour médecins de quartier
+  consultations: Consultation[];
+  factures: Facture[];
+  rendezVous: RendezVous[];
+  typePatient: 'hospitalier' | 'cabinet';
+  medecinCabinet?: string;
+  derniereConsultation?: string;
+  prochainRendezVous?: string;
+}
+
+export interface Consultation {
+  id: string;
+  patientId: string;
+  date: string;
+  motif: string;
+  diagnostic: string;
+  traitement: string;
+  observations: string;
+  medecinId: string;
+  medecinNom: string;
+  duree: number; // en minutes
+  type: 'consultation' | 'visite' | 'urgence' | 'suivi';
+  statut: 'programmee' | 'en_cours' | 'terminee' | 'annulee';
+  tarif: number;
+  factureId?: string;
+  ordonnance?: {
+    medicaments: Array<{
+      nom: string;
+      dosage: string;
+      duree: string;
+      instructions: string;
+    }>;
+    examens: string[];
+    arretTravail?: {
+      duree: number;
+      motif: string;
+    };
+  };
+  signesVitaux?: {
+    tension: string;
+    pouls: number;
+    temperature: number;
+    poids: number;
+    taille: number;
+  };
+}
+
+export interface Facture {
+  id: string;
+  patientId: string;
+  consultationId?: string;
+  numero: string;
+  date: string;
+  montantTotal: number;
+  montantPaye: number;
+  montantRestant: number;
+  statut: 'en_attente' | 'partiellement_payee' | 'payee' | 'en_retard' | 'annulee';
+  methodePaiement?: 'especes' | 'carte' | 'cheque' | 'virement' | 'securite_sociale';
+  dateEcheance: string;
+  datePaiement?: string;
+  details: Array<{
+    description: string;
+    quantite: number;
+    prixUnitaire: number;
+    total: number;
+  }>;
+  remboursement?: {
+    securiteSociale: number;
+    mutuelle: number;
+    restACharge: number;
+  };
+  notes?: string;
+}
+
+export interface RendezVous {
+  id: string;
+  patientId: string;
+  patientNom: string;
+  date: string;
+  heureDebut: string;
+  heureFin: string;
+  motif: string;
+  type: 'consultation' | 'suivi' | 'urgence' | 'visite';
+  statut: 'programme' | 'confirme' | 'en_cours' | 'termine' | 'annule' | 'reporte';
+  medecinId: string;
+  medecinNom: string;
+  salle?: string;
+  notes?: string;
+  rappelEnvoye: boolean;
+  consultationId?: string;
 }
 
 export interface SearchFilters {
@@ -90,6 +181,10 @@ export interface SearchFilters {
     min?: number;
     max?: number;
   };
+  typePatient?: 'hospitalier' | 'cabinet' | 'tous';
+  medecinCabinet?: string;
+  statutFacture?: string;
+  prochainRendezVous?: boolean;
 }
 
 export interface UserRole {
@@ -103,4 +198,31 @@ export interface AdminUser {
   username: string;
   role: UserRole;
   lastLogin?: string;
+  type: 'hospitalier' | 'cabinet';
+  specialite?: string;
+  numeroOrdre?: string;
+}
+
+// Nouveaux types pour les statistiques du cabinet
+export interface CabinetStats {
+  patients: {
+    total: number;
+    nouveaux: number;
+    actifs: number;
+  };
+  consultations: {
+    aujourdhui: number;
+    semaine: number;
+    mois: number;
+  };
+  rendezVous: {
+    aujourdhui: number;
+    semaine: number;
+    enAttente: number;
+  };
+  finances: {
+    chiffreAffaireMois: number;
+    facturenAttente: number;
+    tauxRecouvrement: number;
+  };
 }

@@ -7,7 +7,9 @@ import {
   AlertTriangle, 
   Heart, 
   Eye,
-  Clock
+  Clock,
+  Euro,
+  Stethoscope
 } from 'lucide-react';
 import { Patient } from '../types/Patient';
 import { useLanguage } from '../hooks/useLanguage';
@@ -17,9 +19,14 @@ import { fr, enUS } from 'date-fns/locale';
 interface PatientCardProps {
   patient: Patient;
   onViewDetails: (patient: Patient) => void;
+  showCabinetInfo?: boolean;
 }
 
-export const PatientCard: React.FC<PatientCardProps> = ({ patient, onViewDetails }) => {
+export const PatientCard: React.FC<PatientCardProps> = ({ 
+  patient, 
+  onViewDetails, 
+  showCabinetInfo = false 
+}) => {
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
 
@@ -64,6 +71,14 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onViewDetails
     }
   };
 
+  const getTypePatientColor = (type: string) => {
+    switch (type) {
+      case 'cabinet': return 'bg-blue-100 text-blue-800';
+      case 'hospitalier': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 overflow-hidden">
       {/* Alert Banner */}
@@ -92,8 +107,15 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onViewDetails
               </p>
             </div>
           </div>
-          <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(patient.statut)}`}>
-            {getStatusText(patient.statut)}
+          <div className="flex flex-col gap-2">
+            <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(patient.statut)}`}>
+              {getStatusText(patient.statut)}
+            </div>
+            {showCabinetInfo && patient.typePatient && (
+              <div className={`px-3 py-1 rounded-full text-xs font-medium ${getTypePatientColor(patient.typePatient)}`}>
+                {patient.typePatient === 'cabinet' ? 'Cabinet' : 'Hospitalier'}
+              </div>
+            )}
           </div>
         </div>
 
@@ -118,6 +140,36 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onViewDetails
             </span>
           </div>
         </div>
+
+        {/* Cabinet-specific info */}
+        {showCabinetInfo && (
+          <div className="space-y-2 mb-4">
+            {patient.derniereConsultation && (
+              <div className="flex items-center gap-2 text-sm text-blue-600">
+                <Stethoscope className="w-4 h-4" />
+                <span>
+                  Dernière consultation: {format(new Date(patient.derniereConsultation), 'dd/MM/yyyy', { locale })}
+                </span>
+              </div>
+            )}
+            {patient.prochainRendezVous && (
+              <div className="flex items-center gap-2 text-sm text-green-600">
+                <Calendar className="w-4 h-4" />
+                <span>
+                  Prochain RDV: {format(new Date(patient.prochainRendezVous), 'dd/MM/yyyy', { locale })}
+                </span>
+              </div>
+            )}
+            {patient.factures && patient.factures.length > 0 && (
+              <div className="flex items-center gap-2 text-sm text-orange-600">
+                <Euro className="w-4 h-4" />
+                <span>
+                  {patient.factures.filter(f => f.statut === 'en_attente').length} facture(s) en attente
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Medical Info */}
         <div className="space-y-2 mb-4">

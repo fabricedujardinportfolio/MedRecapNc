@@ -2,6 +2,7 @@ import React from 'react';
 import { LoginForm } from './components/LoginForm';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
+import { CabinetDashboard } from './components/CabinetDashboard';
 import { Footer } from './components/Footer';
 import { LanguageProvider } from './components/LanguageProvider';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -32,7 +33,12 @@ function App() {
           <div className="min-h-screen bg-gray-50 flex flex-col">
             <Header user={user} onLogout={logout} />
             <main className="flex-1">
-              <Dashboard />
+              {/* Affichage conditionnel selon le type d'utilisateur */}
+              {user.type === 'cabinet' ? (
+                <CabinetDashboard />
+              ) : (
+                <Dashboard />
+              )}
             </main>
             <Footer />
           </div>

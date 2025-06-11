@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Filter, Calendar, Users, AlertTriangle } from 'lucide-react';
+import { Search, Filter, Calendar, Users, AlertTriangle, Building } from 'lucide-react';
 import { SearchFilters as SearchFiltersType } from '../types/Patient';
 import { useLanguage } from '../hooks/useLanguage';
 
@@ -7,12 +7,14 @@ interface SearchFiltersProps {
   filters: SearchFiltersType;
   onFiltersChange: (filters: SearchFiltersType) => void;
   onReset: () => void;
+  showCabinetFilters?: boolean;
 }
 
 export const SearchFilters: React.FC<SearchFiltersProps> = ({ 
   filters, 
   onFiltersChange, 
-  onReset 
+  onReset,
+  showCabinetFilters = false
 }) => {
   const { t } = useLanguage();
 
@@ -47,6 +49,27 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             />
           </div>
         </div>
+
+        {/* Type de patient (Cabinet vs Hospitalier) */}
+        {showCabinetFilters && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Type de patient
+            </label>
+            <div className="relative">
+              <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <select
+                value={filters.typePatient || 'tous'}
+                onChange={(e) => handleFilterChange('typePatient', e.target.value === 'tous' ? undefined : e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+              >
+                <option value="tous">Tous les patients</option>
+                <option value="cabinet">Patients cabinet</option>
+                <option value="hospitalier">Patients hospitaliers</option>
+              </select>
+            </div>
+          </div>
+        )}
 
         {/* Service Filter */}
         <div>
@@ -111,6 +134,24 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             </select>
           </div>
         </div>
+
+        {/* Prochain RDV Filter (Cabinet only) */}
+        {showCabinetFilters && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Rendez-vous
+            </label>
+            <label className="flex items-center gap-2 mt-2">
+              <input
+                type="checkbox"
+                checked={filters.prochainRendezVous || false}
+                onChange={(e) => handleFilterChange('prochainRendezVous', e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Prochain RDV programmé</span>
+            </label>
+          </div>
+        )}
 
         {/* Date Range */}
         <div className="md:col-span-2">

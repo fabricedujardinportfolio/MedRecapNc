@@ -16,6 +16,11 @@ const mockRoles: UserRole[] = [
     id: 'auditeur',
     nom: 'Auditeur',
     permissions: ['read_logs', 'read_patients']
+  },
+  {
+    id: 'medecin_cabinet',
+    nom: 'Médecin de Cabinet',
+    permissions: ['manage_patients', 'manage_consultations', 'manage_factures']
   }
 ];
 
@@ -23,17 +28,28 @@ const mockUsers: AdminUser[] = [
   {
     id: '1',
     username: 'admin',
-    role: mockRoles[0]
+    role: mockRoles[0],
+    type: 'hospitalier'
   },
   {
     id: '2', 
     username: 'tech',
-    role: mockRoles[1]
+    role: mockRoles[1],
+    type: 'hospitalier'
   },
   {
     id: '3',
     username: 'audit',
-    role: mockRoles[2]
+    role: mockRoles[2],
+    type: 'hospitalier'
+  },
+  {
+    id: '4',
+    username: 'medecin',
+    role: mockRoles[3],
+    type: 'cabinet',
+    specialite: 'Médecine générale',
+    numeroOrdre: '12345'
   }
 ];
 
