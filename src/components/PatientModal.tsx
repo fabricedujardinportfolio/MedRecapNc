@@ -78,40 +78,35 @@ export const PatientModal: React.FC<PatientModalProps> = ({
   };
 
   const handleExport = () => {
-    // Créer une nouvelle fenêtre pour l'impression
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    // Générer le contenu HTML optimisé pour l'impression
-    const printContent = generatePrintContent();
-    
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html lang="fr">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Dossier Patient - ${patient.prenom} ${patient.nom}</title>
-        <style>
-          ${getPrintStyles()}
-        </style>
-      </head>
-      <body>
-        ${printContent}
-      </body>
-      </html>
-    `);
-
-    printWindow.document.close();
-    
-    // Attendre que le contenu soit chargé puis imprimer
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 500);
+    try {
+      // Générer le contenu HTML complet
+      const htmlContent = generateCompleteHTMLDocument();
+      
+      // Créer un blob avec le contenu HTML
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      
+      // Créer un lien de téléchargement
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Dossier_Patient_${patient.nom}_${patient.prenom}_${format(new Date(), 'yyyy-MM-dd')}.html`;
+      
+      // Déclencher le téléchargement
+      document.body.appendChild(link);
+      link.click();
+      
+      // Nettoyer
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      console.log('✅ Export réussi pour:', patient.nom, patient.prenom);
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'export:', error);
+      alert('Erreur lors de l\'export du dossier patient. Veuillez réessayer.');
+    }
   };
 
-  const generatePrintContent = () => {
+  const generateCompleteHTMLDocument = () => {
     const consultationsHtml = patient.consultations && patient.consultations.length > 0 
       ? patient.consultations.map(consultation => `
           <div class="consultation-item">
@@ -193,180 +188,193 @@ export const PatientModal: React.FC<PatientModalProps> = ({
       : '<p class="no-data">Aucun rendez-vous programmé</p>';
 
     return `
-      <div class="print-container">
-        <!-- En-tête du document -->
-        <div class="header">
-          <div class="header-left">
-            <h1>DOSSIER PATIENT</h1>
-            <h2>${patient.prenom} ${patient.nom}</h2>
-            <p>Dossier #${patient.numeroDossier}</p>
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Dossier Patient - ${patient.prenom} ${patient.nom}</title>
+        <style>
+          ${getPrintStyles()}
+        </style>
+      </head>
+      <body>
+        <div class="print-container">
+          <!-- En-tête du document -->
+          <div class="header">
+            <div class="header-left">
+              <h1>DOSSIER PATIENT</h1>
+              <h2>${patient.prenom} ${patient.nom}</h2>
+              <p>Dossier #${patient.numeroDossier}</p>
+            </div>
+            <div class="header-right">
+              <p>Date d'impression: ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr })}</p>
+              <p>Dernière mise à jour: ${format(new Date(patient.derniereMaj), 'dd/MM/yyyy à HH:mm', { locale: fr })}</p>
+            </div>
           </div>
-          <div class="header-right">
-            <p>Date d'impression: ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr })}</p>
-            <p>Dernière mise à jour: ${format(new Date(patient.derniereMaj), 'dd/MM/yyyy à HH:mm', { locale: fr })}</p>
-          </div>
-        </div>
 
-        ${patient.alerte && patient.alerte.niveau !== 'verte' ? `
-          <div class="alert alert-${patient.alerte.niveau}">
-            <strong>⚠️ ALERTE ${patient.alerte.niveau.toUpperCase()}:</strong> ${patient.alerte.message}
-          </div>
-        ` : ''}
+          ${patient.alerte && patient.alerte.niveau !== 'verte' ? `
+            <div class="alert alert-${patient.alerte.niveau}">
+              <strong>⚠️ ALERTE ${patient.alerte.niveau.toUpperCase()}:</strong> ${patient.alerte.message}
+            </div>
+          ` : ''}
 
-        <!-- Informations personnelles -->
-        <section class="section">
-          <h3>INFORMATIONS PERSONNELLES</h3>
-          <div class="info-grid">
-            <div class="info-item">
-              <strong>Sexe:</strong> ${patient.sexe === 'M' ? 'Masculin' : 'Féminin'}
-            </div>
-            <div class="info-item">
-              <strong>Âge:</strong> ${patient.age} ans
-            </div>
-            <div class="info-item">
-              <strong>Date de naissance:</strong> ${format(new Date(patient.dateNaissance), 'dd/MM/yyyy', { locale: fr })}
-            </div>
-            <div class="info-item">
-              <strong>Lieu de naissance:</strong> ${patient.lieuNaissance}
-            </div>
-            <div class="info-item">
-              <strong>Nationalité:</strong> ${patient.nationalite}
-            </div>
-            <div class="info-item">
-              <strong>Situation familiale:</strong> ${patient.situationFamiliale}
-            </div>
-          </div>
-        </section>
-
-        <!-- Coordonnées -->
-        <section class="section">
-          <h3>COORDONNÉES</h3>
-          <div class="info-grid">
-            <div class="info-item full-width">
-              <strong>Adresse:</strong> ${patient.adresse.rue}, ${patient.adresse.codePostal} ${patient.adresse.ville}, ${patient.adresse.pays}
-            </div>
-            <div class="info-item">
-              <strong>Téléphone:</strong> ${patient.telephone.portable || patient.telephone.fixe}
-            </div>
-            ${patient.email ? `
+          <!-- Informations personnelles -->
+          <section class="section">
+            <h3>INFORMATIONS PERSONNELLES</h3>
+            <div class="info-grid">
               <div class="info-item">
-                <strong>Email:</strong> ${patient.email}
+                <strong>Sexe:</strong> ${patient.sexe === 'M' ? 'Masculin' : 'Féminin'}
               </div>
-            ` : ''}
-            <div class="info-item full-width">
-              <strong>Contact d'urgence:</strong> ${patient.contactUrgence.nom} (${patient.contactUrgence.lien}) - ${patient.contactUrgence.telephone}
-            </div>
-          </div>
-        </section>
-
-        <!-- Informations médicales critiques -->
-        <section class="section medical-critical">
-          <h3>INFORMATIONS MÉDICALES CRITIQUES</h3>
-          <div class="info-grid">
-            <div class="info-item">
-              <strong>Groupe sanguin:</strong> <span class="highlight">${patient.groupeSanguin}</span>
-            </div>
-            <div class="info-item">
-              <strong>IMC:</strong> ${patient.biometrie.imc}
-            </div>
-            ${patient.allergies.length > 0 ? `
-              <div class="info-item full-width allergies">
-                <strong>⚠️ ALLERGIES:</strong> ${patient.allergies.join(', ')}
+              <div class="info-item">
+                <strong>Âge:</strong> ${patient.age} ans
               </div>
-            ` : ''}
-          </div>
-        </section>
+              <div class="info-item">
+                <strong>Date de naissance:</strong> ${format(new Date(patient.dateNaissance), 'dd/MM/yyyy', { locale: fr })}
+              </div>
+              <div class="info-item">
+                <strong>Lieu de naissance:</strong> ${patient.lieuNaissance}
+              </div>
+              <div class="info-item">
+                <strong>Nationalité:</strong> ${patient.nationalite}
+              </div>
+              <div class="info-item">
+                <strong>Situation familiale:</strong> ${patient.situationFamiliale}
+              </div>
+            </div>
+          </section>
 
-        <!-- Hospitalisation actuelle -->
-        <section class="section">
-          <h3>HOSPITALISATION ACTUELLE</h3>
-          <div class="info-grid">
-            <div class="info-item">
-              <strong>Service:</strong> ${patient.service}
-            </div>
-            <div class="info-item">
-              <strong>Statut:</strong> ${patient.statut}
-            </div>
-            <div class="info-item">
-              <strong>Mode d'admission:</strong> ${patient.modeAdmission}
-            </div>
-            <div class="info-item">
-              <strong>Date d'admission:</strong> ${format(new Date(patient.dateAdmission), 'dd/MM/yyyy', { locale: fr })}
-            </div>
-            <div class="info-item full-width">
-              <strong>Motif d'hospitalisation:</strong> ${patient.motifHospitalisation}
-            </div>
-            <div class="info-item">
-              <strong>Médecin référent:</strong> ${patient.medecinReferent}
-            </div>
-            <div class="info-item full-width">
-              <strong>Diagnostics:</strong> ${patient.diagnostics.join(', ')}
-            </div>
-          </div>
-        </section>
-
-        <!-- Traitements en cours -->
-        <section class="section">
-          <h3>TRAITEMENTS EN COURS</h3>
-          ${patient.traitements.length > 0 ? `
-            <div class="treatments">
-              ${patient.traitements.map(traitement => `
-                <div class="treatment-item">
-                  <strong>${traitement.nom}</strong> - ${traitement.dosage} (${traitement.frequence})
-                  <span class="treatment-date">Depuis ${format(new Date(traitement.dateDebut), 'MM/yyyy', { locale: fr })}</span>
+          <!-- Coordonnées -->
+          <section class="section">
+            <h3>COORDONNÉES</h3>
+            <div class="info-grid">
+              <div class="info-item full-width">
+                <strong>Adresse:</strong> ${patient.adresse.rue}, ${patient.adresse.codePostal} ${patient.adresse.ville}, ${patient.adresse.pays}
+              </div>
+              <div class="info-item">
+                <strong>Téléphone:</strong> ${patient.telephone.portable || patient.telephone.fixe}
+              </div>
+              ${patient.email ? `
+                <div class="info-item">
+                  <strong>Email:</strong> ${patient.email}
                 </div>
-              `).join('')}
+              ` : ''}
+              <div class="info-item full-width">
+                <strong>Contact d'urgence:</strong> ${patient.contactUrgence.nom} (${patient.contactUrgence.lien}) - ${patient.contactUrgence.telephone}
+              </div>
             </div>
-          ` : '<p class="no-data">Aucun traitement en cours</p>'}
-        </section>
+          </section>
 
-        <!-- Antécédents médicaux -->
-        <section class="section">
-          <h3>ANTÉCÉDENTS MÉDICAUX</h3>
-          <div class="antecedents">
-            <div class="antecedent-group">
-              <h4>Antécédents personnels</h4>
-              ${patient.antecedents.personnels.length > 0 
-                ? `<ul>${patient.antecedents.personnels.map(a => `<li>${a}</li>`).join('')}</ul>`
-                : '<p class="no-data">Aucun antécédent personnel notable</p>'
-              }
+          <!-- Informations médicales critiques -->
+          <section class="section medical-critical">
+            <h3>INFORMATIONS MÉDICALES CRITIQUES</h3>
+            <div class="info-grid">
+              <div class="info-item">
+                <strong>Groupe sanguin:</strong> <span class="highlight">${patient.groupeSanguin}</span>
+              </div>
+              <div class="info-item">
+                <strong>IMC:</strong> ${patient.biometrie.imc}
+              </div>
+              ${patient.allergies.length > 0 ? `
+                <div class="info-item full-width allergies">
+                  <strong>⚠️ ALLERGIES:</strong> ${patient.allergies.join(', ')}
+                </div>
+              ` : ''}
             </div>
-            <div class="antecedent-group">
-              <h4>Antécédents familiaux</h4>
-              ${patient.antecedents.familiaux.length > 0 
-                ? `<ul>${patient.antecedents.familiaux.map(a => `<li>${a}</li>`).join('')}</ul>`
-                : '<p class="no-data">Aucun antécédent familial notable</p>'
-              }
+          </section>
+
+          <!-- Hospitalisation actuelle -->
+          <section class="section">
+            <h3>HOSPITALISATION ACTUELLE</h3>
+            <div class="info-grid">
+              <div class="info-item">
+                <strong>Service:</strong> ${patient.service}
+              </div>
+              <div class="info-item">
+                <strong>Statut:</strong> ${patient.statut}
+              </div>
+              <div class="info-item">
+                <strong>Mode d'admission:</strong> ${patient.modeAdmission}
+              </div>
+              <div class="info-item">
+                <strong>Date d'admission:</strong> ${format(new Date(patient.dateAdmission), 'dd/MM/yyyy', { locale: fr })}
+              </div>
+              <div class="info-item full-width">
+                <strong>Motif d'hospitalisation:</strong> ${patient.motifHospitalisation}
+              </div>
+              <div class="info-item">
+                <strong>Médecin référent:</strong> ${patient.medecinReferent}
+              </div>
+              <div class="info-item full-width">
+                <strong>Diagnostics:</strong> ${patient.diagnostics.join(', ')}
+              </div>
             </div>
+          </section>
+
+          <!-- Traitements en cours -->
+          <section class="section">
+            <h3>TRAITEMENTS EN COURS</h3>
+            ${patient.traitements.length > 0 ? `
+              <div class="treatments">
+                ${patient.traitements.map(traitement => `
+                  <div class="treatment-item">
+                    <strong>${traitement.nom}</strong> - ${traitement.dosage} (${traitement.frequence})
+                    <span class="treatment-date">Depuis ${format(new Date(traitement.dateDebut), 'MM/yyyy', { locale: fr })}</span>
+                  </div>
+                `).join('')}
+              </div>
+            ` : '<p class="no-data">Aucun traitement en cours</p>'}
+          </section>
+
+          <!-- Antécédents médicaux -->
+          <section class="section">
+            <h3>ANTÉCÉDENTS MÉDICAUX</h3>
+            <div class="antecedents">
+              <div class="antecedent-group">
+                <h4>Antécédents personnels</h4>
+                ${patient.antecedents.personnels.length > 0 
+                  ? `<ul>${patient.antecedents.personnels.map(a => `<li>${a}</li>`).join('')}</ul>`
+                  : '<p class="no-data">Aucun antécédent personnel notable</p>'
+                }
+              </div>
+              <div class="antecedent-group">
+                <h4>Antécédents familiaux</h4>
+                ${patient.antecedents.familiaux.length > 0 
+                  ? `<ul>${patient.antecedents.familiaux.map(a => `<li>${a}</li>`).join('')}</ul>`
+                  : '<p class="no-data">Aucun antécédent familial notable</p>'
+                }
+              </div>
+            </div>
+          </section>
+
+          ${showCabinetFeatures ? `
+            <!-- Consultations -->
+            <section class="section page-break">
+              <h3>HISTORIQUE DES CONSULTATIONS</h3>
+              ${consultationsHtml}
+            </section>
+
+            <!-- Factures -->
+            <section class="section">
+              <h3>FACTURES ET PAIEMENTS</h3>
+              ${facturesHtml}
+            </section>
+
+            <!-- Rendez-vous -->
+            <section class="section">
+              <h3>RENDEZ-VOUS</h3>
+              ${rdvHtml}
+            </section>
+          ` : ''}
+
+          <!-- Pied de page -->
+          <div class="footer">
+            <p>Document généré par MedRecap+ - Système de Gestion Médicale Sécurisé</p>
+            <p>Conforme HDS • ISO 27001 • RGPD</p>
           </div>
-        </section>
-
-        ${showCabinetFeatures ? `
-          <!-- Consultations -->
-          <section class="section page-break">
-            <h3>HISTORIQUE DES CONSULTATIONS</h3>
-            ${consultationsHtml}
-          </section>
-
-          <!-- Factures -->
-          <section class="section">
-            <h3>FACTURES ET PAIEMENTS</h3>
-            ${facturesHtml}
-          </section>
-
-          <!-- Rendez-vous -->
-          <section class="section">
-            <h3>RENDEZ-VOUS</h3>
-            ${rdvHtml}
-          </section>
-        ` : ''}
-
-        <!-- Pied de page -->
-        <div class="footer">
-          <p>Document généré par MedRecap+ - Système de Gestion Médicale Sécurisé</p>
-          <p>Conforme HDS • ISO 27001 • RGPD</p>
         </div>
-      </div>
+      </body>
+      </html>
     `;
   };
 
@@ -388,6 +396,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
         color: #333;
         margin: 0;
         padding: 0;
+        background: white;
       }
 
       .print-container {
