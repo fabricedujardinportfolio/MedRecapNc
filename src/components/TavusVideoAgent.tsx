@@ -31,6 +31,14 @@ interface TavusVideoAgentProps {
   onClose: () => void;
 }
 
+// Extend Window interface for Speech Recognition
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
 export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({ 
   patient, 
   isVisible, 
@@ -47,10 +55,13 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const [isAvatarLoaded, setIsAvatarLoaded] = useState(false);
   const [showExternalWindow, setShowExternalWindow] = useState(false);
   
-  // Microphone states
-  const [isMicrophoneActive, setIsMicrophoneActive] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
+  // Speech Recognition states
+  const [isSpeechRecognitionActive, setIsSpeechRecognitionActive] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [speechRecognitionSupported, setSpeechRecognitionSupported] = useState(false);
   const [microphonePermission, setMicrophonePermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
+  const [currentTranscript, setCurrentTranscript] = useState('');
+  const [finalTranscript, setFinalTranscript] = useState('');
   const [audioLevel, setAudioLevel] = useState(0);
   
   const [chatHistory, setChatHistory] = useState<Array<{
@@ -61,14 +72,18 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const speechRecognitionRef = useRef<any>(null);
   const audioStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
-  // Check Tavus configuration on mount
+  // Check Speech Recognition support and Tavus configuration on mount
   useEffect(() => {
+    // Check Speech Recognition support
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    setSpeechRecognitionSupported(!!SpeechRecognition);
+
     const config = tavusService.getConfigurationStatus();
     if (!config.isFullyConfigured) {
       const missingItems = [];
@@ -78,13 +93,21 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       
       setChatHistory([{
         type: 'system',
-        content: `Configuration Tavus incomplète. Éléments manquants: ${missingItems.join(', ')}. Fonctionnement en mode démonstration avec reconnaissance vocale.`,
+        content: `Configuration Tavus incomplète. Éléments manquants: ${missingItems.join(', ')}. Fonctionnement en mode démonstration avec reconnaissance vocale${SpeechRecognition ? ' activée' : ' non supportée'}.`,
         timestamp: new Date()
       }]);
     } else {
       setChatHistory([{
         type: 'system',
-        content: `Configuration Tavus détectée. Initialisation de l'avatar IA avec support vocal...`,
+        content: `Configuration Tavus détectée. Initialisation de l'avatar IA avec support vocal${SpeechRecognition ? ' et reconnaissance vocale' : ''}...`,
+        timestamp: new Date()
+      }]);
+    }
+
+    if (!SpeechRecognition) {
+      setChatHistory(prev => [...prev, {
+        type: 'warning',
+        content: '⚠️ Reconnaissance vocale non supportée par votre navigateur. Utilisez Chrome, Edge ou Safari pour une meilleure expérience.',
         timestamp: new Date()
       }]);
     }
@@ -94,10 +117,12 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   useEffect(() => {
     if (isVisible) {
       checkMicrophonePermissions();
+      initializeSpeechRecognition();
     }
     
     return () => {
       cleanupAudioResources();
+      cleanupSpeechRecognition();
     };
   }, [isVisible]);
 
@@ -115,6 +140,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
         tavusService.endSession();
       }
       cleanupAudioResources();
+      cleanupSpeechRecognition();
     };
   }, []);
 
@@ -125,6 +151,141 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       audioRef.current.volume = isMuted ? 0 : 1;
     }
   }, [isMuted]);
+
+  const initializeSpeechRecognition = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      console.warn('Speech Recognition not supported');
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      
+      // Configuration de la reconnaissance vocale
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'fr-FR'; // Français par défaut
+      recognition.maxAlternatives = 1;
+
+      // Événements de reconnaissance vocale
+      recognition.onstart = () => {
+        console.log('Reconnaissance vocale démarrée');
+        setIsListening(true);
+        setCurrentTranscript('');
+        setFinalTranscript('');
+        setChatHistory(prev => [...prev, {
+          type: 'system',
+          content: '🎤 Reconnaissance vocale active - Parlez maintenant...',
+          timestamp: new Date()
+        }]);
+      };
+
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        let finalTranscriptText = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          
+          if (event.results[i].isFinal) {
+            finalTranscriptText += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+
+        setCurrentTranscript(interimTranscript);
+        
+        if (finalTranscriptText) {
+          setFinalTranscript(prev => prev + finalTranscriptText);
+          console.log('Transcription finale:', finalTranscriptText);
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Erreur de reconnaissance vocale:', event.error);
+        setIsListening(false);
+        setIsSpeechRecognitionActive(false);
+        
+        let errorMessage = '❌ Erreur de reconnaissance vocale: ';
+        switch (event.error) {
+          case 'no-speech':
+            errorMessage += 'Aucune parole détectée. Réessayez.';
+            break;
+          case 'audio-capture':
+            errorMessage += 'Impossible de capturer l\'audio. Vérifiez votre microphone.';
+            break;
+          case 'not-allowed':
+            errorMessage += 'Permission microphone refusée.';
+            setMicrophonePermission('denied');
+            break;
+          case 'network':
+            errorMessage += 'Erreur réseau. Vérifiez votre connexion.';
+            break;
+          case 'language-not-supported':
+            errorMessage += 'Langue non supportée.';
+            break;
+          default:
+            errorMessage += event.error;
+        }
+        
+        setChatHistory(prev => [...prev, {
+          type: 'warning',
+          content: errorMessage,
+          timestamp: new Date()
+        }]);
+      };
+
+      recognition.onend = () => {
+        console.log('Reconnaissance vocale terminée');
+        setIsListening(false);
+        setIsSpeechRecognitionActive(false);
+        
+        // Traiter la transcription finale si elle existe
+        if (finalTranscript.trim()) {
+          handleVoiceMessage(finalTranscript.trim());
+        } else if (currentTranscript.trim()) {
+          handleVoiceMessage(currentTranscript.trim());
+        }
+        
+        setCurrentTranscript('');
+        setFinalTranscript('');
+      };
+
+      speechRecognitionRef.current = recognition;
+      
+      setChatHistory(prev => [...prev, {
+        type: 'system',
+        content: '✅ Reconnaissance vocale initialisée et prête à l\'emploi !',
+        timestamp: new Date()
+      }]);
+      
+    } catch (error) {
+      console.error('Erreur lors de l\'initialisation de la reconnaissance vocale:', error);
+      setChatHistory(prev => [...prev, {
+        type: 'warning',
+        content: '❌ Impossible d\'initialiser la reconnaissance vocale.',
+        timestamp: new Date()
+      }]);
+    }
+  };
+
+  const cleanupSpeechRecognition = () => {
+    if (speechRecognitionRef.current) {
+      try {
+        speechRecognitionRef.current.stop();
+        speechRecognitionRef.current = null;
+      } catch (error) {
+        console.error('Erreur lors du nettoyage de la reconnaissance vocale:', error);
+      }
+    }
+    setIsListening(false);
+    setIsSpeechRecognitionActive(false);
+    setCurrentTranscript('');
+    setFinalTranscript('');
+  };
 
   const checkMicrophonePermissions = async () => {
     try {
@@ -239,7 +400,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
       setAudioLevel(average / 255); // Normalize to 0-1
       
-      if (isMicrophoneActive) {
+      if (isSpeechRecognitionActive || isListening) {
         animationFrameRef.current = requestAnimationFrame(updateLevel);
       }
     };
@@ -247,112 +408,95 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     updateLevel();
   };
 
-  const startVoiceRecording = async () => {
-    if (!audioStreamRef.current) {
+  const startSpeechRecognition = async () => {
+    if (!speechRecognitionSupported) {
+      setChatHistory(prev => [...prev, {
+        type: 'warning',
+        content: '❌ Reconnaissance vocale non supportée par votre navigateur. Utilisez Chrome, Edge ou Safari.',
+        timestamp: new Date()
+      }]);
+      return;
+    }
+
+    if (microphonePermission !== 'granted') {
       const success = await requestMicrophoneAccess();
       if (!success) return;
     }
 
-    if (!audioStreamRef.current) return;
+    if (!speechRecognitionRef.current) {
+      initializeSpeechRecognition();
+      await new Promise(resolve => setTimeout(resolve, 500)); // Wait for initialization
+    }
 
     try {
-      // Setup MediaRecorder for voice recording
-      const mediaRecorder = new MediaRecorder(audioStreamRef.current, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
+      setIsSpeechRecognitionActive(true);
+      setCurrentTranscript('');
+      setFinalTranscript('');
       
-      mediaRecorderRef.current = mediaRecorder;
-      const audioChunks: Blob[] = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunks.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
-        await processVoiceInput(audioBlob);
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      setIsMicrophoneActive(true);
-      
-      setChatHistory(prev => [...prev, {
-        type: 'system',
-        content: '🎤 Enregistrement en cours... Parlez maintenant.',
-        timestamp: new Date()
-      }]);
-
       // Start audio level monitoring
-      monitorAudioLevel();
-      
-    } catch (error) {
-      console.error('Erreur lors du démarrage de l\'enregistrement:', error);
-      setChatHistory(prev => [...prev, {
-        type: 'warning',
-        content: '❌ Impossible de démarrer l\'enregistrement vocal.',
-        timestamp: new Date()
-      }]);
-    }
-  };
-
-  const stopVoiceRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      setIsMicrophoneActive(false);
-      setAudioLevel(0);
-      
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+      if (audioStreamRef.current) {
+        monitorAudioLevel();
       }
       
+      speechRecognitionRef.current?.start();
+      
       setChatHistory(prev => [...prev, {
         type: 'system',
-        content: '⏹️ Enregistrement terminé. Traitement en cours...',
+        content: '🎤 Reconnaissance vocale démarrée - Parlez maintenant !',
+        timestamp: new Date()
+      }]);
+      
+    } catch (error) {
+      console.error('Erreur lors du démarrage de la reconnaissance vocale:', error);
+      setIsSpeechRecognitionActive(false);
+      setChatHistory(prev => [...prev, {
+        type: 'warning',
+        content: '❌ Impossible de démarrer la reconnaissance vocale.',
         timestamp: new Date()
       }]);
     }
   };
 
-  const processVoiceInput = async (audioBlob: Blob) => {
-    try {
-      // In a real implementation, you would send the audio to a speech-to-text service
-      // For demo purposes, we'll simulate speech recognition
-      setChatHistory(prev => [...prev, {
-        type: 'system',
-        content: '🔄 Conversion de la parole en texte...',
-        timestamp: new Date()
-      }]);
-
-      // Simulate speech-to-text processing
-      setTimeout(() => {
-        const simulatedTranscription = "Pouvez-vous me donner plus d'informations sur les allergies de ce patient ?";
+  const stopSpeechRecognition = () => {
+    if (speechRecognitionRef.current && isSpeechRecognitionActive) {
+      try {
+        speechRecognitionRef.current.stop();
+        setIsSpeechRecognitionActive(false);
+        setIsListening(false);
+        setAudioLevel(0);
+        
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
         
         setChatHistory(prev => [...prev, {
-          type: 'user',
-          content: `🎤 "${simulatedTranscription}"`,
+          type: 'system',
+          content: '⏹️ Reconnaissance vocale arrêtée.',
           timestamp: new Date()
         }]);
-
-        // Process the transcribed message
-        handleVoiceMessage(simulatedTranscription);
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Erreur lors du traitement de l\'entrée vocale:', error);
-      setChatHistory(prev => [...prev, {
-        type: 'warning',
-        content: '❌ Erreur lors du traitement de votre message vocal.',
-        timestamp: new Date()
-      }]);
+      } catch (error) {
+        console.error('Erreur lors de l\'arrêt de la reconnaissance vocale:', error);
+      }
     }
   };
 
   const handleVoiceMessage = async (transcription: string) => {
+    if (!transcription.trim()) {
+      setChatHistory(prev => [...prev, {
+        type: 'warning',
+        content: '❌ Aucun texte transcrit. Réessayez de parler plus clairement.',
+        timestamp: new Date()
+      }]);
+      return;
+    }
+
     try {
+      setChatHistory(prev => [...prev, {
+        type: 'user',
+        content: `🎤 "${transcription}"`,
+        timestamp: new Date()
+      }]);
+
       if (session) {
         await tavusService.sendMessage(transcription);
       }
@@ -371,15 +515,15 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       }, 1500);
     } catch (error) {
       console.error('Erreur lors du traitement du message vocal:', error);
+      setChatHistory(prev => [...prev, {
+        type: 'warning',
+        content: '❌ Erreur lors du traitement de votre message vocal.',
+        timestamp: new Date()
+      }]);
     }
   };
 
   const cleanupAudioResources = () => {
-    // Stop recording if active
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-    }
-    
     // Stop audio stream
     if (audioStreamRef.current) {
       audioStreamRef.current.getTracks().forEach(track => track.stop());
@@ -397,8 +541,8 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       cancelAnimationFrame(animationFrameRef.current);
     }
     
-    setIsMicrophoneActive(false);
-    setIsRecording(false);
+    setIsSpeechRecognitionActive(false);
+    setIsListening(false);
     setAudioLevel(0);
   };
 
@@ -408,15 +552,24 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       return;
     }
 
+    if (!speechRecognitionSupported) {
+      setChatHistory(prev => [...prev, {
+        type: 'warning',
+        content: '❌ Reconnaissance vocale non supportée. Utilisez Chrome, Edge ou Safari pour cette fonctionnalité.',
+        timestamp: new Date()
+      }]);
+      return;
+    }
+
     if (microphonePermission !== 'granted') {
       await requestMicrophoneAccess();
       return;
     }
 
-    if (isRecording) {
-      stopVoiceRecording();
+    if (isSpeechRecognitionActive || isListening) {
+      stopSpeechRecognition();
     } else {
-      startVoiceRecording();
+      startSpeechRecognition();
     }
   };
 
@@ -538,7 +691,7 @@ ${criticalInfo.length > 0 ? `**Informations critiques:**\n${criticalInfo.join('\
 
 **Contact d'urgence:** ${patient.contactUrgence.nom} (${patient.contactUrgence.lien}) - ${patient.contactUrgence.telephone}
 
-💬 Vous pouvez me poser des questions par écrit ou **utiliser le microphone** pour une interaction vocale !
+💬 Vous pouvez me poser des questions par écrit ou **utiliser le microphone** pour une interaction vocale avec reconnaissance automatique !
     `.trim();
   };
 
@@ -643,7 +796,7 @@ ${criticalInfo.length > 0 ? `**Informations critiques:**\n${criticalInfo.join('\
       return `Données biométriques: Poids ${patient.biometrie.poids} kilogrammes, Taille ${patient.biometrie.taille} centimètres, I.M.C. ${patient.biometrie.imc}`;
     }
     
-    return `Je peux vous fournir des informations sur les allergies, les traitements, les antécédents médicaux, les contacts d'urgence, les diagnostics, ou les données biométriques. Vous pouvez me poser vos questions par écrit ou utiliser le microphone pour une interaction vocale. Que souhaitez-vous savoir spécifiquement ?`;
+    return `Je peux vous fournir des informations sur les allergies, les traitements, les antécédents médicaux, les contacts d'urgence, les diagnostics, ou les données biométriques. Vous pouvez me poser vos questions par écrit ou utiliser le microphone pour une interaction vocale avec reconnaissance automatique. Que souhaitez-vous savoir spécifiquement ?`;
   };
 
   const openTavusInNewWindow = () => {
@@ -723,17 +876,34 @@ ${criticalInfo.length > 0 ? `**Informations critiques:**\n${criticalInfo.join('\
   };
 
   const getMicrophoneButtonColor = () => {
+    if (!speechRecognitionSupported) return 'bg-gray-500 hover:bg-gray-600';
     if (microphonePermission === 'denied') return 'bg-red-600 hover:bg-red-700';
-    if (isRecording) return 'bg-red-600 hover:bg-red-700 animate-pulse';
-    if (isMicrophoneActive) return 'bg-green-600 hover:bg-green-700';
+    if (isSpeechRecognitionActive || isListening) return 'bg-red-600 hover:bg-red-700 animate-pulse';
     if (!isAudioEnabled) return 'bg-red-600 hover:bg-red-700';
     return 'bg-gray-700 hover:bg-gray-600';
   };
 
   const getMicrophoneIcon = () => {
-    if (microphonePermission === 'denied' || !isAudioEnabled) return <MicOff className="w-5 h-5 text-white" />;
-    if (isRecording) return <Square className="w-5 h-5 text-white" />;
+    if (!speechRecognitionSupported || microphonePermission === 'denied' || !isAudioEnabled) {
+      return <MicOff className="w-5 h-5 text-white" />;
+    }
+    if (isSpeechRecognitionActive || isListening) {
+      return <Square className="w-5 h-5 text-white" />;
+    }
     return <Mic className="w-5 h-5 text-white" />;
+  };
+
+  const getMicrophoneTooltip = () => {
+    if (!speechRecognitionSupported) {
+      return 'Reconnaissance vocale non supportée - Utilisez Chrome, Edge ou Safari';
+    }
+    if (microphonePermission === 'denied') {
+      return 'Microphone refusé - Autorisez dans les paramètres';
+    }
+    if (isSpeechRecognitionActive || isListening) {
+      return 'Arrêter la reconnaissance vocale';
+    }
+    return 'Commencer la reconnaissance vocale';
   };
 
   if (!isVisible) return null;
@@ -765,11 +935,19 @@ ${criticalInfo.length > 0 ? `**Informations critiques:**\n${criticalInfo.join('\
                 ) : (
                   <AlertCircle className="w-4 h-4 text-orange-500" />
                 )}
-                {/* Microphone Status */}
-                {microphonePermission === 'granted' && (
+                {/* Speech Recognition Status */}
+                {speechRecognitionSupported && microphonePermission === 'granted' && (
                   <div className="flex items-center gap-1">
                     <MicIcon className="w-3 h-3 text-green-500" />
-                    <span className="text-xs text-green-600">Micro OK</span>
+                    <span className="text-xs text-green-600">
+                      {isListening ? 'Écoute...' : 'Vocal OK'}
+                    </span>
+                  </div>
+                )}
+                {!speechRecognitionSupported && (
+                  <div className="flex items-center gap-1">
+                    <MicOff className="w-3 h-3 text-red-500" />
+                    <span className="text-xs text-red-600">Vocal non supporté</span>
                   </div>
                 )}
               </div>
@@ -849,8 +1027,8 @@ ${criticalInfo.length > 0 ? `**Informations critiques:**\n${criticalInfo.join('\
                   <div className="text-center text-white">
                     <div className={`w-32 h-32 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 relative ${isPlaying ? 'animate-pulse' : ''}`}>
                       <Bot className="w-16 h-16 text-white" />
-                      {/* Audio level indicator */}
-                      {isMicrophoneActive && audioLevel > 0 && (
+                      {/* Audio level indicator for speech recognition */}
+                      {(isSpeechRecognitionActive || isListening) && audioLevel > 0 && (
                         <div 
                           className="absolute inset-0 rounded-full border-4 border-green-400 animate-ping"
                           style={{ 
@@ -859,33 +1037,64 @@ ${criticalInfo.length > 0 ? `**Informations critiques:**\n${criticalInfo.join('\
                           }}
                         />
                       )}
+                      {/* Listening indicator */}
+                      {isListening && (
+                        <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+                          <div className="flex space-x-1">
+                            <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce"></div>
+                            <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                            <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <h3 className="text-xl font-semibold mb-2">Dr. IA Assistant</h3>
                     <p className="text-blue-200 mb-2">
                       Agent médical virtuel {session?.isDemoMode ? 'en mode démonstration' : 'Tavus'}
                     </p>
                     
-                    {/* Microphone Status Display */}
+                    {/* Speech Recognition Status Display */}
                     <div className="mb-4">
-                      {microphonePermission === 'granted' ? (
-                        <div className="flex items-center justify-center gap-2 text-green-300">
-                          <CheckCircle className="w-4 h-4" />
-                          <span className="text-sm">
-                            {isRecording ? 'Enregistrement en cours...' : 'Microphone prêt'}
-                          </span>
-                        </div>
-                      ) : microphonePermission === 'denied' ? (
-                        <div className="flex items-center justify-center gap-2 text-red-300">
-                          <AlertCircle className="w-4 h-4" />
-                          <span className="text-sm">Microphone refusé</span>
-                        </div>
+                      {speechRecognitionSupported ? (
+                        microphonePermission === 'granted' ? (
+                          <div className="flex items-center justify-center gap-2 text-green-300">
+                            <CheckCircle className="w-4 h-4" />
+                            <span className="text-sm">
+                              {isListening ? 'Reconnaissance vocale active...' : 
+                               isSpeechRecognitionActive ? 'Démarrage de la reconnaissance...' : 
+                               'Reconnaissance vocale prête'}
+                            </span>
+                          </div>
+                        ) : microphonePermission === 'denied' ? (
+                          <div className="flex items-center justify-center gap-2 text-red-300">
+                            <AlertCircle className="w-4 h-4" />
+                            <span className="text-sm">Microphone refusé</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-2 text-yellow-300">
+                            <AlertCircle className="w-4 h-4" />
+                            <span className="text-sm">Cliquez sur le micro pour activer</span>
+                          </div>
+                        )
                       ) : (
-                        <div className="flex items-center justify-center gap-2 text-yellow-300">
+                        <div className="flex items-center justify-center gap-2 text-orange-300">
                           <AlertCircle className="w-4 h-4" />
-                          <span className="text-sm">Cliquez sur le micro pour activer</span>
+                          <span className="text-sm">Reconnaissance vocale non supportée</span>
                         </div>
                       )}
                     </div>
+
+                    {/* Current transcript display */}
+                    {(currentTranscript || finalTranscript) && (
+                      <div className="mb-4 p-3 bg-black bg-opacity-30 rounded-lg">
+                        <p className="text-sm text-gray-300 mb-1">Transcription en cours:</p>
+                        <p className="text-white">
+                          {finalTranscript}
+                          <span className="text-gray-400">{currentTranscript}</span>
+                          {isListening && <span className="animate-pulse">|</span>}
+                        </p>
+                      </div>
+                    )}
                     
                     {configStatus.isFullyConfigured && !session?.isDemoMode ? (
                       <div className="space-y-2">
@@ -912,7 +1121,10 @@ ${criticalInfo.length > 0 ? `**Informations critiques:**\n${criticalInfo.join('\
                     ) : (
                       <div className="flex items-center justify-center gap-2 text-orange-300">
                         <AlertCircle className="w-4 h-4" />
-                        <span className="text-sm">Mode démonstration avec reconnaissance vocale</span>
+                        <span className="text-sm">
+                          Mode démonstration avec reconnaissance vocale
+                          {speechRecognitionSupported ? ' activée' : ' non supportée'}
+                        </span>
                       </div>
                     )}
                     
@@ -962,21 +1174,15 @@ ${criticalInfo.length > 0 ? `**Informations critiques:**\n${criticalInfo.join('\
                       <Pause className="w-5 h-5 text-white" />
                     </button>
                   )}
-                  {/* Enhanced Microphone Button */}
+                  {/* Enhanced Speech Recognition Button */}
                   <button
                     onClick={toggleMicrophone}
                     className={`p-3 rounded-full transition-colors relative ${getMicrophoneButtonColor()}`}
-                    title={
-                      microphonePermission === 'denied' 
-                        ? 'Microphone refusé - Autorisez dans les paramètres'
-                        : isRecording 
-                        ? 'Arrêter l\'enregistrement'
-                        : 'Commencer l\'enregistrement vocal'
-                    }
+                    title={getMicrophoneTooltip()}
                   >
                     {getMicrophoneIcon()}
                     {/* Audio level indicator */}
-                    {isMicrophoneActive && audioLevel > 0 && (
+                    {(isSpeechRecognitionActive || isListening) && audioLevel > 0 && (
                       <div 
                         className="absolute inset-0 rounded-full border-2 border-green-400"
                         style={{ 
@@ -1001,7 +1207,8 @@ ${criticalInfo.length > 0 ? `**Informations critiques:**\n${criticalInfo.join('\
               </div>
               {!configStatus.isFullyConfigured || session?.isDemoMode ? (
                 <div className="mt-2 p-2 bg-orange-100 border border-orange-200 rounded text-xs text-orange-800">
-                  Mode démonstration - Synthèse vocale et reconnaissance vocale activées
+                  Mode démonstration - Synthèse vocale et reconnaissance vocale
+                  {speechRecognitionSupported ? ' activées' : ' (reconnaissance non supportée)'}
                 </div>
               ) : showExternalWindow ? (
                 <div className="mt-2 p-2 bg-purple-100 border border-purple-200 rounded text-xs text-purple-800">
@@ -1013,19 +1220,28 @@ ${criticalInfo.length > 0 ? `**Informations critiques:**\n${criticalInfo.join('\
                 </div>
               )}
               
-              {/* Microphone Status in Chat Header */}
+              {/* Speech Recognition Status in Chat Header */}
               <div className="mt-2 flex items-center gap-2">
-                {microphonePermission === 'granted' ? (
-                  <div className="flex items-center gap-1 text-green-600">
-                    <MicIcon className="w-3 h-3" />
-                    <span className="text-xs">
-                      {isRecording ? 'Enregistrement...' : 'Micro prêt'}
-                    </span>
-                  </div>
+                {speechRecognitionSupported ? (
+                  microphonePermission === 'granted' ? (
+                    <div className="flex items-center gap-1 text-green-600">
+                      <MicIcon className="w-3 h-3" />
+                      <span className="text-xs">
+                        {isListening ? 'Écoute en cours...' : 
+                         isSpeechRecognitionActive ? 'Démarrage...' : 
+                         'Reconnaissance vocale prête'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 text-orange-600">
+                      <MicOff className="w-3 h-3" />
+                      <span className="text-xs">Cliquez le micro pour activer</span>
+                    </div>
+                  )
                 ) : (
-                  <div className="flex items-center gap-1 text-orange-600">
+                  <div className="flex items-center gap-1 text-red-600">
                     <MicOff className="w-3 h-3" />
-                    <span className="text-xs">Cliquez le micro pour activer</span>
+                    <span className="text-xs">Reconnaissance vocale non supportée</span>
                   </div>
                 )}
               </div>
@@ -1089,13 +1305,16 @@ ${criticalInfo.length > 0 ? `**Informations critiques:**\n${criticalInfo.join('\
                   onClick={toggleMicrophone}
                   disabled={!session || session.status === 'initializing'}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${getMicrophoneButtonColor()} text-white disabled:bg-gray-400`}
+                  title={getMicrophoneTooltip()}
                 >
                   {getMicrophoneIcon()}
                   <span>
-                    {microphonePermission === 'denied' 
+                    {!speechRecognitionSupported 
+                      ? 'Vocal non supporté'
+                      : microphonePermission === 'denied' 
                       ? 'Autoriser le micro'
-                      : isRecording 
-                      ? 'Arrêter l\'enregistrement'
+                      : (isSpeechRecognitionActive || isListening)
+                      ? 'Arrêter la reconnaissance'
                       : 'Parler à l\'IA'
                     }
                   </span>
