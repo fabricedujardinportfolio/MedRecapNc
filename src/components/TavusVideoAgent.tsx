@@ -21,6 +21,8 @@ declare global {
   interface Window {
     SpeechRecognition: any;
     webkitSpeechRecognition: any;
+    speechSynthesis: any;
+    SpeechSynthesisUtterance: any;
   }
 }
 
@@ -41,14 +43,22 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const [externalWindow, setExternalWindow] = useState<Window | null>(null);
   const [speechSupported, setSpeechSupported] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   
   const recognitionRef = useRef<any>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const speechSynthesisRef = useRef<any>(null);
 
-  // Vérifier le support de la reconnaissance vocale
+  // Vérifier le support de la reconnaissance vocale et synthèse vocale
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    setSpeechSupported(!!SpeechRecognition);
+    const speechSynthesis = window.speechSynthesis;
+    setSpeechSupported(!!SpeechRecognition && !!speechSynthesis);
+    
+    if (speechSynthesis) {
+      console.log('🔊 Synthèse vocale supportée');
+    }
   }, []);
 
   // Initialiser la session Tavus
@@ -64,6 +74,9 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
+      if (speechSynthesisRef.current) {
+        window.speechSynthesis.cancel();
+      }
       if (externalWindow && !externalWindow.closed) {
         externalWindow.close();
       }
@@ -77,6 +90,63 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     }
   }, [chatMessages]);
 
+  // Fonction de synthèse vocale
+  const speakText = (text: string) => {
+    if (!voiceEnabled || !window.speechSynthesis) {
+      console.log('🔇 Synthèse vocale désactivée ou non supportée');
+      return;
+    }
+
+    // Arrêter toute synthèse en cours
+    window.speechSynthesis.cancel();
+
+    const utterance = new window.SpeechSynthesisUtterance(text);
+    
+    // Configuration de la voix
+    utterance.lang = 'fr-FR';
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    utterance.volume = 0.8;
+
+    // Sélectionner une voix française si disponible
+    const voices = window.speechSynthesis.getVoices();
+    const frenchVoice = voices.find(voice => 
+      voice.lang.startsWith('fr') && voice.name.includes('Female')
+    ) || voices.find(voice => voice.lang.startsWith('fr'));
+    
+    if (frenchVoice) {
+      utterance.voice = frenchVoice;
+      console.log('🎙️ Voix sélectionnée:', frenchVoice.name);
+    }
+
+    utterance.onstart = () => {
+      console.log('🔊 Début de la synthèse vocale');
+      setIsSpeaking(true);
+      if (session) {
+        setSession(prev => prev ? { ...prev, status: 'speaking' } : null);
+      }
+    };
+
+    utterance.onend = () => {
+      console.log('🔇 Fin de la synthèse vocale');
+      setIsSpeaking(false);
+      if (session) {
+        setSession(prev => prev ? { ...prev, status: 'ready' } : null);
+      }
+    };
+
+    utterance.onerror = (event) => {
+      console.error('❌ Erreur synthèse vocale:', event.error);
+      setIsSpeaking(false);
+      if (session) {
+        setSession(prev => prev ? { ...prev, status: 'ready' } : null);
+      }
+    };
+
+    speechSynthesisRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  };
+
   const initializeSession = async () => {
     setIsLoading(true);
     setError(null);
@@ -85,14 +155,19 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       const newSession = await tavusService.initializePatientSession(patient);
       setSession(newSession);
       
-      // Ajouter un message de bienvenue
+      // Message de bienvenue avec présentation vocale
       const welcomeMessage: ChatMessage = {
         id: `msg-${Date.now()}`,
         type: 'ai',
-        content: `Bonjour ! Je suis votre assistant médical IA. Je vais vous présenter le dossier de ${patient.prenom} ${patient.nom}. Vous pouvez me poser des questions spécifiques sur ce patient.`,
+        content: `Bonjour ! Je suis Dr. IA Assistant, votre assistant médical virtuel. Je vais vous présenter le dossier de ${patient.prenom} ${patient.nom}. Vous pouvez me poser des questions spécifiques sur ce patient en utilisant le microphone ou en tapant votre message.`,
         timestamp: new Date()
       };
       setChatMessages([welcomeMessage]);
+      
+      // Présentation vocale automatique
+      setTimeout(() => {
+        speakText(welcomeMessage.content);
+      }, 1000);
       
     } catch (err) {
       console.error('Erreur lors de l\'initialisation:', err);
@@ -106,6 +181,12 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     if (!speechSupported) {
       setSpeechError('La reconnaissance vocale n\'est pas supportée par votre navigateur');
       return;
+    }
+
+    // Arrêter la synthèse vocale si en cours
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -122,6 +203,9 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       setSpeechError(null);
       setTranscript('');
       setInterimTranscript('');
+      if (session) {
+        setSession(prev => prev ? { ...prev, status: 'listening' } : null);
+      }
     };
 
     recognition.onresult = (event: any) => {
@@ -169,6 +253,9 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       
       setSpeechError(errorMessage);
       setIsListening(false);
+      if (session) {
+        setSession(prev => prev ? { ...prev, status: 'ready' } : null);
+      }
     };
 
     recognition.onend = () => {
@@ -176,7 +263,11 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       setIsListening(false);
       setInterimTranscript('');
       
-      // **CORRECTION CRITIQUE** : Envoyer automatiquement le texte transcrit à l'IA
+      if (session) {
+        setSession(prev => prev ? { ...prev, status: 'ready' } : null);
+      }
+      
+      // **ENVOI AUTOMATIQUE** : Envoyer automatiquement le texte transcrit à l'IA
       if (transcript.trim()) {
         console.log('📤 Envoi automatique du texte transcrit à l\'IA:', transcript.trim());
         handleSendMessage(transcript.trim());
@@ -229,6 +320,11 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
           timestamp: new Date()
         };
         setChatMessages(prev => [...prev, aiMessage]);
+        
+        // **SYNTHÈSE VOCALE AUTOMATIQUE** de la réponse IA
+        setTimeout(() => {
+          speakText(aiResponse);
+        }, 500);
       }, 1500);
 
     } catch (error) {
@@ -286,6 +382,15 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     return `Concernant ${patient.prenom} ${patient.nom}, je peux vous fournir des informations sur ses allergies, traitements, diagnostics, antécédents médicaux, ou son statut actuel. Que souhaitez-vous savoir précisément ?`;
   };
 
+  const toggleVoice = () => {
+    setVoiceEnabled(!voiceEnabled);
+    if (!voiceEnabled) {
+      // Si on réactive la voix, arrêter toute synthèse en cours
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  };
+
   const openExternalWindow = () => {
     if (session?.videoUrl && session.videoUrl !== '#demo-mode') {
       const newWindow = window.open(
@@ -304,6 +409,9 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
     if (externalWindow && !externalWindow.closed) {
       externalWindow.close();
     }
@@ -311,6 +419,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     setChatMessages([]);
     setTranscript('');
     setInterimTranscript('');
+    setIsSpeaking(false);
     onClose();
   };
 
@@ -328,7 +437,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
                 <Bot className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Assistant Médical IA</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Dr. IA Assistant</h3>
                 <p className="text-sm text-gray-600">
                   Patient: {patient.prenom} {patient.nom}
                 </p>
@@ -345,6 +454,17 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
                   Fenêtre externe active
                 </span>
               )}
+              <button
+                onClick={toggleVoice}
+                className={`p-2 rounded-lg transition-colors ${
+                  voiceEnabled 
+                    ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+                    : 'bg-red-100 text-red-600 hover:bg-red-200'
+                }`}
+                title={voiceEnabled ? 'Désactiver la voix' : 'Activer la voix'}
+              >
+                {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -371,26 +491,30 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
             ) : session ? (
               <div className="text-center w-full">
                 {/* Avatar simulé */}
-                <div className="w-48 h-48 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl">
-                  <Bot className="w-24 h-24 text-white" />
+                <div className={`w-48 h-48 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl transition-all duration-300 ${
+                  isSpeaking ? 'scale-110 shadow-purple-300' : ''
+                }`}>
+                  <Bot className={`w-24 h-24 text-white transition-all duration-300 ${
+                    isSpeaking ? 'animate-pulse' : ''
+                  }`} />
                 </div>
                 
                 {/* Status */}
                 <div className="mb-4">
                   <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
                     session.status === 'ready' ? 'bg-green-100 text-green-800' :
-                    session.status === 'speaking' ? 'bg-blue-100 text-blue-800' :
+                    session.status === 'speaking' || isSpeaking ? 'bg-blue-100 text-blue-800' :
                     session.status === 'listening' ? 'bg-orange-100 text-orange-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
                     <div className={`w-2 h-2 rounded-full ${
                       session.status === 'ready' ? 'bg-green-500' :
-                      session.status === 'speaking' ? 'bg-blue-500 animate-pulse' :
+                      session.status === 'speaking' || isSpeaking ? 'bg-blue-500 animate-pulse' :
                       session.status === 'listening' ? 'bg-orange-500 animate-pulse' :
                       'bg-gray-500'
                     }`}></div>
-                    {session.status === 'ready' && 'Prêt'}
-                    {session.status === 'speaking' && 'En train de parler'}
+                    {session.status === 'ready' && !isSpeaking && 'Prêt'}
+                    {(session.status === 'speaking' || isSpeaking) && 'En train de parler'}
                     {session.status === 'listening' && 'À l\'écoute'}
                     {session.status === 'initializing' && 'Initialisation'}
                     {session.status === 'ended' && 'Session terminée'}
@@ -432,7 +556,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
                   {speechSupported ? (
                     <button
                       onClick={isListening ? stopListening : startListening}
-                      disabled={session.status === 'ended'}
+                      disabled={session.status === 'ended' || isSpeaking}
                       className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
                         isListening
                           ? 'bg-red-600 hover:bg-red-700 text-white'
