@@ -12,13 +12,36 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
   const [showNotifications, setShowNotifications] = useState(false);
-  const { stats } = useNotifications(); // ✅ Utilise le hook pour obtenir les stats réactives
+  const { stats } = useNotifications();
   const { t } = useLanguage();
 
   // Debug: Log stats changes in Header
   useEffect(() => {
     console.log('🎯 Header - Stats reçues:', stats);
+    console.log('🔢 Badge devrait afficher:', stats.unread);
   }, [stats]);
+
+  // Fonction pour générer le contenu du tooltip
+  const getTooltipContent = () => {
+    if (stats.unread === 0) {
+      return t('header.notifications.tooltip.none');
+    }
+    
+    const unreadText = stats.unread === 1 
+      ? t('header.notifications.tooltip.unread') 
+      : t('header.notifications.tooltip.unread.plural');
+    
+    let content = `${stats.unread} ${unreadText}`;
+    
+    if (stats.critical > 0) {
+      const criticalText = stats.critical === 1 
+        ? t('header.notifications.tooltip.critical') 
+        : t('header.notifications.tooltip.critical.plural');
+      content += ` • ${stats.critical} ${criticalText}`;
+    }
+    
+    return content;
+  };
 
   return (
     <>
@@ -38,43 +61,73 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
 
             {/* User Info and Actions */}
             <div className="flex items-center gap-4">
-              {/* Notifications */}
-              <button 
-                onClick={() => setShowNotifications(true)}
-                className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors group"
-              >
-                <Bell className="w-5 h-5" />
-                {stats.unread > 0 && (
-                  <>
-                    <span 
-                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium z-10"
-                      key={`badge-${stats.unread}`} // Force re-render when count changes
-                    >
-                      {stats.unread > 99 ? '99+' : stats.unread}
-                    </span>
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full animate-ping"></span>
-                  </>
-                )}
-                {stats.critical > 0 && (
-                  <span className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></span>
-                )}
-                
-                {/* Tooltip */}
-                <div className="absolute right-0 top-full mt-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                  {stats.unread > 0 ? (
+              {/* Notifications Button - Complètement refait */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowNotifications(true)}
+                  className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg"
+                  aria-label={`Notifications: ${getTooltipContent()}`}
+                >
+                  {/* Icône Bell */}
+                  <Bell className="w-5 h-5" />
+                  
+                  {/* Badge de notification - Conditionnel et réactif */}
+                  {stats.unread > 0 && (
                     <>
-                      {stats.unread} {stats.unread === 1 ? t('header.notifications.tooltip.unread') : t('header.notifications.tooltip.unread.plural')}
-                      {stats.critical > 0 && (
-                        <span className="block text-red-300">
-                          {stats.critical} {stats.critical === 1 ? t('header.notifications.tooltip.critical') : t('header.notifications.tooltip.critical.plural')}
-                        </span>
-                      )}
+                      {/* Badge principal avec le nombre */}
+                      <span 
+                        className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium z-10 px-1"
+                        key={`notification-badge-${stats.unread}-${Date.now()}`} // Force re-render
+                      >
+                        {stats.unread > 99 ? '99+' : stats.unread}
+                      </span>
+                      
+                      {/* Animation ping pour attirer l'attention */}
+                      <span 
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full animate-ping"
+                        key={`notification-ping-${stats.unread}`}
+                      ></span>
                     </>
-                  ) : (
-                    t('header.notifications.tooltip.none')
                   )}
-                </div>
-              </button>
+                  
+                  {/* Indicateur critique - Séparé du badge principal */}
+                  {stats.critical > 0 && (
+                    <span 
+                      className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"
+                      key={`critical-indicator-${stats.critical}`}
+                      title={`${stats.critical} notification(s) critique(s)`}
+                    ></span>
+                  )}
+                  
+                  {/* Tooltip amélioré */}
+                  <div className="absolute right-0 top-full mt-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-lg">
+                    <div className="text-center">
+                      {stats.unread === 0 ? (
+                        <span>{t('header.notifications.tooltip.none')}</span>
+                      ) : (
+                        <>
+                          <div className="font-medium">
+                            {stats.unread} {stats.unread === 1 ? t('header.notifications.tooltip.unread') : t('header.notifications.tooltip.unread.plural')}
+                          </div>
+                          {stats.critical > 0 && (
+                            <div className="text-red-300 text-xs mt-1">
+                              {stats.critical} {stats.critical === 1 ? t('header.notifications.tooltip.critical') : t('header.notifications.tooltip.critical.plural')}
+                            </div>
+                          )}
+                          {stats.actionRequired > 0 && (
+                            <div className="text-orange-300 text-xs mt-1">
+                              {stats.actionRequired} action(s) requise(s)
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Flèche du tooltip */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900"></div>
+                  </div>
+                </button>
+              </div>
 
               {/* User Info */}
               <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50">
