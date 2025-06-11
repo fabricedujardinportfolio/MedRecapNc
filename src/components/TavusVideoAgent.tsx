@@ -37,7 +37,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
+  const [finalTranscript, setFinalTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const [externalWindow, setExternalWindow] = useState<Window | null>(null);
@@ -49,6 +49,8 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const recognitionRef = useRef<any>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const speechSynthesisRef = useRef<any>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isProcessingRef = useRef(false);
 
   // Vérifier le support de la reconnaissance vocale et synthèse vocale
   useEffect(() => {
@@ -79,6 +81,9 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       }
       if (externalWindow && !externalWindow.closed) {
         externalWindow.close();
+      }
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
       }
     };
   }, [externalWindow]);
@@ -177,6 +182,59 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     }
   };
 
+  const processVoiceInput = async (transcript: string) => {
+    if (isProcessingRef.current || !transcript.trim()) {
+      console.log('🚫 Traitement en cours ou transcript vide, ignoré');
+      return;
+    }
+
+    isProcessingRef.current = true;
+    console.log('🎯 Traitement du transcript:', transcript);
+
+    try {
+      // Ajouter le message utilisateur au chat
+      const userMessage: ChatMessage = {
+        id: `msg-${Date.now()}-user`,
+        type: 'user',
+        content: transcript.trim(),
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, userMessage]);
+
+      // Envoyer le message au service Tavus
+      await tavusService.sendMessage(transcript.trim());
+      
+      // Simuler une réponse de l'IA
+      setTimeout(() => {
+        const aiResponse = generateAIResponse(transcript.trim(), patient);
+        const aiMessage: ChatMessage = {
+          id: `msg-${Date.now()}-ai`,
+          type: 'ai',
+          content: aiResponse,
+          timestamp: new Date()
+        };
+        setChatMessages(prev => [...prev, aiMessage]);
+        
+        // Synthèse vocale automatique de la réponse IA
+        setTimeout(() => {
+          speakText(aiResponse);
+        }, 500);
+      }, 1500);
+
+    } catch (error) {
+      console.error('❌ Erreur lors du traitement vocal:', error);
+      const errorMessage: ChatMessage = {
+        id: `msg-${Date.now()}-error`,
+        type: 'ai',
+        content: 'Désolé, je rencontre une difficulté technique. Pouvez-vous reformuler votre question ?',
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+    } finally {
+      isProcessingRef.current = false;
+    }
+  };
+
   const startListening = () => {
     if (!speechSupported) {
       setSpeechError('La reconnaissance vocale n\'est pas supportée par votre navigateur');
@@ -189,6 +247,12 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       setIsSpeaking(false);
     }
 
+    // Nettoyer les timers précédents
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     
@@ -197,36 +261,55 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     recognition.lang = 'fr-FR';
     recognition.maxAlternatives = 1;
 
+    let lastResultTime = Date.now();
+    let currentFinalTranscript = '';
+
     recognition.onstart = () => {
       console.log('🎤 Reconnaissance vocale démarrée');
       setIsListening(true);
       setSpeechError(null);
-      setTranscript('');
+      setFinalTranscript('');
       setInterimTranscript('');
+      isProcessingRef.current = false;
       if (session) {
         setSession(prev => prev ? { ...prev, status: 'listening' } : null);
       }
     };
 
     recognition.onresult = (event: any) => {
-      let finalTranscript = '';
       let interimText = '';
+      let finalText = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          finalTranscript += result[0].transcript;
+          finalText += result[0].transcript;
         } else {
           interimText += result[0].transcript;
         }
       }
 
-      console.log('📝 Transcription:', { finalTranscript, interimText });
-      
-      if (finalTranscript) {
-        setTranscript(prev => prev + finalTranscript);
+      if (finalText) {
+        currentFinalTranscript += finalText;
+        setFinalTranscript(currentFinalTranscript);
+        console.log('📝 Transcript final mis à jour:', currentFinalTranscript);
       }
+
       setInterimTranscript(interimText);
+      lastResultTime = Date.now();
+
+      // Réinitialiser le timer de silence
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
+
+      // Détecter la fin de parole (2 secondes de silence)
+      silenceTimerRef.current = setTimeout(() => {
+        if (currentFinalTranscript.trim() && !isProcessingRef.current) {
+          console.log('🔇 Silence détecté, arrêt automatique et envoi');
+          recognition.stop();
+        }
+      }, 2000);
     };
 
     recognition.onerror = (event: any) => {
@@ -267,11 +350,17 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
         setSession(prev => prev ? { ...prev, status: 'ready' } : null);
       }
       
-      // **ENVOI AUTOMATIQUE** : Envoyer automatiquement le texte transcrit à l'IA
-      if (transcript.trim()) {
-        console.log('📤 Envoi automatique du texte transcrit à l\'IA:', transcript.trim());
-        handleSendMessage(transcript.trim());
-        setTranscript(''); // Réinitialiser après envoi
+      // Nettoyer le timer
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      
+      // Traitement automatique du transcript final
+      if (currentFinalTranscript.trim() && !isProcessingRef.current) {
+        console.log('📤 Envoi automatique du transcript final:', currentFinalTranscript.trim());
+        processVoiceInput(currentFinalTranscript.trim());
+        setFinalTranscript(''); // Réinitialiser après traitement
       }
     };
 
@@ -281,8 +370,12 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
 
   const stopListening = () => {
     if (recognitionRef.current) {
-      console.log('⏹️ Arrêt de la reconnaissance vocale');
+      console.log('⏹️ Arrêt manuel de la reconnaissance vocale');
       recognitionRef.current.stop();
+    }
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
     }
   };
 
@@ -415,11 +508,15 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     if (externalWindow && !externalWindow.closed) {
       externalWindow.close();
     }
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+    }
     setSession(null);
     setChatMessages([]);
-    setTranscript('');
+    setFinalTranscript('');
     setInterimTranscript('');
     setIsSpeaking(false);
+    isProcessingRef.current = false;
     onClose();
   };
 
@@ -522,7 +619,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
                 </div>
 
                 {/* Transcription en temps réel */}
-                {(isListening || transcript || interimTranscript) && (
+                {(isListening || finalTranscript || interimTranscript) && (
                   <div className="bg-white rounded-lg p-4 shadow-lg border-2 border-purple-200 mb-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Mic className="w-4 h-4 text-purple-600" />
@@ -531,13 +628,13 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
                       </span>
                     </div>
                     <div className="text-left">
-                      {transcript && (
-                        <p className="text-gray-900 mb-1">{transcript}</p>
+                      {finalTranscript && (
+                        <p className="text-gray-900 mb-1">{finalTranscript}</p>
                       )}
                       {interimTranscript && (
                         <p className="text-gray-500 italic">{interimTranscript}</p>
                       )}
-                      {!transcript && !interimTranscript && isListening && (
+                      {!finalTranscript && !interimTranscript && isListening && (
                         <p className="text-gray-400 italic">Parlez maintenant...</p>
                       )}
                     </div>
