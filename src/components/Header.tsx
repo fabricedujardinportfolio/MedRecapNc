@@ -41,7 +41,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
                 <Bell className="w-5 h-5" />
                 {stats.unread > 0 && (
                   <>
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium z-10">
                       {stats.unread > 99 ? '99+' : stats.unread}
                     </span>
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full animate-ping"></span>

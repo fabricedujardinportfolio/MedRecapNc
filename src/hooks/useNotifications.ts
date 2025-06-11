@@ -61,23 +61,25 @@ export const useNotifications = () => {
     });
   }, [notifications, filters]);
 
-  // Calculate notification statistics - recalculated whenever notifications change
+  // Calculate notification statistics - ALWAYS based on ALL notifications, not filtered ones
   const stats: NotificationStats = useMemo(() => {
+    const allNotifications = notifications; // Use all notifications for stats
+    
     return {
-      total: notifications.length,
-      unread: notifications.filter(n => !n.isRead).length,
-      critical: notifications.filter(n => n.priority === 'critical').length,
-      actionRequired: notifications.filter(n => n.actionRequired).length,
-      byCategory: notifications.reduce((acc, n) => {
+      total: allNotifications.length,
+      unread: allNotifications.filter(n => !n.isRead).length,
+      critical: allNotifications.filter(n => n.priority === 'critical' && !n.isRead).length,
+      actionRequired: allNotifications.filter(n => n.actionRequired && !n.isRead).length,
+      byCategory: allNotifications.reduce((acc, n) => {
         acc[n.category] = (acc[n.category] || 0) + 1;
         return acc;
       }, {} as Record<string, number>),
-      byPriority: notifications.reduce((acc, n) => {
+      byPriority: allNotifications.reduce((acc, n) => {
         acc[n.priority] = (acc[n.priority] || 0) + 1;
         return acc;
       }, {} as Record<string, number>)
     };
-  }, [notifications]);
+  }, [notifications]); // Dependency on notifications ensures recalculation on every change
 
   // Mark notification as read
   const markAsRead = useCallback((notificationId: string) => {
@@ -122,7 +124,7 @@ export const useNotifications = () => {
   return {
     notifications: filteredNotifications,
     allNotifications: notifications,
-    stats,
+    stats, // These stats are now reactive to all changes
     filters,
     setFilters,
     isLoading,
