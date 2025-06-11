@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, LogOut, User, Bell } from 'lucide-react';
 import { AdminUser } from '../types/Patient';
 import { useNotifications } from '../hooks/useNotifications';
@@ -14,6 +14,11 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const { stats } = useNotifications(); // ✅ Utilise le hook pour obtenir les stats réactives
   const { t } = useLanguage();
+
+  // Debug: Log stats changes in Header
+  useEffect(() => {
+    console.log('🎯 Header - Stats reçues:', stats);
+  }, [stats]);
 
   return (
     <>
@@ -41,7 +46,10 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
                 <Bell className="w-5 h-5" />
                 {stats.unread > 0 && (
                   <>
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium z-10">
+                    <span 
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium z-10"
+                      key={`badge-${stats.unread}`} // Force re-render when count changes
+                    >
                       {stats.unread > 99 ? '99+' : stats.unread}
                     </span>
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full animate-ping"></span>

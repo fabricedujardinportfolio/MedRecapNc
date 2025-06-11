@@ -62,14 +62,27 @@ export const useNotifications = () => {
   }, [notifications, filters]);
 
   // Calculate notification statistics - ALWAYS based on ALL notifications, not filtered ones
+  // Force recalculation by using a dependency array that includes notifications
   const stats: NotificationStats = useMemo(() => {
+    console.log('🔄 Recalcul des stats notifications:', notifications.length, 'notifications totales');
+    
     const allNotifications = notifications; // Use all notifications for stats
+    const unreadCount = allNotifications.filter(n => !n.isRead).length;
+    const criticalCount = allNotifications.filter(n => n.priority === 'critical' && !n.isRead).length;
+    const actionRequiredCount = allNotifications.filter(n => n.actionRequired && !n.isRead).length;
+    
+    console.log('📊 Stats calculées:', {
+      total: allNotifications.length,
+      unread: unreadCount,
+      critical: criticalCount,
+      actionRequired: actionRequiredCount
+    });
     
     return {
       total: allNotifications.length,
-      unread: allNotifications.filter(n => !n.isRead).length,
-      critical: allNotifications.filter(n => n.priority === 'critical' && !n.isRead).length,
-      actionRequired: allNotifications.filter(n => n.actionRequired && !n.isRead).length,
+      unread: unreadCount,
+      critical: criticalCount,
+      actionRequired: actionRequiredCount,
       byCategory: allNotifications.reduce((acc, n) => {
         acc[n.category] = (acc[n.category] || 0) + 1;
         return acc;
@@ -83,31 +96,41 @@ export const useNotifications = () => {
 
   // Mark notification as read
   const markAsRead = useCallback((notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
+    console.log('✅ Marquage comme lu:', notificationId);
+    setNotifications(prev => {
+      const updated = prev.map(notification => 
         notification.id === notificationId 
           ? { ...notification, isRead: true }
           : notification
-      )
-    );
+      );
+      console.log('📝 Notifications après marquage:', updated.filter(n => !n.isRead).length, 'non lues');
+      return updated;
+    });
   }, []);
 
   // Mark all notifications as read
   const markAllAsRead = useCallback(() => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, isRead: true }))
-    );
+    console.log('✅ Marquage de toutes les notifications comme lues');
+    setNotifications(prev => {
+      const updated = prev.map(notification => ({ ...notification, isRead: true }));
+      console.log('📝 Toutes les notifications marquées comme lues');
+      return updated;
+    });
   }, []);
 
   // Delete notification
   const deleteNotification = useCallback((notificationId: string) => {
-    setNotifications(prev => 
-      prev.filter(notification => notification.id !== notificationId)
-    );
+    console.log('🗑️ Suppression de la notification:', notificationId);
+    setNotifications(prev => {
+      const updated = prev.filter(notification => notification.id !== notificationId);
+      console.log('📝 Notifications après suppression:', updated.length, 'restantes,', updated.filter(n => !n.isRead).length, 'non lues');
+      return updated;
+    });
   }, []);
 
   // Clear all notifications
   const clearAllNotifications = useCallback(() => {
+    console.log('🗑️ Suppression de toutes les notifications');
     setNotifications([]);
   }, []);
 
@@ -118,8 +141,18 @@ export const useNotifications = () => {
       id: `notif-${Date.now()}`,
       timestamp: new Date().toISOString()
     };
-    setNotifications(prev => [newNotification, ...prev]);
+    console.log('➕ Ajout d\'une nouvelle notification:', newNotification.id);
+    setNotifications(prev => {
+      const updated = [newNotification, ...prev];
+      console.log('📝 Notifications après ajout:', updated.length, 'totales,', updated.filter(n => !n.isRead).length, 'non lues');
+      return updated;
+    });
   }, []);
+
+  // Debug: Log stats changes
+  useEffect(() => {
+    console.log('🎯 Stats mises à jour dans le hook:', stats);
+  }, [stats]);
 
   return {
     notifications: filteredNotifications,
