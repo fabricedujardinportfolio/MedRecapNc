@@ -4,6 +4,7 @@ import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { Footer } from './components/Footer';
 import { LanguageProvider } from './components/LanguageProvider';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
@@ -24,17 +25,19 @@ function App() {
 
   return (
     <LanguageProvider>
-      {!isAuthenticated || !user ? (
-        <LoginForm onLogin={login} isLoading={isLoading} />
-      ) : (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-          <Header user={user} onLogout={logout} />
-          <main className="flex-1">
-            <Dashboard />
-          </main>
-          <Footer />
-        </div>
-      )}
+      <NotificationProvider>
+        {!isAuthenticated || !user ? (
+          <LoginForm onLogin={login} isLoading={isLoading} />
+        ) : (
+          <div className="min-h-screen bg-gray-50 flex flex-col">
+            <Header user={user} onLogout={logout} />
+            <main className="flex-1">
+              <Dashboard />
+            </main>
+            <Footer />
+          </div>
+        )}
+      </NotificationProvider>
     </LanguageProvider>
   );
 }

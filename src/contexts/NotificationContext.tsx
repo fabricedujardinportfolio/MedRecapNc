@@ -1,8 +1,28 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import { Notification as AppNotification, NotificationFilters, NotificationStats } from '../types/Notification';
 import { mockNotifications, generateRealtimeNotification } from '../data/mockNotifications';
 
-export const useNotifications = () => {
+interface NotificationContextType {
+  notifications: AppNotification[];
+  allNotifications: AppNotification[];
+  stats: NotificationStats;
+  filters: NotificationFilters;
+  setFilters: (filters: NotificationFilters) => void;
+  isLoading: boolean;
+  markAsRead: (notificationId: string) => void;
+  markAllAsRead: () => void;
+  deleteNotification: (notificationId: string) => void;
+  clearAllNotifications: () => void;
+  addNotification: (notification: Omit<AppNotification, 'id' | 'timestamp'>) => void;
+}
+
+const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+
+interface NotificationProviderProps {
+  children: ReactNode;
+}
+
+export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
   const [notifications, setNotifications] = useState<AppNotification[]>(mockNotifications);
   const [filters, setFilters] = useState<NotificationFilters>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -61,24 +81,16 @@ export const useNotifications = () => {
     });
   }, [notifications, filters]);
 
-  // Calculate notification statistics - ALWAYS based on ALL notifications, not filtered ones
-  // Force recalculation by using a dependency array that includes notifications
+  // Calculate notification statistics - ALWAYS based on ALL notifications
   const stats: NotificationStats = useMemo(() => {
-    console.log('🔄 Recalcul des stats notifications:', notifications.length, 'notifications totales');
+    console.log('🔄 [Context] Recalcul des stats notifications:', notifications.length, 'notifications totales');
     
-    const allNotifications = notifications; // Use all notifications for stats
+    const allNotifications = notifications;
     const unreadCount = allNotifications.filter(n => !n.isRead).length;
     const criticalCount = allNotifications.filter(n => n.priority === 'critical' && !n.isRead).length;
     const actionRequiredCount = allNotifications.filter(n => n.actionRequired && !n.isRead).length;
     
-    console.log('📊 Stats calculées:', {
-      total: allNotifications.length,
-      unread: unreadCount,
-      critical: criticalCount,
-      actionRequired: actionRequiredCount
-    });
-    
-    return {
+    const newStats = {
       total: allNotifications.length,
       unread: unreadCount,
       critical: criticalCount,
@@ -92,72 +104,75 @@ export const useNotifications = () => {
         return acc;
       }, {} as Record<string, number>)
     };
-  }, [notifications]); // Dependency on notifications ensures recalculation on every change
+    
+    console.log('📊 [Context] Stats calculées:', newStats);
+    return newStats;
+  }, [notifications]);
 
   // Mark notification as read
   const markAsRead = useCallback((notificationId: string) => {
-    console.log('✅ Marquage comme lu:', notificationId);
+    console.log('✅ [Context] Marquage comme lu:', notificationId);
     setNotifications(prev => {
       const updated = prev.map(notification => 
         notification.id === notificationId 
           ? { ...notification, isRead: true }
           : notification
       );
-      console.log('📝 Notifications après marquage:', updated.filter(n => !n.isRead).length, 'non lues');
+      console.log('📝 [Context] Notifications après marquage:', updated.filter(n => !n.isRead).length, 'non lues');
       return updated;
     });
   }, []);
 
   // Mark all notifications as read
   const markAllAsRead = useCallback(() => {
-    console.log('✅ Marquage de toutes les notifications comme lues');
+    console.log('✅ [Context] Marquage de toutes les notifications comme lues');
     setNotifications(prev => {
       const updated = prev.map(notification => ({ ...notification, isRead: true }));
-      console.log('📝 Toutes les notifications marquées comme lues');
+      console.log('📝 [Context] Toutes les notifications marquées comme lues');
       return updated;
     });
   }, []);
 
   // Delete notification
   const deleteNotification = useCallback((notificationId: string) => {
-    console.log('🗑️ Suppression de la notification:', notificationId);
+    console.log('🗑️ [Context] Suppression de la notification:', notificationId);
     setNotifications(prev => {
       const updated = prev.filter(notification => notification.id !== notificationId);
-      console.log('📝 Notifications après suppression:', updated.length, 'restantes,', updated.filter(n => !n.isRead).length, 'non lues');
+      console.log('📝 [Context] Notifications après suppression:', updated.length, 'restantes,', updated.filter(n => !n.isRead).length, 'non lues');
       return updated;
     });
   }, []);
 
   // Clear all notifications
   const clearAllNotifications = useCallback(() => {
-    console.log('🗑️ Suppression de toutes les notifications');
+    console.log('🗑️ [Context] Suppression de toutes les notifications');
     setNotifications([]);
   }, []);
 
-  // Add new notification (for testing or manual creation)
+  // Add new notification
   const addNotification = useCallback((notification: Omit<AppNotification, 'id' | 'timestamp'>) => {
     const newNotification: AppNotification = {
       ...notification,
       id: `notif-${Date.now()}`,
       timestamp: new Date().toISOString()
     };
-    console.log('➕ Ajout d\'une nouvelle notification:', newNotification.id);
+    console.log('➕ [Context] Ajout d\'une nouvelle notification:', newNotification.id);
     setNotifications(prev => {
       const updated = [newNotification, ...prev];
-      console.log('📝 Notifications après ajout:', updated.length, 'totales,', updated.filter(n => !n.isRead).length, 'non lues');
+      console.log('📝 [Context] Notifications après ajout:', updated.length, 'totales,', updated.filter(n => !n.isRead).length, 'non lues');
       return updated;
     });
   }, []);
 
   // Debug: Log stats changes
   useEffect(() => {
-    console.log('🎯 Stats mises à jour dans le hook:', stats);
+    console.log('🎯 [Context] Stats mises à jour:', stats);
   }, [stats]);
 
-  return {
+  const value: NotificationContextType = {
     notifications: filteredNotifications,
     allNotifications: notifications,
-    stats, // These stats are now reactive to all changes
+    stats,
     filters,
     setFilters,
     isLoading,
@@ -167,4 +182,18 @@ export const useNotifications = () => {
     clearAllNotifications,
     addNotification
   };
+
+  return (
+    <NotificationContext.Provider value={value}>
+      {children}
+    </NotificationContext.Provider>
+  );
+};
+
+export const useNotifications = (): NotificationContextType => {
+  const context = useContext(NotificationContext);
+  if (!context) {
+    throw new Error('useNotifications must be used within a NotificationProvider');
+  }
+  return context;
 };

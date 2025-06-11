@@ -23,7 +23,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import { Notification as AppNotification, NotificationFilters } from '../types/Notification';
-import { useNotifications } from '../hooks/useNotifications';
+import { useNotifications } from '../contexts/NotificationContext';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 

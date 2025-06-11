@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, LogOut, User, Bell } from 'lucide-react';
 import { AdminUser } from '../types/Patient';
-import { useNotifications } from '../hooks/useNotifications';
+import { useNotifications } from '../contexts/NotificationContext';
 import { useLanguage } from '../hooks/useLanguage';
 import { NotificationPanel } from './NotificationPanel';
 
@@ -17,8 +17,8 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
 
   // Debug: Log stats changes in Header
   useEffect(() => {
-    console.log('🎯 Header - Stats reçues:', stats);
-    console.log('🔢 Badge devrait afficher:', stats.unread);
+    console.log('🎯 [Header] Stats reçues:', stats);
+    console.log('🔢 [Header] Badge devrait afficher:', stats.unread);
   }, [stats]);
 
   // Fonction pour générer le contenu du tooltip
@@ -61,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
 
             {/* User Info and Actions */}
             <div className="flex items-center gap-4">
-              {/* Notifications Button - Complètement refait */}
+              {/* Notifications Button - Complètement refait avec Context */}
               <div className="relative">
                 <button 
                   onClick={() => setShowNotifications(true)}
@@ -71,21 +71,21 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
                   {/* Icône Bell */}
                   <Bell className="w-5 h-5" />
                   
-                  {/* Badge de notification - Conditionnel et réactif */}
+                  {/* Badge de notification - Réactif au Context */}
                   {stats.unread > 0 && (
                     <>
-                      {/* Badge principal avec le nombre */}
+                      {/* Badge principal avec le nombre - Force re-render avec key */}
                       <span 
+                        key={`notification-badge-${stats.unread}-${stats.total}`}
                         className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium z-10 px-1"
-                        key={`notification-badge-${stats.unread}-${Date.now()}`} // Force re-render
                       >
                         {stats.unread > 99 ? '99+' : stats.unread}
                       </span>
                       
                       {/* Animation ping pour attirer l'attention */}
                       <span 
-                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full animate-ping"
                         key={`notification-ping-${stats.unread}`}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full animate-ping"
                       ></span>
                     </>
                   )}
@@ -93,8 +93,8 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
                   {/* Indicateur critique - Séparé du badge principal */}
                   {stats.critical > 0 && (
                     <span 
-                      className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"
                       key={`critical-indicator-${stats.critical}`}
+                      className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"
                       title={`${stats.critical} notification(s) critique(s)`}
                     ></span>
                   )}
