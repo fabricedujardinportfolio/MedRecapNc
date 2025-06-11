@@ -157,21 +157,44 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     setError(null);
     
     try {
+      console.log('🚀 Initialisation de la session avec données complètes du patient:', {
+        nom: patient.nom,
+        prenom: patient.prenom,
+        consultations: patient.consultations?.length || 0,
+        factures: patient.factures?.length || 0,
+        rendezVous: patient.rendezVous?.length || 0,
+        typePatient: patient.typePatient
+      });
+
       const newSession = await tavusService.initializePatientSession(patient);
       setSession(newSession);
       
-      // Message de bienvenue avec présentation vocale
+      // Message de bienvenue enrichi avec informations sur les capacités
       const welcomeMessage: ChatMessage = {
         id: `msg-${Date.now()}`,
         type: 'ai',
-        content: `Bonjour ! Je suis Dr. IA Assistant, votre assistant médical virtuel. Je vais vous présenter le dossier de ${patient.prenom} ${patient.nom}. Vous pouvez me poser des questions spécifiques sur ce patient en utilisant le microphone ou en tapant votre message.`,
+        content: `Bonjour ! Je suis Dr. IA Assistant, votre assistant médical virtuel spécialisé. J'ai accès à l'ensemble du dossier de ${patient.prenom} ${patient.nom}, incluant :
+
+📋 Historique médical complet
+🩺 ${patient.consultations?.length || 0} consultation(s) enregistrée(s)
+💰 ${patient.factures?.length || 0} facture(s) et situation financière
+📅 ${patient.rendezVous?.length || 0} rendez-vous programmé(s)
+
+Je peux répondre à vos questions sur tous ces aspects. Vous pouvez me demander :
+- Un résumé complet du dossier
+- Des détails sur les consultations récentes
+- La situation financière et les factures
+- Les rendez-vous passés et à venir
+- Les traitements et recommandations
+
+Que souhaitez-vous savoir ?`,
         timestamp: new Date()
       };
       setChatMessages([welcomeMessage]);
       
       // Présentation vocale automatique
       setTimeout(() => {
-        speakText(welcomeMessage.content);
+        speakText(`Bonjour ! Je suis Dr. IA Assistant. J'ai accès au dossier complet de ${patient.prenom} ${patient.nom}, incluant ses consultations, factures et rendez-vous. Que souhaitez-vous savoir ?`);
       }, 1000);
       
     } catch (err) {
@@ -189,7 +212,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     }
 
     isProcessingRef.current = true;
-    console.log('🎯 Traitement du transcript:', transcript);
+    console.log('🎯 Traitement du transcript avec contexte patient:', transcript);
 
     try {
       // Ajouter le message utilisateur au chat
@@ -204,9 +227,9 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       // Envoyer le message au service Tavus
       await tavusService.sendMessage(transcript.trim());
       
-      // Simuler une réponse de l'IA
+      // Générer une réponse contextuelle avec les données patient
       setTimeout(() => {
-        const aiResponse = generateAIResponse(transcript.trim(), patient);
+        const aiResponse = tavusService.generateContextualResponse(transcript.trim(), patient);
         const aiMessage: ChatMessage = {
           id: `msg-${Date.now()}-ai`,
           type: 'ai',
@@ -383,7 +406,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     const content = messageContent || inputMessage.trim();
     if (!content || !session) return;
 
-    console.log('💬 Envoi du message à l\'IA:', content);
+    console.log('💬 Envoi du message à l\'IA avec contexte patient:', content);
 
     // Ajouter le message utilisateur au chat
     const userMessage: ChatMessage = {
@@ -403,9 +426,9 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       // Envoyer le message au service Tavus
       await tavusService.sendMessage(content);
       
-      // Simuler une réponse de l'IA (en attendant l'intégration complète)
+      // Générer une réponse contextuelle avec toutes les données patient
       setTimeout(() => {
-        const aiResponse = generateAIResponse(content, patient);
+        const aiResponse = tavusService.generateContextualResponse(content, patient);
         const aiMessage: ChatMessage = {
           id: `msg-${Date.now()}-ai`,
           type: 'ai',
@@ -430,49 +453,6 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       };
       setChatMessages(prev => [...prev, errorMessage]);
     }
-  };
-
-  const generateAIResponse = (question: string, patient: Patient): string => {
-    const lowerQuestion = question.toLowerCase();
-    
-    if (lowerQuestion.includes('allergie')) {
-      if (patient.allergies.length > 0) {
-        return `${patient.prenom} ${patient.nom} présente les allergies suivantes : ${patient.allergies.join(', ')}. Il est important de vérifier toute prescription médicamenteuse en tenant compte de ces allergies.`;
-      } else {
-        return `${patient.prenom} ${patient.nom} ne présente aucune allergie connue dans son dossier médical.`;
-      }
-    }
-    
-    if (lowerQuestion.includes('traitement') || lowerQuestion.includes('médicament')) {
-      if (patient.traitements.length > 0) {
-        const traitements = patient.traitements.map(t => `${t.nom} ${t.dosage} (${t.frequence})`).join(', ');
-        return `Les traitements actuels de ${patient.prenom} ${patient.nom} sont : ${traitements}.`;
-      } else {
-        return `${patient.prenom} ${patient.nom} ne suit actuellement aucun traitement médicamenteux.`;
-      }
-    }
-    
-    if (lowerQuestion.includes('diagnostic')) {
-      return `Les diagnostics pour ${patient.prenom} ${patient.nom} sont : ${patient.diagnostics.join(', ')}.`;
-    }
-    
-    if (lowerQuestion.includes('antécédent')) {
-      const antecedents = patient.antecedents.personnels.length > 0 
-        ? patient.antecedents.personnels.join(', ')
-        : 'aucun antécédent notable';
-      return `Les antécédents médicaux de ${patient.prenom} ${patient.nom} incluent : ${antecedents}.`;
-    }
-    
-    if (lowerQuestion.includes('statut') || lowerQuestion.includes('état')) {
-      let response = `${patient.prenom} ${patient.nom} est actuellement ${patient.statut.toLowerCase()} dans le service ${patient.service}.`;
-      if (patient.alerte && patient.alerte.niveau !== 'verte') {
-        response += ` Attention : ${patient.alerte.message}`;
-      }
-      return response;
-    }
-    
-    // Réponse générale
-    return `Concernant ${patient.prenom} ${patient.nom}, je peux vous fournir des informations sur ses allergies, traitements, diagnostics, antécédents médicaux, ou son statut actuel. Que souhaitez-vous savoir précisément ?`;
   };
 
   const toggleVoice = () => {
@@ -538,6 +518,9 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
                 <p className="text-sm text-gray-600">
                   Patient: {patient.prenom} {patient.nom}
                 </p>
+                <p className="text-xs text-purple-600">
+                  Accès complet: {patient.consultations?.length || 0} consultations • {patient.factures?.length || 0} factures • {patient.rendezVous?.length || 0} RDV
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -571,6 +554,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
               <div className="text-center">
                 <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                 <p className="text-gray-600">Initialisation de l'assistant IA...</p>
+                <p className="text-sm text-purple-600 mt-2">Chargement des données patient complètes</p>
               </div>
             ) : error ? (
               <div className="text-center max-w-md">
@@ -704,7 +688,10 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div className="flex items-center gap-3">
               <MessageCircle className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Chat Médical</h3>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Chat Médical Avancé</h3>
+                <p className="text-sm text-gray-600">Accès complet aux données patient</p>
+              </div>
             </div>
             <button
               onClick={handleClose}
@@ -731,7 +718,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
                       : 'bg-gray-100 text-gray-900'
                   }`}
                 >
-                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-line">{message.content}</p>
                   <p className={`text-xs mt-2 ${
                     message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
                   }`}>
@@ -750,7 +737,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Posez une question sur le patient..."
+                placeholder="Posez une question sur le patient (consultations, factures, RDV...)..."
                 className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={!session || session.status === 'ended'}
               />
@@ -761,6 +748,9 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
               >
                 <Send className="w-5 h-5" />
               </button>
+            </div>
+            <div className="mt-2 text-xs text-gray-500">
+              💡 Exemples: "Résumé complet", "Dernière consultation", "Factures en attente", "Prochain rendez-vous"
             </div>
           </div>
         </div>
