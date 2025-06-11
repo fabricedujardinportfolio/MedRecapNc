@@ -77,6 +77,590 @@ export const PatientModal: React.FC<PatientModalProps> = ({
     }
   };
 
+  const handleExport = () => {
+    // Créer une nouvelle fenêtre pour l'impression
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    // Générer le contenu HTML optimisé pour l'impression
+    const printContent = generatePrintContent();
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Dossier Patient - ${patient.prenom} ${patient.nom}</title>
+        <style>
+          ${getPrintStyles()}
+        </style>
+      </head>
+      <body>
+        ${printContent}
+      </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    
+    // Attendre que le contenu soit chargé puis imprimer
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
+  };
+
+  const generatePrintContent = () => {
+    const consultationsHtml = patient.consultations && patient.consultations.length > 0 
+      ? patient.consultations.map(consultation => `
+          <div class="consultation-item">
+            <div class="consultation-header">
+              <strong>${consultation.motif}</strong>
+              <span class="date">${format(new Date(consultation.date), 'dd/MM/yyyy à HH:mm', { locale: fr })}</span>
+            </div>
+            <div class="consultation-details">
+              <p><strong>Médecin:</strong> ${consultation.medecinNom}</p>
+              <p><strong>Diagnostic:</strong> ${consultation.diagnostic}</p>
+              <p><strong>Traitement:</strong> ${consultation.traitement}</p>
+              <p><strong>Durée:</strong> ${consultation.duree} min | <strong>Tarif:</strong> ${consultation.tarif}€</p>
+              ${consultation.observations ? `<p><strong>Observations:</strong> ${consultation.observations}</p>` : ''}
+              ${consultation.ordonnance?.medicaments.length > 0 ? `
+                <div class="ordonnance">
+                  <strong>Médicaments prescrits:</strong>
+                  <ul>
+                    ${consultation.ordonnance.medicaments.map(med => 
+                      `<li>${med.nom} ${med.dosage} - ${med.instructions}</li>`
+                    ).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `).join('')
+      : '<p class="no-data">Aucune consultation enregistrée</p>';
+
+    const facturesHtml = patient.factures && patient.factures.length > 0
+      ? patient.factures.map(facture => `
+          <div class="facture-item">
+            <div class="facture-header">
+              <strong>Facture ${facture.numero}</strong>
+              <span class="status status-${facture.statut}">${getFactureStatusText(facture.statut)}</span>
+            </div>
+            <div class="facture-details">
+              <div class="facture-row">
+                <span>Date: ${format(new Date(facture.date), 'dd/MM/yyyy', { locale: fr })}</span>
+                <span>Échéance: ${format(new Date(facture.dateEcheance), 'dd/MM/yyyy', { locale: fr })}</span>
+              </div>
+              <div class="facture-row">
+                <span>Montant total: ${facture.montantTotal.toFixed(2)}€</span>
+                <span>Payé: ${facture.montantPaye.toFixed(2)}€</span>
+                <span>Reste: ${facture.montantRestant.toFixed(2)}€</span>
+              </div>
+              ${facture.remboursement ? `
+                <div class="remboursement">
+                  <strong>Remboursement:</strong>
+                  Sécurité Sociale: ${facture.remboursement.securiteSociale.toFixed(2)}€ |
+                  Mutuelle: ${facture.remboursement.mutuelle.toFixed(2)}€ |
+                  Reste à charge: ${facture.remboursement.restACharge.toFixed(2)}€
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `).join('')
+      : '<p class="no-data">Aucune facture enregistrée</p>';
+
+    const rdvHtml = patient.rendezVous && patient.rendezVous.length > 0
+      ? patient.rendezVous.map(rdv => `
+          <div class="rdv-item">
+            <div class="rdv-header">
+              <strong>${rdv.motif}</strong>
+              <span class="status status-${rdv.statut}">${rdv.statut}</span>
+            </div>
+            <div class="rdv-details">
+              <div class="rdv-row">
+                <span>Date: ${format(new Date(rdv.date), 'dd/MM/yyyy', { locale: fr })}</span>
+                <span>Heure: ${rdv.heureDebut} - ${rdv.heureFin}</span>
+              </div>
+              <div class="rdv-row">
+                <span>Type: ${rdv.type}</span>
+                <span>Médecin: ${rdv.medecinNom}</span>
+                <span>Salle: ${rdv.salle}</span>
+              </div>
+            </div>
+          </div>
+        `).join('')
+      : '<p class="no-data">Aucun rendez-vous programmé</p>';
+
+    return `
+      <div class="print-container">
+        <!-- En-tête du document -->
+        <div class="header">
+          <div class="header-left">
+            <h1>DOSSIER PATIENT</h1>
+            <h2>${patient.prenom} ${patient.nom}</h2>
+            <p>Dossier #${patient.numeroDossier}</p>
+          </div>
+          <div class="header-right">
+            <p>Date d'impression: ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr })}</p>
+            <p>Dernière mise à jour: ${format(new Date(patient.derniereMaj), 'dd/MM/yyyy à HH:mm', { locale: fr })}</p>
+          </div>
+        </div>
+
+        ${patient.alerte && patient.alerte.niveau !== 'verte' ? `
+          <div class="alert alert-${patient.alerte.niveau}">
+            <strong>⚠️ ALERTE ${patient.alerte.niveau.toUpperCase()}:</strong> ${patient.alerte.message}
+          </div>
+        ` : ''}
+
+        <!-- Informations personnelles -->
+        <section class="section">
+          <h3>INFORMATIONS PERSONNELLES</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <strong>Sexe:</strong> ${patient.sexe === 'M' ? 'Masculin' : 'Féminin'}
+            </div>
+            <div class="info-item">
+              <strong>Âge:</strong> ${patient.age} ans
+            </div>
+            <div class="info-item">
+              <strong>Date de naissance:</strong> ${format(new Date(patient.dateNaissance), 'dd/MM/yyyy', { locale: fr })}
+            </div>
+            <div class="info-item">
+              <strong>Lieu de naissance:</strong> ${patient.lieuNaissance}
+            </div>
+            <div class="info-item">
+              <strong>Nationalité:</strong> ${patient.nationalite}
+            </div>
+            <div class="info-item">
+              <strong>Situation familiale:</strong> ${patient.situationFamiliale}
+            </div>
+          </div>
+        </section>
+
+        <!-- Coordonnées -->
+        <section class="section">
+          <h3>COORDONNÉES</h3>
+          <div class="info-grid">
+            <div class="info-item full-width">
+              <strong>Adresse:</strong> ${patient.adresse.rue}, ${patient.adresse.codePostal} ${patient.adresse.ville}, ${patient.adresse.pays}
+            </div>
+            <div class="info-item">
+              <strong>Téléphone:</strong> ${patient.telephone.portable || patient.telephone.fixe}
+            </div>
+            ${patient.email ? `
+              <div class="info-item">
+                <strong>Email:</strong> ${patient.email}
+              </div>
+            ` : ''}
+            <div class="info-item full-width">
+              <strong>Contact d'urgence:</strong> ${patient.contactUrgence.nom} (${patient.contactUrgence.lien}) - ${patient.contactUrgence.telephone}
+            </div>
+          </div>
+        </section>
+
+        <!-- Informations médicales critiques -->
+        <section class="section medical-critical">
+          <h3>INFORMATIONS MÉDICALES CRITIQUES</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <strong>Groupe sanguin:</strong> <span class="highlight">${patient.groupeSanguin}</span>
+            </div>
+            <div class="info-item">
+              <strong>IMC:</strong> ${patient.biometrie.imc}
+            </div>
+            ${patient.allergies.length > 0 ? `
+              <div class="info-item full-width allergies">
+                <strong>⚠️ ALLERGIES:</strong> ${patient.allergies.join(', ')}
+              </div>
+            ` : ''}
+          </div>
+        </section>
+
+        <!-- Hospitalisation actuelle -->
+        <section class="section">
+          <h3>HOSPITALISATION ACTUELLE</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <strong>Service:</strong> ${patient.service}
+            </div>
+            <div class="info-item">
+              <strong>Statut:</strong> ${patient.statut}
+            </div>
+            <div class="info-item">
+              <strong>Mode d'admission:</strong> ${patient.modeAdmission}
+            </div>
+            <div class="info-item">
+              <strong>Date d'admission:</strong> ${format(new Date(patient.dateAdmission), 'dd/MM/yyyy', { locale: fr })}
+            </div>
+            <div class="info-item full-width">
+              <strong>Motif d'hospitalisation:</strong> ${patient.motifHospitalisation}
+            </div>
+            <div class="info-item">
+              <strong>Médecin référent:</strong> ${patient.medecinReferent}
+            </div>
+            <div class="info-item full-width">
+              <strong>Diagnostics:</strong> ${patient.diagnostics.join(', ')}
+            </div>
+          </div>
+        </section>
+
+        <!-- Traitements en cours -->
+        <section class="section">
+          <h3>TRAITEMENTS EN COURS</h3>
+          ${patient.traitements.length > 0 ? `
+            <div class="treatments">
+              ${patient.traitements.map(traitement => `
+                <div class="treatment-item">
+                  <strong>${traitement.nom}</strong> - ${traitement.dosage} (${traitement.frequence})
+                  <span class="treatment-date">Depuis ${format(new Date(traitement.dateDebut), 'MM/yyyy', { locale: fr })}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : '<p class="no-data">Aucun traitement en cours</p>'}
+        </section>
+
+        <!-- Antécédents médicaux -->
+        <section class="section">
+          <h3>ANTÉCÉDENTS MÉDICAUX</h3>
+          <div class="antecedents">
+            <div class="antecedent-group">
+              <h4>Antécédents personnels</h4>
+              ${patient.antecedents.personnels.length > 0 
+                ? `<ul>${patient.antecedents.personnels.map(a => `<li>${a}</li>`).join('')}</ul>`
+                : '<p class="no-data">Aucun antécédent personnel notable</p>'
+              }
+            </div>
+            <div class="antecedent-group">
+              <h4>Antécédents familiaux</h4>
+              ${patient.antecedents.familiaux.length > 0 
+                ? `<ul>${patient.antecedents.familiaux.map(a => `<li>${a}</li>`).join('')}</ul>`
+                : '<p class="no-data">Aucun antécédent familial notable</p>'
+              }
+            </div>
+          </div>
+        </section>
+
+        ${showCabinetFeatures ? `
+          <!-- Consultations -->
+          <section class="section page-break">
+            <h3>HISTORIQUE DES CONSULTATIONS</h3>
+            ${consultationsHtml}
+          </section>
+
+          <!-- Factures -->
+          <section class="section">
+            <h3>FACTURES ET PAIEMENTS</h3>
+            ${facturesHtml}
+          </section>
+
+          <!-- Rendez-vous -->
+          <section class="section">
+            <h3>RENDEZ-VOUS</h3>
+            ${rdvHtml}
+          </section>
+        ` : ''}
+
+        <!-- Pied de page -->
+        <div class="footer">
+          <p>Document généré par MedRecap+ - Système de Gestion Médicale Sécurisé</p>
+          <p>Conforme HDS • ISO 27001 • RGPD</p>
+        </div>
+      </div>
+    `;
+  };
+
+  const getPrintStyles = () => {
+    return `
+      @page {
+        size: A4;
+        margin: 15mm;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 11px;
+        line-height: 1.4;
+        color: #333;
+        margin: 0;
+        padding: 0;
+      }
+
+      .print-container {
+        max-width: 100%;
+        margin: 0 auto;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 2px solid #2563eb;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+      }
+
+      .header h1 {
+        font-size: 18px;
+        font-weight: bold;
+        color: #2563eb;
+        margin: 0 0 5px 0;
+      }
+
+      .header h2 {
+        font-size: 16px;
+        font-weight: bold;
+        color: #1f2937;
+        margin: 0 0 5px 0;
+      }
+
+      .header p {
+        font-size: 10px;
+        color: #6b7280;
+        margin: 2px 0;
+      }
+
+      .header-right {
+        text-align: right;
+      }
+
+      .alert {
+        background-color: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 15px;
+        color: #dc2626;
+      }
+
+      .alert-rouge {
+        background-color: #fef2f2;
+        border-color: #fecaca;
+        color: #dc2626;
+      }
+
+      .alert-orange {
+        background-color: #fffbeb;
+        border-color: #fed7aa;
+        color: #d97706;
+      }
+
+      .section {
+        margin-bottom: 20px;
+        break-inside: avoid;
+      }
+
+      .section h3 {
+        font-size: 14px;
+        font-weight: bold;
+        color: #1f2937;
+        background-color: #f3f4f6;
+        padding: 8px 12px;
+        margin: 0 0 10px 0;
+        border-left: 4px solid #2563eb;
+      }
+
+      .medical-critical h3 {
+        background-color: #fef2f2;
+        border-left-color: #dc2626;
+        color: #dc2626;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .info-item {
+        padding: 6px 0;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .info-item.full-width {
+        grid-column: 1 / -1;
+      }
+
+      .info-item strong {
+        color: #374151;
+        font-weight: 600;
+      }
+
+      .highlight {
+        background-color: #fef3c7;
+        padding: 2px 4px;
+        border-radius: 2px;
+        font-weight: bold;
+      }
+
+      .allergies {
+        background-color: #fef2f2;
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #fecaca;
+      }
+
+      .treatments {
+        display: grid;
+        gap: 8px;
+      }
+
+      .treatment-item {
+        background-color: #f8fafc;
+        padding: 8px;
+        border-radius: 4px;
+        border-left: 3px solid #3b82f6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .treatment-date {
+        font-size: 10px;
+        color: #6b7280;
+      }
+
+      .antecedents {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+      }
+
+      .antecedent-group h4 {
+        font-size: 12px;
+        font-weight: 600;
+        color: #374151;
+        margin: 0 0 8px 0;
+      }
+
+      .antecedent-group ul {
+        margin: 0;
+        padding-left: 15px;
+      }
+
+      .antecedent-group li {
+        margin-bottom: 4px;
+      }
+
+      .consultation-item,
+      .facture-item,
+      .rdv-item {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 10px;
+        margin-bottom: 10px;
+        break-inside: avoid;
+      }
+
+      .consultation-header,
+      .facture-header,
+      .rdv-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .consultation-details p,
+      .facture-details,
+      .rdv-details {
+        margin: 4px 0;
+        font-size: 10px;
+      }
+
+      .facture-row,
+      .rdv-row {
+        display: flex;
+        justify-content: space-between;
+        margin: 4px 0;
+      }
+
+      .status {
+        padding: 2px 6px;
+        border-radius: 12px;
+        font-size: 9px;
+        font-weight: 600;
+      }
+
+      .status-payee { background-color: #dcfce7; color: #166534; }
+      .status-en_attente { background-color: #fed7aa; color: #9a3412; }
+      .status-partiellement_payee { background-color: #fef3c7; color: #92400e; }
+      .status-en_retard { background-color: #fecaca; color: #991b1b; }
+      .status-confirme { background-color: #dcfce7; color: #166534; }
+      .status-programme { background-color: #dbeafe; color: #1e40af; }
+      .status-termine { background-color: #f3f4f6; color: #374151; }
+      .status-annule { background-color: #fecaca; color: #991b1b; }
+
+      .ordonnance {
+        background-color: #f0f9ff;
+        padding: 6px;
+        border-radius: 4px;
+        margin-top: 6px;
+      }
+
+      .ordonnance ul {
+        margin: 4px 0;
+        padding-left: 15px;
+      }
+
+      .remboursement {
+        background-color: #f0fdf4;
+        padding: 6px;
+        border-radius: 4px;
+        margin-top: 6px;
+        font-size: 10px;
+      }
+
+      .no-data {
+        color: #6b7280;
+        font-style: italic;
+        text-align: center;
+        padding: 15px;
+      }
+
+      .page-break {
+        page-break-before: always;
+      }
+
+      .footer {
+        margin-top: 30px;
+        padding-top: 15px;
+        border-top: 1px solid #e5e7eb;
+        text-align: center;
+        font-size: 9px;
+        color: #6b7280;
+      }
+
+      .footer p {
+        margin: 2px 0;
+      }
+
+      .date {
+        font-size: 10px;
+        color: #6b7280;
+      }
+
+      @media print {
+        .section {
+          break-inside: avoid;
+        }
+        
+        .consultation-item,
+        .facture-item,
+        .rdv-item {
+          break-inside: avoid;
+        }
+      }
+    `;
+  };
+
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -107,7 +691,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                 Assistant IA
               </button>
               <button
-                onClick={() => window.print()}
+                onClick={handleExport}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
               >
                 <Download className="w-4 h-4" />
