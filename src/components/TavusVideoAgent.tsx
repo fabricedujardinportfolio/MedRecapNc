@@ -26,6 +26,9 @@ declare global {
   }
 }
 
+// Variable globale pour empêcher les instances multiples
+let globalSessionActive = false;
+
 export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({ 
   patient, 
   isVisible, 
@@ -54,6 +57,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isProcessingRef = useRef(false);
   const autoRestartTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const instanceIdRef = useRef<string>(`instance-${Date.now()}-${Math.random()}`);
 
   // Vérifier le support de la reconnaissance vocale et synthèse vocale
   useEffect(() => {
@@ -66,9 +70,14 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     }
   }, []);
 
-  // Initialiser la session Tavus
+  // Initialiser la session Tavus avec protection contre les instances multiples
   useEffect(() => {
     if (isVisible && !session) {
+      if (globalSessionActive) {
+        console.log('⚠️ Une session IA est déjà active, fermeture de cette instance');
+        setError('Une session IA est déjà active. Veuillez fermer l\'autre session avant d\'en ouvrir une nouvelle.');
+        return;
+      }
       initializeSession();
     }
   }, [isVisible]);
@@ -76,21 +85,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   // Nettoyer les ressources
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      if (speechSynthesisRef.current) {
-        window.speechSynthesis.cancel();
-      }
-      if (externalWindow && !externalWindow.closed) {
-        externalWindow.close();
-      }
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-      }
-      if (autoRestartTimerRef.current) {
-        clearTimeout(autoRestartTimerRef.current);
-      }
+      cleanupSession();
     };
   }, [externalWindow]);
 
@@ -100,6 +95,32 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [chatMessages]);
+
+  const cleanupSession = () => {
+    console.log(`🧹 Nettoyage de la session ${instanceIdRef.current}`);
+    
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    if (speechSynthesisRef.current) {
+      window.speechSynthesis.cancel();
+    }
+    if (externalWindow && !externalWindow.closed) {
+      externalWindow.close();
+    }
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+    }
+    if (autoRestartTimerRef.current) {
+      clearTimeout(autoRestartTimerRef.current);
+    }
+    
+    // Libérer le verrou global seulement si c'est notre instance
+    if (globalSessionActive) {
+      globalSessionActive = false;
+      console.log('🔓 Session globale libérée');
+    }
+  };
 
   // Fonction de synthèse vocale avec callback pour relancer l'écoute
   const speakText = (text: string, onSpeechEnd?: () => void) => {
@@ -176,6 +197,16 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   };
 
   const initializeSession = async () => {
+    // Vérifier si une session est déjà active
+    if (globalSessionActive) {
+      setError('Une session IA est déjà active. Veuillez fermer l\'autre session avant d\'en ouvrir une nouvelle.');
+      return;
+    }
+
+    // Marquer cette session comme active
+    globalSessionActive = true;
+    console.log(`🔒 Session ${instanceIdRef.current} verrouillée`);
+
     setIsLoading(true);
     setError(null);
     
@@ -223,6 +254,8 @@ Que souhaitez-vous savoir ?`,
     } catch (err) {
       console.error('Erreur lors de l\'initialisation:', err);
       setError(err instanceof Error ? err.message : 'Erreur d\'initialisation');
+      // Libérer le verrou en cas d'erreur
+      globalSessionActive = false;
     } finally {
       setIsLoading(false);
     }
@@ -238,7 +271,7 @@ Que souhaitez-vous savoir ?`,
     console.log('🎯 Traitement du transcript avec contexte patient:', transcript);
 
     try {
-      // Ajouter le message utilisateur au chat
+      // Ajouter le message utilisateur au chat IMMÉDIATEMENT
       const userMessage: ChatMessage = {
         id: `msg-${Date.now()}-user`,
         type: 'user',
@@ -553,6 +586,8 @@ Que souhaitez-vous savoir ?`,
   };
 
   const handleClose = async () => {
+    console.log(`🚪 Fermeture de la session ${instanceIdRef.current}`);
+    
     // Arrêter la conversation si elle est active
     if (conversationActive) {
       stopConversation();
@@ -561,21 +596,11 @@ Que souhaitez-vous savoir ?`,
     if (session) {
       await tavusService.endSession();
     }
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-    }
-    if (externalWindow && !externalWindow.closed) {
-      externalWindow.close();
-    }
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-    }
-    if (autoRestartTimerRef.current) {
-      clearTimeout(autoRestartTimerRef.current);
-    }
+    
+    // Nettoyer toutes les ressources
+    cleanupSession();
+    
+    // Réinitialiser les états
     setSession(null);
     setChatMessages([]);
     setFinalTranscript('');
@@ -584,6 +609,7 @@ Que souhaitez-vous savoir ?`,
     setConversationActive(false);
     setAutoListenEnabled(false);
     isProcessingRef.current = false;
+    
     onClose();
   };
 
