@@ -22,6 +22,9 @@ import { Patient } from '../types/Patient';
 import { format } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
 import { TavusVideoAgent } from './TavusVideoAgent';
+import { ConsultationModal } from './ConsultationModal';
+import { FactureModal } from './FactureModal';
+import { RendezVousModal } from './RendezVousModal';
 import { useLanguage } from '../hooks/useLanguage';
 
 interface PatientModalProps {
@@ -36,6 +39,9 @@ export const PatientModal: React.FC<PatientModalProps> = ({
   showCabinetFeatures = false 
 }) => {
   const [showTavusAgent, setShowTavusAgent] = useState(false);
+  const [showConsultationModal, setShowConsultationModal] = useState(false);
+  const [showFactureModal, setShowFactureModal] = useState(false);
+  const [showRendezVousModal, setShowRendezVousModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'medical' | 'consultations' | 'factures' | 'rendez-vous'>('medical');
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
@@ -1023,7 +1029,10 @@ export const PatientModal: React.FC<PatientModalProps> = ({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.consultations')}</h3>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                  <button 
+                    onClick={() => setShowConsultationModal(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
                     {t('patient.modal.new.consultation')}
                   </button>
                 </div>
@@ -1069,7 +1078,10 @@ export const PatientModal: React.FC<PatientModalProps> = ({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.invoices')}</h3>
-                  <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                  <button 
+                    onClick={() => setShowFactureModal(true)}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
                     {t('patient.modal.new.invoice')}
                   </button>
                 </div>
@@ -1110,7 +1122,10 @@ export const PatientModal: React.FC<PatientModalProps> = ({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.appointments')}</h3>
-                  <button className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                  <button 
+                    onClick={() => setShowRendezVousModal(true)}
+                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                  >
                     {t('patient.modal.new.appointment')}
                   </button>
                 </div>
@@ -1149,12 +1164,35 @@ export const PatientModal: React.FC<PatientModalProps> = ({
         </div>
       </div>
 
-      {/* Tavus Video Agent Modal */}
-      <TavusVideoAgent
-        patient={patient}
-        isVisible={showTavusAgent}
-        onClose={() => setShowTavusAgent(false)}
-      />
+      {/* Modals */}
+      {showTavusAgent && (
+        <TavusVideoAgent
+          patient={patient}
+          isVisible={showTavusAgent}
+          onClose={() => setShowTavusAgent(false)}
+        />
+      )}
+
+      {showConsultationModal && (
+        <ConsultationModal
+          patientId={patient.id}
+          onClose={() => setShowConsultationModal(false)}
+        />
+      )}
+
+      {showFactureModal && (
+        <FactureModal
+          patientId={patient.id}
+          onClose={() => setShowFactureModal(false)}
+        />
+      )}
+
+      {showRendezVousModal && (
+        <RendezVousModal
+          patientId={patient.id}
+          onClose={() => setShowRendezVousModal(false)}
+        />
+      )}
     </>
   );
 };
