@@ -158,7 +158,12 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     };
 
     utterance.onerror = (event) => {
-      console.error('❌ Erreur synthèse vocale:', event.error);
+      // Handle interrupted speech synthesis gracefully
+      if (event.error === 'interrupted') {
+        console.log('🔇 Synthèse vocale interrompue (comportement normal)');
+      } else {
+        console.error('❌ Erreur synthèse vocale:', event.error);
+      }
       setIsSpeaking(false);
       if (session) {
         setSession(prev => prev ? { ...prev, status: 'ready' } : null);
