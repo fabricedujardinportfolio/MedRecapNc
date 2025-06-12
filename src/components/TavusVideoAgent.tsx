@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mic, MicOff, Send, Bot, Video, MessageCircle, Volume2, VolumeX, ExternalLink } from 'lucide-react';
+import { X, Mic, MicOff, Send, Bot, Video, MessageCircle, Volume2, VolumeX, ExternalLink, Square } from 'lucide-react';
 import { Patient } from '../types/Patient';
 import { tavusService, TavusVideoSession } from '../services/tavusService';
 
@@ -45,12 +45,15 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [conversationActive, setConversationActive] = useState(false);
+  const [autoListenEnabled, setAutoListenEnabled] = useState(false);
   
   const recognitionRef = useRef<any>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const speechSynthesisRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isProcessingRef = useRef(false);
+  const autoRestartTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Vérifier le support de la reconnaissance vocale et synthèse vocale
   useEffect(() => {
@@ -85,6 +88,9 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
       }
+      if (autoRestartTimerRef.current) {
+        clearTimeout(autoRestartTimerRef.current);
+      }
     };
   }, [externalWindow]);
 
@@ -95,10 +101,11 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     }
   }, [chatMessages]);
 
-  // Fonction de synthèse vocale
-  const speakText = (text: string) => {
+  // Fonction de synthèse vocale avec callback pour relancer l'écoute
+  const speakText = (text: string, onSpeechEnd?: () => void) => {
     if (!voiceEnabled || !window.speechSynthesis) {
       console.log('🔇 Synthèse vocale désactivée ou non supportée');
+      if (onSpeechEnd) onSpeechEnd();
       return;
     }
 
@@ -138,6 +145,16 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       if (session) {
         setSession(prev => prev ? { ...prev, status: 'ready' } : null);
       }
+      
+      // Relancer automatiquement l'écoute si la conversation est active et l'auto-écoute activée
+      if (conversationActive && autoListenEnabled && !isListening) {
+        console.log('🔄 Relance automatique de l\'écoute après synthèse vocale');
+        autoRestartTimerRef.current = setTimeout(() => {
+          startListening();
+        }, 1000); // Délai de 1 seconde après la fin de la synthèse
+      }
+      
+      if (onSpeechEnd) onSpeechEnd();
     };
 
     utterance.onerror = (event) => {
@@ -146,6 +163,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       if (session) {
         setSession(prev => prev ? { ...prev, status: 'ready' } : null);
       }
+      if (onSpeechEnd) onSpeechEnd();
     };
 
     speechSynthesisRef.current = utterance;
@@ -238,7 +256,7 @@ Que souhaitez-vous savoir ?`,
         };
         setChatMessages(prev => [...prev, aiMessage]);
         
-        // Synthèse vocale automatique de la réponse IA
+        // Synthèse vocale automatique de la réponse IA avec callback pour relancer l'écoute
         setTimeout(() => {
           speakText(aiResponse);
         }, 500);
@@ -274,6 +292,11 @@ Que souhaitez-vous savoir ?`,
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
+    }
+
+    if (autoRestartTimerRef.current) {
+      clearTimeout(autoRestartTimerRef.current);
+      autoRestartTimerRef.current = null;
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -400,6 +423,55 @@ Que souhaitez-vous savoir ?`,
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
     }
+    if (autoRestartTimerRef.current) {
+      clearTimeout(autoRestartTimerRef.current);
+      autoRestartTimerRef.current = null;
+    }
+  };
+
+  const startConversation = () => {
+    console.log('🎙️ Démarrage de la conversation vocale continue');
+    setConversationActive(true);
+    setAutoListenEnabled(true);
+    startListening();
+  };
+
+  const stopConversation = () => {
+    console.log('⏹️ Arrêt de la conversation vocale continue');
+    setConversationActive(false);
+    setAutoListenEnabled(false);
+    
+    // Arrêter la reconnaissance vocale
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    
+    // Arrêter la synthèse vocale
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+    
+    // Nettoyer les timers
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    if (autoRestartTimerRef.current) {
+      clearTimeout(autoRestartTimerRef.current);
+      autoRestartTimerRef.current = null;
+    }
+    
+    // Réinitialiser les états
+    setIsListening(false);
+    setIsSpeaking(false);
+    setFinalTranscript('');
+    setInterimTranscript('');
+    isProcessingRef.current = false;
+    
+    if (session) {
+      setSession(prev => prev ? { ...prev, status: 'ready' } : null);
+    }
   };
 
   const handleSendMessage = async (messageContent?: string) => {
@@ -476,6 +548,11 @@ Que souhaitez-vous savoir ?`,
   };
 
   const handleClose = async () => {
+    // Arrêter la conversation si elle est active
+    if (conversationActive) {
+      stopConversation();
+    }
+    
     if (session) {
       await tavusService.endSession();
     }
@@ -491,11 +568,16 @@ Que souhaitez-vous savoir ?`,
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
     }
+    if (autoRestartTimerRef.current) {
+      clearTimeout(autoRestartTimerRef.current);
+    }
     setSession(null);
     setChatMessages([]);
     setFinalTranscript('');
     setInterimTranscript('');
     setIsSpeaking(false);
+    setConversationActive(false);
+    setAutoListenEnabled(false);
     isProcessingRef.current = false;
     onClose();
   };
@@ -527,6 +609,11 @@ Que souhaitez-vous savoir ?`,
               {session?.isDemoMode && (
                 <span className="px-3 py-1 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">
                   Mode Démo
+                </span>
+              )}
+              {conversationActive && (
+                <span className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
+                  Conversation Active
                 </span>
               )}
               {externalWindow && !externalWindow.closed && (
@@ -574,6 +661,8 @@ Que souhaitez-vous savoir ?`,
                 {/* Avatar simulé */}
                 <div className={`w-48 h-48 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl transition-all duration-300 ${
                   isSpeaking ? 'scale-110 shadow-purple-300' : ''
+                } ${
+                  isListening ? 'ring-4 ring-orange-300 ring-opacity-75' : ''
                 }`}>
                   <Bot className={`w-24 h-24 text-white transition-all duration-300 ${
                     isSpeaking ? 'animate-pulse' : ''
@@ -583,18 +672,21 @@ Que souhaitez-vous savoir ?`,
                 {/* Status */}
                 <div className="mb-4">
                   <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
-                    session.status === 'ready' ? 'bg-green-100 text-green-800' :
+                    session.status === 'ready' && !conversationActive ? 'bg-green-100 text-green-800' :
+                    conversationActive ? 'bg-blue-100 text-blue-800' :
                     session.status === 'speaking' || isSpeaking ? 'bg-blue-100 text-blue-800' :
                     session.status === 'listening' ? 'bg-orange-100 text-orange-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
                     <div className={`w-2 h-2 rounded-full ${
-                      session.status === 'ready' ? 'bg-green-500' :
+                      session.status === 'ready' && !conversationActive ? 'bg-green-500' :
+                      conversationActive ? 'bg-blue-500 animate-pulse' :
                       session.status === 'speaking' || isSpeaking ? 'bg-blue-500 animate-pulse' :
                       session.status === 'listening' ? 'bg-orange-500 animate-pulse' :
                       'bg-gray-500'
                     }`}></div>
-                    {session.status === 'ready' && !isSpeaking && 'Prêt'}
+                    {conversationActive && 'Conversation en cours'}
+                    {!conversationActive && session.status === 'ready' && !isSpeaking && 'Prêt'}
                     {(session.status === 'speaking' || isSpeaking) && 'En train de parler'}
                     {session.status === 'listening' && 'À l\'écoute'}
                     {session.status === 'initializing' && 'Initialisation'}
@@ -633,29 +725,52 @@ Que souhaitez-vous savoir ?`,
                 )}
 
                 {/* Controls */}
-                <div className="flex justify-center gap-3">
+                <div className="flex justify-center gap-3 flex-wrap">
                   {speechSupported ? (
-                    <button
-                      onClick={isListening ? stopListening : startListening}
-                      disabled={session.status === 'ended' || isSpeaking}
-                      className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
-                        isListening
-                          ? 'bg-red-600 hover:bg-red-700 text-white'
-                          : 'bg-purple-600 hover:bg-purple-700 text-white'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {isListening ? (
-                        <>
-                          <MicOff className="w-5 h-5" />
-                          Arrêter
-                        </>
-                      ) : (
-                        <>
+                    <>
+                      {!conversationActive ? (
+                        <button
+                          onClick={startConversation}
+                          disabled={session.status === 'ended'}
+                          className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
                           <Mic className="w-5 h-5" />
-                          Parler
-                        </>
+                          Démarrer Conversation
+                        </button>
+                      ) : (
+                        <button
+                          onClick={stopConversation}
+                          className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+                        >
+                          <Square className="w-5 h-5" />
+                          Arrêter Conversation
+                        </button>
                       )}
-                    </button>
+                      
+                      {!conversationActive && (
+                        <button
+                          onClick={isListening ? stopListening : startListening}
+                          disabled={session.status === 'ended' || isSpeaking}
+                          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+                            isListening
+                              ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                              : 'bg-purple-600 hover:bg-purple-700 text-white'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          {isListening ? (
+                            <>
+                              <MicOff className="w-5 h-5" />
+                              Arrêter
+                            </>
+                          ) : (
+                            <>
+                              <Mic className="w-5 h-5" />
+                              Parler Une Fois
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </>
                   ) : (
                     <div className="text-center">
                       <p className="text-red-600 text-sm mb-2">
@@ -676,6 +791,16 @@ Que souhaitez-vous savoir ?`,
                       Ouvrir Avatar
                     </button>
                   )}
+                </div>
+
+                {/* Instructions */}
+                <div className="mt-4 text-xs text-gray-600 max-w-md mx-auto">
+                  <p className="mb-2">
+                    <strong>Conversation:</strong> Démarre une conversation continue avec relance automatique de l'écoute
+                  </p>
+                  <p>
+                    <strong>Parler Une Fois:</strong> Active l'écoute pour un seul message
+                  </p>
                 </div>
               </div>
             ) : null}
