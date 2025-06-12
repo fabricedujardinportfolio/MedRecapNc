@@ -28,7 +28,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { fr, enUS } from 'date-fns/locale';
 
 export const CabinetDashboard: React.FC = () => {
   const [filters, setFilters] = useState<SearchFiltersType>({});
@@ -37,7 +37,8 @@ export const CabinetDashboard: React.FC = () => {
   const [showFactureModal, setShowFactureModal] = useState(false);
   const [showRendezVousModal, setShowRendezVousModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'patients' | 'consultations' | 'factures' | 'rendez-vous'>('patients');
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const locale = language === 'fr' ? fr : enUS;
 
   // Mise à jour des patients avec les données cabinet
   const patientsWithCabinetData = useMemo(() => {
@@ -111,6 +112,16 @@ export const CabinetDashboard: React.FC = () => {
     }
   };
 
+  const getConsultationStatusText = (statut: string) => {
+    switch (statut) {
+      case 'terminee': return t('consultation.status.completed');
+      case 'en_cours': return t('consultation.status.ongoing');
+      case 'programmee': return t('consultation.status.scheduled');
+      case 'annulee': return t('consultation.status.cancelled');
+      default: return statut;
+    }
+  };
+
   const getFactureStatusColor = (statut: string) => {
     switch (statut) {
       case 'payee': return 'bg-green-100 text-green-800';
@@ -123,10 +134,10 @@ export const CabinetDashboard: React.FC = () => {
 
   const getFactureStatusText = (statut: string) => {
     switch (statut) {
-      case 'payee': return 'Payée';
-      case 'en_attente': return 'En attente';
-      case 'partiellement_payee': return 'Partiellement payée';
-      case 'en_retard': return 'En retard';
+      case 'payee': return t('invoice.status.paid');
+      case 'en_attente': return t('invoice.status.pending');
+      case 'partiellement_payee': return t('invoice.status.partial');
+      case 'en_retard': return t('invoice.status.overdue');
       default: return statut;
     }
   };
@@ -145,12 +156,12 @@ export const CabinetDashboard: React.FC = () => {
 
   const getRdvStatusText = (statut: string) => {
     switch (statut) {
-      case 'confirme': return 'Confirmé';
-      case 'programme': return 'Programmé';
-      case 'en_cours': return 'En cours';
-      case 'termine': return 'Terminé';
-      case 'annule': return 'Annulé';
-      case 'reporte': return 'Reporté';
+      case 'confirme': return t('appointment.status.confirmed');
+      case 'programme': return t('appointment.status.scheduled');
+      case 'en_cours': return t('appointment.status.ongoing');
+      case 'termine': return t('appointment.status.completed');
+      case 'annule': return t('appointment.status.cancelled');
+      case 'reporte': return t('appointment.status.postponed');
       default: return statut;
     }
   };
@@ -162,10 +173,10 @@ export const CabinetDashboard: React.FC = () => {
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
             {[
-              { id: 'patients', label: 'Patients', icon: Users },
-              { id: 'consultations', label: 'Consultations', icon: Stethoscope },
-              { id: 'factures', label: 'Factures', icon: FileText },
-              { id: 'rendez-vous', label: 'Rendez-vous', icon: Calendar }
+              { id: 'patients', label: t('cabinet.tabs.patients'), icon: Users },
+              { id: 'consultations', label: t('cabinet.tabs.consultations'), icon: Stethoscope },
+              { id: 'factures', label: t('cabinet.tabs.invoices'), icon: FileText },
+              { id: 'rendez-vous', label: t('cabinet.tabs.appointments'), icon: Calendar }
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -192,7 +203,7 @@ export const CabinetDashboard: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Patients Total</p>
+              <p className="text-sm font-medium text-gray-600">{t('cabinet.stats.patients')}</p>
               <p className="text-3xl font-bold text-gray-900">{stats.patients.total}</p>
             </div>
             <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg">
@@ -202,14 +213,14 @@ export const CabinetDashboard: React.FC = () => {
           <div className="flex items-center mt-4 text-sm">
             <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
             <span className="text-green-600">+{stats.patients.nouveaux}</span>
-            <span className="text-gray-500 ml-1">nouveaux ce mois</span>
+            <span className="text-gray-500 ml-1">{t('cabinet.stats.new.month')}</span>
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Consultations</p>
+              <p className="text-sm font-medium text-gray-600">{t('cabinet.stats.consultations')}</p>
               <p className="text-3xl font-bold text-green-600">{stats.consultations.aujourdhui}</p>
             </div>
             <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg">
@@ -218,7 +229,7 @@ export const CabinetDashboard: React.FC = () => {
           </div>
           <div className="flex items-center mt-4 text-sm">
             <span className="text-gray-500">
-              {stats.consultations.semaine} cette semaine
+              {stats.consultations.semaine} {t('cabinet.stats.week')}
             </span>
           </div>
         </div>
@@ -226,7 +237,7 @@ export const CabinetDashboard: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Rendez-vous</p>
+              <p className="text-sm font-medium text-gray-600">{t('cabinet.stats.appointments')}</p>
               <p className="text-3xl font-bold text-orange-600">{stats.rendezVous.aujourdhui}</p>
             </div>
             <div className="flex items-center justify-center w-12 h-12 bg-orange-100 rounded-lg">
@@ -235,14 +246,14 @@ export const CabinetDashboard: React.FC = () => {
           </div>
           <div className="flex items-center mt-4 text-sm">
             <Clock className="w-4 h-4 text-orange-500 mr-1" />
-            <span className="text-orange-600">{stats.rendezVous.enAttente} en attente</span>
+            <span className="text-orange-600">{stats.rendezVous.enAttente} {t('cabinet.stats.pending')}</span>
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">CA du mois</p>
+              <p className="text-sm font-medium text-gray-600">{t('cabinet.stats.revenue')}</p>
               <p className="text-3xl font-bold text-purple-600">{stats.finances.chiffreAffaireMois}€</p>
             </div>
             <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-lg">
@@ -251,39 +262,39 @@ export const CabinetDashboard: React.FC = () => {
           </div>
           <div className="flex items-center mt-4 text-sm">
             <CreditCard className="w-4 h-4 text-red-500 mr-1" />
-            <span className="text-red-600">{stats.finances.facturenAttente}€ en attente</span>
+            <span className="text-red-600">{stats.finances.facturenAttente}€ {t('cabinet.stats.waiting')}</span>
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('cabinet.actions.title')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <button
             onClick={() => setShowConsultationModal(true)}
             className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
           >
             <Stethoscope className="w-5 h-5 text-blue-600" />
-            <span className="font-medium text-blue-900">Nouvelle consultation</span>
+            <span className="font-medium text-blue-900">{t('cabinet.actions.consultation')}</span>
           </button>
           <button
             onClick={() => setShowRendezVousModal(true)}
             className="flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
           >
             <Calendar className="w-5 h-5 text-green-600" />
-            <span className="font-medium text-green-900">Nouveau RDV</span>
+            <span className="font-medium text-green-900">{t('cabinet.actions.appointment')}</span>
           </button>
           <button
             onClick={() => setShowFactureModal(true)}
             className="flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
           >
             <FileText className="w-5 h-5 text-purple-600" />
-            <span className="font-medium text-purple-900">Nouvelle facture</span>
+            <span className="font-medium text-purple-900">{t('cabinet.actions.invoice')}</span>
           </button>
           <button className="flex items-center gap-3 p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors">
             <Users className="w-5 h-5 text-orange-600" />
-            <span className="font-medium text-orange-900">Nouveau patient</span>
+            <span className="font-medium text-orange-900">{t('cabinet.actions.patient')}</span>
           </button>
         </div>
       </div>
@@ -303,10 +314,10 @@ export const CabinetDashboard: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
-                Liste des Patients
+                {t('dashboard.title')}
               </h2>
               <p className="text-gray-600">
-                {filteredPatients.length} {filteredPatients.length === 1 ? 'patient trouvé' : 'patients trouvés'}
+                {filteredPatients.length} {filteredPatients.length === 1 ? t('dashboard.results.found') : t('dashboard.results.found.plural')}
               </p>
             </div>
           </div>
@@ -328,16 +339,16 @@ export const CabinetDashboard: React.FC = () => {
             <div className="text-center py-12">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Aucun patient trouvé
+                {t('dashboard.empty.title')}
               </h3>
               <p className="text-gray-600 mb-4">
-                Essayez de modifier vos critères de recherche
+                {t('dashboard.empty.subtitle')}
               </p>
               <button
                 onClick={resetFilters}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
-                Réinitialiser les filtres
+                {t('dashboard.empty.reset')}
               </button>
             </div>
           )}
@@ -349,14 +360,14 @@ export const CabinetDashboard: React.FC = () => {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Gestion des Consultations</h2>
-              <p className="text-gray-600">{mockConsultations.length} consultations enregistrées</p>
+              <h2 className="text-xl font-semibold text-gray-900">{t('patient.modal.consultations')}</h2>
+              <p className="text-gray-600">{mockConsultations.length} {t('cabinet.tabs.consultations').toLowerCase()}</p>
             </div>
             <button
               onClick={() => setShowConsultationModal(true)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Nouvelle consultation
+              {t('patient.modal.new.consultation')}
             </button>
           </div>
 
@@ -372,42 +383,40 @@ export const CabinetDashboard: React.FC = () => {
                       <div>
                         <h3 className="font-semibold text-gray-900">{consultation.motif}</h3>
                         <p className="text-sm text-gray-600">
-                          Patient: {patientsWithCabinetData.find(p => p.id === consultation.patientId)?.prenom} {patientsWithCabinetData.find(p => p.id === consultation.patientId)?.nom}
+                          {t('common.patient')}: {patientsWithCabinetData.find(p => p.id === consultation.patientId)?.prenom} {patientsWithCabinetData.find(p => p.id === consultation.patientId)?.nom}
                         </p>
                       </div>
                       <span className={`px-3 py-1 text-xs rounded-full font-medium ${getConsultationStatusColor(consultation.statut)}`}>
-                        {consultation.statut === 'terminee' ? 'Terminée' :
-                         consultation.statut === 'en_cours' ? 'En cours' :
-                         consultation.statut === 'programmee' ? 'Programmée' : 'Annulée'}
+                        {getConsultationStatusText(consultation.statut)}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">Date & Heure</p>
+                        <p className="text-xs font-medium text-gray-500 mb-1">{t('common.date')} & {t('common.time')}</p>
                         <p className="text-sm font-medium text-gray-900">
-                          {format(new Date(consultation.date), 'dd/MM/yyyy à HH:mm', { locale: fr })}
+                          {format(new Date(consultation.date), 'dd/MM/yyyy à HH:mm', { locale })}
                         </p>
-                        <p className="text-xs text-gray-600">Durée: {consultation.duree} min</p>
+                        <p className="text-xs text-gray-600">{t('common.duration')}: {consultation.duree} min</p>
                       </div>
                       
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">Diagnostic</p>
+                        <p className="text-xs font-medium text-gray-500 mb-1">{t('common.diagnosis')}</p>
                         <p className="text-sm text-gray-900">{consultation.diagnostic}</p>
                       </div>
                       
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">Tarif</p>
+                        <p className="text-xs font-medium text-gray-500 mb-1">{t('common.amount')}</p>
                         <p className="text-sm font-medium text-gray-900">{consultation.tarif}€</p>
                         {consultation.factureId && (
-                          <p className="text-xs text-green-600">Facturé</p>
+                          <p className="text-xs text-green-600">{t('invoice.status.paid')}</p>
                         )}
                       </div>
                     </div>
 
                     {consultation.traitement && (
                       <div className="bg-blue-50 rounded-lg p-3 mb-4">
-                        <p className="text-xs font-medium text-blue-800 mb-1">Traitement prescrit</p>
+                        <p className="text-xs font-medium text-blue-800 mb-1">{t('common.treatment')}</p>
                         <p className="text-sm text-blue-900">{consultation.traitement}</p>
                       </div>
                     )}
@@ -446,14 +455,14 @@ export const CabinetDashboard: React.FC = () => {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Gestion des Factures</h2>
-              <p className="text-gray-600">{mockFactures.length} factures • {mockFactures.filter(f => f.statut === 'en_attente').length} en attente</p>
+              <h2 className="text-xl font-semibold text-gray-900">{t('patient.modal.invoices')}</h2>
+              <p className="text-gray-600">{mockFactures.length} {t('cabinet.tabs.invoices').toLowerCase()} • {mockFactures.filter(f => f.statut === 'en_attente').length} {t('cabinet.stats.pending')}</p>
             </div>
             <button
               onClick={() => setShowFactureModal(true)}
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
             >
-              Nouvelle facture
+              {t('patient.modal.new.invoice')}
             </button>
           </div>
 
@@ -469,7 +478,7 @@ export const CabinetDashboard: React.FC = () => {
                       <div>
                         <h3 className="font-semibold text-gray-900">Facture {facture.numero}</h3>
                         <p className="text-sm text-gray-600">
-                          Patient: {patientsWithCabinetData.find(p => p.id === facture.patientId)?.prenom} {patientsWithCabinetData.find(p => p.id === facture.patientId)?.nom}
+                          {t('common.patient')}: {patientsWithCabinetData.find(p => p.id === facture.patientId)?.prenom} {patientsWithCabinetData.find(p => p.id === facture.patientId)?.nom}
                         </p>
                       </div>
                       <span className={`px-3 py-1 text-xs rounded-full font-medium ${getFactureStatusColor(facture.statut)}`}>
@@ -479,14 +488,14 @@ export const CabinetDashboard: React.FC = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">Date</p>
+                        <p className="text-xs font-medium text-gray-500 mb-1">{t('common.date')}</p>
                         <p className="text-sm font-medium text-gray-900">
-                          {format(new Date(facture.date), 'dd/MM/yyyy', { locale: fr })}
+                          {format(new Date(facture.date), 'dd/MM/yyyy', { locale })}
                         </p>
                       </div>
                       
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">Montant Total</p>
+                        <p className="text-xs font-medium text-gray-500 mb-1">{t('common.total')}</p>
                         <p className="text-sm font-bold text-gray-900">{facture.montantTotal.toFixed(2)}€</p>
                       </div>
                       
@@ -559,14 +568,14 @@ export const CabinetDashboard: React.FC = () => {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Planning des Rendez-vous</h2>
-              <p className="text-gray-600">{mockRendezVous.length} rendez-vous • {mockRendezVous.filter(r => r.statut === 'confirme').length} confirmés</p>
+              <h2 className="text-xl font-semibold text-gray-900">{t('patient.modal.appointments')}</h2>
+              <p className="text-gray-600">{mockRendezVous.length} {t('cabinet.tabs.appointments').toLowerCase()} • {mockRendezVous.filter(r => r.statut === 'confirme').length} confirmés</p>
             </div>
             <button
               onClick={() => setShowRendezVousModal(true)}
               className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
             >
-              Nouveau rendez-vous
+              {t('patient.modal.new.appointment')}
             </button>
           </div>
 
@@ -581,7 +590,7 @@ export const CabinetDashboard: React.FC = () => {
                       </div>
                       <div>
                         <h3 className="font-semibold text-gray-900">{rdv.motif}</h3>
-                        <p className="text-sm text-gray-600">Patient: {rdv.patientNom}</p>
+                        <p className="text-sm text-gray-600">{t('common.patient')}: {rdv.patientNom}</p>
                       </div>
                       <span className={`px-3 py-1 text-xs rounded-full font-medium ${getRdvStatusColor(rdv.statut)}`}>
                         {getRdvStatusText(rdv.statut)}
@@ -590,9 +599,9 @@ export const CabinetDashboard: React.FC = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">Date</p>
+                        <p className="text-xs font-medium text-gray-500 mb-1">{t('common.date')}</p>
                         <p className="text-sm font-medium text-gray-900">
-                          {format(new Date(rdv.date), 'dd/MM/yyyy', { locale: fr })}
+                          {format(new Date(rdv.date), 'dd/MM/yyyy', { locale })}
                         </p>
                       </div>
                       
@@ -627,7 +636,7 @@ export const CabinetDashboard: React.FC = () => {
                       {rdv.notes && (
                         <div className="flex items-center gap-2 text-gray-600">
                           <AlertCircle className="w-4 h-4" />
-                          <span>Notes disponibles</span>
+                          <span>{t('common.notes')} disponibles</span>
                         </div>
                       )}
                     </div>

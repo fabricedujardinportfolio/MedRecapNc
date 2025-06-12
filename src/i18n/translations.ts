@@ -16,7 +16,12 @@ export const translations = {
     'login.demo.superadmin': 'Super Admin:',
     'login.demo.admin': 'Admin Tech:',
     'login.demo.auditor': 'Auditeur:',
-    'login.footer.built': 'Built with ❤️ using',
+    'login.demo.cabinet': 'Médecin de Cabinet:',
+    'login.demo.description.superadmin': 'Accès complet système hospitalier',
+    'login.demo.description.admin': 'Gestion technique hospitalière',
+    'login.demo.description.auditor': 'Consultation logs et rapports',
+    'login.demo.description.cabinet': 'Gestion cabinet médical complet',
+    'login.footer.built': 'Développé avec ❤️ par',
     'login.footer.copyright': '© 2025 MedRecap+ - Nouvelle-Calédonie',
     'login.language.label': 'Langue / Language',
 
@@ -46,6 +51,27 @@ export const translations = {
     'dashboard.empty.subtitle': 'Essayez de modifier vos critères de recherche',
     'dashboard.empty.reset': 'Réinitialiser les filtres',
 
+    // Cabinet Dashboard
+    'cabinet.title': 'Tableau de Bord Cabinet',
+    'cabinet.stats.patients': 'Patients Total',
+    'cabinet.stats.consultations': 'Consultations',
+    'cabinet.stats.appointments': 'Rendez-vous',
+    'cabinet.stats.revenue': 'CA du mois',
+    'cabinet.stats.new.month': 'nouveaux ce mois',
+    'cabinet.stats.week': 'cette semaine',
+    'cabinet.stats.today': 'aujourd\'hui',
+    'cabinet.stats.pending': 'en attente',
+    'cabinet.stats.waiting': 'en attente',
+    'cabinet.actions.title': 'Actions rapides',
+    'cabinet.actions.consultation': 'Nouvelle consultation',
+    'cabinet.actions.appointment': 'Nouveau RDV',
+    'cabinet.actions.invoice': 'Nouvelle facture',
+    'cabinet.actions.patient': 'Nouveau patient',
+    'cabinet.tabs.patients': 'Patients',
+    'cabinet.tabs.consultations': 'Consultations',
+    'cabinet.tabs.invoices': 'Factures',
+    'cabinet.tabs.appointments': 'Rendez-vous',
+
     // Search Filters
     'filters.title': 'Recherche et Filtres',
     'filters.name': 'Nom du patient',
@@ -64,6 +90,12 @@ export const translations = {
     'filters.age.min': 'Âge min',
     'filters.age.max': 'Âge max',
     'filters.reset': 'Réinitialiser les filtres',
+    'filters.patient.type': 'Type de patient',
+    'filters.patient.type.all': 'Tous les patients',
+    'filters.patient.type.cabinet': 'Patients cabinet',
+    'filters.patient.type.hospital': 'Patients hospitaliers',
+    'filters.appointments': 'Rendez-vous',
+    'filters.appointments.scheduled': 'Prochain RDV programmé',
 
     // Patient Card
     'patient.file': 'Dossier',
@@ -72,9 +104,12 @@ export const translations = {
     'patient.reason': 'Motif:',
     'patient.allergies': 'Allergies:',
     'patient.view': 'Voir le dossier',
+    'patient.last.consultation': 'Dernière consultation:',
+    'patient.next.appointment': 'Prochain RDV:',
+    'patient.pending.invoices': 'facture(s) en attente',
 
     // Patient Modal
-    'patient.modal.title': 'Dossier',
+    'patient.modal.title': 'Dossier Patient',
     'patient.modal.updated': 'Dernière mise à jour:',
     'patient.modal.assistant': 'Assistant IA',
     'patient.modal.export': 'Exporter',
@@ -86,6 +121,15 @@ export const translations = {
     'patient.modal.history': 'Antécédents médicaux',
     'patient.modal.personal.history': 'Antécédents personnels',
     'patient.modal.family.history': 'Antécédents familiaux',
+    'patient.modal.consultations': 'Historique des consultations',
+    'patient.modal.invoices': 'Factures et paiements',
+    'patient.modal.appointments': 'Rendez-vous',
+    'patient.modal.new.consultation': 'Nouvelle consultation',
+    'patient.modal.new.invoice': 'Nouvelle facture',
+    'patient.modal.new.appointment': 'Nouveau rendez-vous',
+    'patient.modal.no.consultations': 'Aucune consultation enregistrée',
+    'patient.modal.no.invoices': 'Aucune facture enregistrée',
+    'patient.modal.no.appointments': 'Aucun rendez-vous programmé',
 
     // Services
     'service.cardiology': 'Cardiologie',
@@ -101,6 +145,26 @@ export const translations = {
     'status.discharged': 'Sorti',
     'status.transfer': 'Transfert',
 
+    // Consultation Status
+    'consultation.status.completed': 'Terminée',
+    'consultation.status.ongoing': 'En cours',
+    'consultation.status.scheduled': 'Programmée',
+    'consultation.status.cancelled': 'Annulée',
+
+    // Invoice Status
+    'invoice.status.paid': 'Payée',
+    'invoice.status.pending': 'En attente',
+    'invoice.status.partial': 'Partiellement payée',
+    'invoice.status.overdue': 'En retard',
+
+    // Appointment Status
+    'appointment.status.confirmed': 'Confirmé',
+    'appointment.status.scheduled': 'Programmé',
+    'appointment.status.ongoing': 'En cours',
+    'appointment.status.completed': 'Terminé',
+    'appointment.status.cancelled': 'Annulé',
+    'appointment.status.postponed': 'Reporté',
+
     // Notifications
     'notifications.title': 'Notifications',
     'notifications.unread': 'non lues sur',
@@ -111,17 +175,10 @@ export const translations = {
     'notifications.clear': 'Effacer',
     'notifications.empty.title': 'Aucune notification',
     'notifications.empty.subtitle': 'Vous êtes à jour !',
-    'notifications.detail.title': 'Détails de la notification',
-    'notifications.priority': 'Priorité:',
-    'notifications.category': 'Catégorie:',
-    'notifications.patient': 'Patient concerné',
-    'notifications.action.required': 'Action requise',
-    'notifications.close': 'Fermer',
-    'notifications.mark.read': 'Marquer comme lu',
 
     // Footer
     'footer.description': 'Système professionnel de gestion des dossiers patients pour la Nouvelle-Calédonie.',
-    'footer.built': 'Built with ❤️ using',
+    'footer.built': 'Développé avec ❤️ par',
     'footer.certifications': 'Certifications',
     'footer.legal': 'Informations légales',
     'footer.copyright': '© 2025 MedRecap+ NC',
@@ -130,19 +187,6 @@ export const translations = {
     'footer.updated': 'Dernière mise à jour du système: 15 janvier 2025',
     'footer.status': 'Système opérationnel',
     'footer.latency': 'Latence: <150ms',
-
-    // Tavus AI
-    'tavus.title': 'Assistant Médical IA',
-    'tavus.status.ready': 'Prêt',
-    'tavus.status.speaking': 'En train de parler',
-    'tavus.status.listening': 'À l\'écoute',
-    'tavus.status.initializing': 'Initialisation',
-    'tavus.status.ended': 'Session terminée',
-    'tavus.demo.mode': 'Mode Démo',
-    'tavus.external.window': 'Fenêtre externe active',
-    'tavus.open.avatar': 'Ouvrir Avatar',
-    'tavus.chat.title': 'Chat Médical',
-    'tavus.chat.placeholder': 'Posez une question sur le patient...',
 
     // Common
     'common.loading': 'Chargement...',
@@ -158,7 +202,19 @@ export const translations = {
     'common.no': 'Non',
     'common.male': 'Masculin',
     'common.female': 'Féminin',
-    'common.other': 'Autre'
+    'common.other': 'Autre',
+    'common.date': 'Date',
+    'common.time': 'Heure',
+    'common.duration': 'Durée',
+    'common.amount': 'Montant',
+    'common.total': 'Total',
+    'common.doctor': 'Médecin',
+    'common.patient': 'Patient',
+    'common.reason': 'Motif',
+    'common.diagnosis': 'Diagnostic',
+    'common.treatment': 'Traitement',
+    'common.notes': 'Notes',
+    'common.status': 'Statut'
   },
   en: {
     // Login Form
@@ -177,7 +233,12 @@ export const translations = {
     'login.demo.superadmin': 'Super Admin:',
     'login.demo.admin': 'Tech Admin:',
     'login.demo.auditor': 'Auditor:',
-    'login.footer.built': 'Built with ❤️ using',
+    'login.demo.cabinet': 'Cabinet Doctor:',
+    'login.demo.description.superadmin': 'Full hospital system access',
+    'login.demo.description.admin': 'Hospital technical management',
+    'login.demo.description.auditor': 'Logs and reports consultation',
+    'login.demo.description.cabinet': 'Complete medical practice management',
+    'login.footer.built': 'Built with ❤️ by',
     'login.footer.copyright': '© 2025 MedRecap+ - New Caledonia',
     'login.language.label': 'Language / Langue',
 
@@ -207,6 +268,27 @@ export const translations = {
     'dashboard.empty.subtitle': 'Try modifying your search criteria',
     'dashboard.empty.reset': 'Reset filters',
 
+    // Cabinet Dashboard
+    'cabinet.title': 'Practice Dashboard',
+    'cabinet.stats.patients': 'Total Patients',
+    'cabinet.stats.consultations': 'Consultations',
+    'cabinet.stats.appointments': 'Appointments',
+    'cabinet.stats.revenue': 'Monthly Revenue',
+    'cabinet.stats.new.month': 'new this month',
+    'cabinet.stats.week': 'this week',
+    'cabinet.stats.today': 'today',
+    'cabinet.stats.pending': 'pending',
+    'cabinet.stats.waiting': 'waiting',
+    'cabinet.actions.title': 'Quick Actions',
+    'cabinet.actions.consultation': 'New Consultation',
+    'cabinet.actions.appointment': 'New Appointment',
+    'cabinet.actions.invoice': 'New Invoice',
+    'cabinet.actions.patient': 'New Patient',
+    'cabinet.tabs.patients': 'Patients',
+    'cabinet.tabs.consultations': 'Consultations',
+    'cabinet.tabs.invoices': 'Invoices',
+    'cabinet.tabs.appointments': 'Appointments',
+
     // Search Filters
     'filters.title': 'Search and Filters',
     'filters.name': 'Patient name',
@@ -225,6 +307,12 @@ export const translations = {
     'filters.age.min': 'Min age',
     'filters.age.max': 'Max age',
     'filters.reset': 'Reset filters',
+    'filters.patient.type': 'Patient type',
+    'filters.patient.type.all': 'All patients',
+    'filters.patient.type.cabinet': 'Practice patients',
+    'filters.patient.type.hospital': 'Hospital patients',
+    'filters.appointments': 'Appointments',
+    'filters.appointments.scheduled': 'Next appointment scheduled',
 
     // Patient Card
     'patient.file': 'File',
@@ -233,9 +321,12 @@ export const translations = {
     'patient.reason': 'Reason:',
     'patient.allergies': 'Allergies:',
     'patient.view': 'View file',
+    'patient.last.consultation': 'Last consultation:',
+    'patient.next.appointment': 'Next appointment:',
+    'patient.pending.invoices': 'pending invoice(s)',
 
     // Patient Modal
-    'patient.modal.title': 'File',
+    'patient.modal.title': 'Patient File',
     'patient.modal.updated': 'Last updated:',
     'patient.modal.assistant': 'AI Assistant',
     'patient.modal.export': 'Export',
@@ -247,6 +338,15 @@ export const translations = {
     'patient.modal.history': 'Medical history',
     'patient.modal.personal.history': 'Personal history',
     'patient.modal.family.history': 'Family history',
+    'patient.modal.consultations': 'Consultation History',
+    'patient.modal.invoices': 'Invoices and Payments',
+    'patient.modal.appointments': 'Appointments',
+    'patient.modal.new.consultation': 'New consultation',
+    'patient.modal.new.invoice': 'New invoice',
+    'patient.modal.new.appointment': 'New appointment',
+    'patient.modal.no.consultations': 'No consultations recorded',
+    'patient.modal.no.invoices': 'No invoices recorded',
+    'patient.modal.no.appointments': 'No appointments scheduled',
 
     // Services
     'service.cardiology': 'Cardiology',
@@ -262,6 +362,26 @@ export const translations = {
     'status.discharged': 'Discharged',
     'status.transfer': 'Transfer',
 
+    // Consultation Status
+    'consultation.status.completed': 'Completed',
+    'consultation.status.ongoing': 'Ongoing',
+    'consultation.status.scheduled': 'Scheduled',
+    'consultation.status.cancelled': 'Cancelled',
+
+    // Invoice Status
+    'invoice.status.paid': 'Paid',
+    'invoice.status.pending': 'Pending',
+    'invoice.status.partial': 'Partially Paid',
+    'invoice.status.overdue': 'Overdue',
+
+    // Appointment Status
+    'appointment.status.confirmed': 'Confirmed',
+    'appointment.status.scheduled': 'Scheduled',
+    'appointment.status.ongoing': 'Ongoing',
+    'appointment.status.completed': 'Completed',
+    'appointment.status.cancelled': 'Cancelled',
+    'appointment.status.postponed': 'Postponed',
+
     // Notifications
     'notifications.title': 'Notifications',
     'notifications.unread': 'unread out of',
@@ -272,17 +392,10 @@ export const translations = {
     'notifications.clear': 'Clear',
     'notifications.empty.title': 'No notifications',
     'notifications.empty.subtitle': 'You\'re all caught up!',
-    'notifications.detail.title': 'Notification details',
-    'notifications.priority': 'Priority:',
-    'notifications.category': 'Category:',
-    'notifications.patient': 'Related patient',
-    'notifications.action.required': 'Action required',
-    'notifications.close': 'Close',
-    'notifications.mark.read': 'Mark as read',
 
     // Footer
     'footer.description': 'Professional patient record management system for New Caledonia.',
-    'footer.built': 'Built with ❤️ using',
+    'footer.built': 'Built with ❤️ by',
     'footer.certifications': 'Certifications',
     'footer.legal': 'Legal information',
     'footer.copyright': '© 2025 MedRecap+ NC',
@@ -291,19 +404,6 @@ export const translations = {
     'footer.updated': 'Last system update: January 15, 2025',
     'footer.status': 'System operational',
     'footer.latency': 'Latency: <150ms',
-
-    // Tavus AI
-    'tavus.title': 'Medical AI Assistant',
-    'tavus.status.ready': 'Ready',
-    'tavus.status.speaking': 'Speaking',
-    'tavus.status.listening': 'Listening',
-    'tavus.status.initializing': 'Initializing',
-    'tavus.status.ended': 'Session ended',
-    'tavus.demo.mode': 'Demo Mode',
-    'tavus.external.window': 'External window active',
-    'tavus.open.avatar': 'Open Avatar',
-    'tavus.chat.title': 'Medical Chat',
-    'tavus.chat.placeholder': 'Ask a question about the patient...',
 
     // Common
     'common.loading': 'Loading...',
@@ -319,7 +419,19 @@ export const translations = {
     'common.no': 'No',
     'common.male': 'Male',
     'common.female': 'Female',
-    'common.other': 'Other'
+    'common.other': 'Other',
+    'common.date': 'Date',
+    'common.time': 'Time',
+    'common.duration': 'Duration',
+    'common.amount': 'Amount',
+    'common.total': 'Total',
+    'common.doctor': 'Doctor',
+    'common.patient': 'Patient',
+    'common.reason': 'Reason',
+    'common.diagnosis': 'Diagnosis',
+    'common.treatment': 'Treatment',
+    'common.notes': 'Notes',
+    'common.status': 'Status'
   }
 };
 

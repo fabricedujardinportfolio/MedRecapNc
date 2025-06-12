@@ -54,7 +54,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         {showCabinetFilters && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Type de patient
+              {t('filters.patient.type')}
             </label>
             <div className="relative">
               <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -63,9 +63,9 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                 onChange={(e) => handleFilterChange('typePatient', e.target.value === 'tous' ? undefined : e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
               >
-                <option value="tous">Tous les patients</option>
-                <option value="cabinet">Patients cabinet</option>
-                <option value="hospitalier">Patients hospitaliers</option>
+                <option value="tous">{t('filters.patient.type.all')}</option>
+                <option value="cabinet">{t('filters.patient.type.cabinet')}</option>
+                <option value="hospitalier">{t('filters.patient.type.hospital')}</option>
               </select>
             </div>
           </div>
@@ -139,7 +139,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         {showCabinetFilters && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Rendez-vous
+              {t('filters.appointments')}
             </label>
             <label className="flex items-center gap-2 mt-2">
               <input
@@ -148,7 +148,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                 onChange={(e) => handleFilterChange('prochainRendezVous', e.target.checked)}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span className="text-sm text-gray-700">Prochain RDV programmé</span>
+              <span className="text-sm text-gray-700">{t('filters.appointments.scheduled')}</span>
             </label>
           </div>
         )}

@@ -20,8 +20,9 @@ import {
 } from 'lucide-react';
 import { Patient } from '../types/Patient';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { fr, enUS } from 'date-fns/locale';
 import { TavusVideoAgent } from './TavusVideoAgent';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface PatientModalProps {
   patient: Patient;
@@ -36,6 +37,8 @@ export const PatientModal: React.FC<PatientModalProps> = ({
 }) => {
   const [showTavusAgent, setShowTavusAgent] = useState(false);
   const [activeTab, setActiveTab] = useState<'medical' | 'consultations' | 'factures' | 'rendez-vous'>('medical');
+  const { t, language } = useLanguage();
+  const locale = language === 'fr' ? fr : enUS;
 
   const getAlertColor = (niveau: string) => {
     switch (niveau) {
@@ -58,10 +61,10 @@ export const PatientModal: React.FC<PatientModalProps> = ({
 
   const getFactureStatusText = (statut: string) => {
     switch (statut) {
-      case 'payee': return 'Payée';
-      case 'en_attente': return 'En attente';
-      case 'partiellement_payee': return 'Partiellement payée';
-      case 'en_retard': return 'En retard';
+      case 'payee': return t('invoice.status.paid');
+      case 'en_attente': return t('invoice.status.pending');
+      case 'partiellement_payee': return t('invoice.status.partial');
+      case 'en_retard': return t('invoice.status.overdue');
       default: return statut;
     }
   };
@@ -74,6 +77,27 @@ export const PatientModal: React.FC<PatientModalProps> = ({
       case 'termine': return 'bg-gray-100 text-gray-800';
       case 'annule': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getRdvStatusText = (statut: string) => {
+    switch (statut) {
+      case 'confirme': return t('appointment.status.confirmed');
+      case 'programme': return t('appointment.status.scheduled');
+      case 'en_cours': return t('appointment.status.ongoing');
+      case 'termine': return t('appointment.status.completed');
+      case 'annule': return t('appointment.status.cancelled');
+      default: return statut;
+    }
+  };
+
+  const getConsultationStatusText = (statut: string) => {
+    switch (statut) {
+      case 'terminee': return t('consultation.status.completed');
+      case 'en_cours': return t('consultation.status.ongoing');
+      case 'programmee': return t('consultation.status.scheduled');
+      case 'annulee': return t('consultation.status.cancelled');
+      default: return statut;
     }
   };
 
@@ -112,13 +136,13 @@ export const PatientModal: React.FC<PatientModalProps> = ({
           <div class="consultation-item">
             <div class="consultation-header">
               <strong>${consultation.motif}</strong>
-              <span class="date">${format(new Date(consultation.date), 'dd/MM/yyyy à HH:mm', { locale: fr })}</span>
+              <span class="date">${format(new Date(consultation.date), 'dd/MM/yyyy à HH:mm', { locale })}</span>
             </div>
             <div class="consultation-details">
-              <p><strong>Médecin:</strong> ${consultation.medecinNom}</p>
-              <p><strong>Diagnostic:</strong> ${consultation.diagnostic}</p>
-              <p><strong>Traitement:</strong> ${consultation.traitement}</p>
-              <p><strong>Durée:</strong> ${consultation.duree} min | <strong>Tarif:</strong> ${consultation.tarif}€</p>
+              <p><strong>${t('common.doctor')}:</strong> ${consultation.medecinNom}</p>
+              <p><strong>${t('common.diagnosis')}:</strong> ${consultation.diagnostic}</p>
+              <p><strong>${t('common.treatment')}:</strong> ${consultation.traitement}</p>
+              <p><strong>${t('common.duration')}:</strong> ${consultation.duree} min | <strong>${t('common.amount')}:</strong> ${consultation.tarif}€</p>
               ${consultation.observations ? `<p><strong>Observations:</strong> ${consultation.observations}</p>` : ''}
               ${consultation.ordonnance?.medicaments.length > 0 ? `
                 <div class="ordonnance">
@@ -133,7 +157,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             </div>
           </div>
         `).join('')
-      : '<p class="no-data">Aucune consultation enregistrée</p>';
+      : `<p class="no-data">${t('patient.modal.no.consultations')}</p>`;
 
     const facturesHtml = patient.factures && patient.factures.length > 0
       ? patient.factures.map(facture => `
@@ -144,11 +168,11 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             </div>
             <div class="facture-details">
               <div class="facture-row">
-                <span>Date: ${format(new Date(facture.date), 'dd/MM/yyyy', { locale: fr })}</span>
-                <span>Échéance: ${format(new Date(facture.dateEcheance), 'dd/MM/yyyy', { locale: fr })}</span>
+                <span>${t('common.date')}: ${format(new Date(facture.date), 'dd/MM/yyyy', { locale })}</span>
+                <span>Échéance: ${format(new Date(facture.dateEcheance), 'dd/MM/yyyy', { locale })}</span>
               </div>
               <div class="facture-row">
-                <span>Montant total: ${facture.montantTotal.toFixed(2)}€</span>
+                <span>${t('common.total')}: ${facture.montantTotal.toFixed(2)}€</span>
                 <span>Payé: ${facture.montantPaye.toFixed(2)}€</span>
                 <span>Reste: ${facture.montantRestant.toFixed(2)}€</span>
               </div>
@@ -163,37 +187,37 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             </div>
           </div>
         `).join('')
-      : '<p class="no-data">Aucune facture enregistrée</p>';
+      : `<p class="no-data">${t('patient.modal.no.invoices')}</p>`;
 
     const rdvHtml = patient.rendezVous && patient.rendezVous.length > 0
       ? patient.rendezVous.map(rdv => `
           <div class="rdv-item">
             <div class="rdv-header">
               <strong>${rdv.motif}</strong>
-              <span class="status status-${rdv.statut}">${rdv.statut}</span>
+              <span class="status status-${rdv.statut}">${getRdvStatusText(rdv.statut)}</span>
             </div>
             <div class="rdv-details">
               <div class="rdv-row">
-                <span>Date: ${format(new Date(rdv.date), 'dd/MM/yyyy', { locale: fr })}</span>
-                <span>Heure: ${rdv.heureDebut} - ${rdv.heureFin}</span>
+                <span>${t('common.date')}: ${format(new Date(rdv.date), 'dd/MM/yyyy', { locale })}</span>
+                <span>${t('common.time')}: ${rdv.heureDebut} - ${rdv.heureFin}</span>
               </div>
               <div class="rdv-row">
                 <span>Type: ${rdv.type}</span>
-                <span>Médecin: ${rdv.medecinNom}</span>
+                <span>${t('common.doctor')}: ${rdv.medecinNom}</span>
                 <span>Salle: ${rdv.salle}</span>
               </div>
             </div>
           </div>
         `).join('')
-      : '<p class="no-data">Aucun rendez-vous programmé</p>';
+      : `<p class="no-data">${t('patient.modal.no.appointments')}</p>`;
 
     return `
       <!DOCTYPE html>
-      <html lang="fr">
+      <html lang="${language}">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Dossier Patient - ${patient.prenom} ${patient.nom}</title>
+        <title>${t('patient.modal.title')} - ${patient.prenom} ${patient.nom}</title>
         <style>
           ${getPrintStyles()}
         </style>
@@ -203,13 +227,13 @@ export const PatientModal: React.FC<PatientModalProps> = ({
           <!-- En-tête du document -->
           <div class="header">
             <div class="header-left">
-              <h1>DOSSIER PATIENT</h1>
+              <h1>${t('patient.modal.title').toUpperCase()}</h1>
               <h2>${patient.prenom} ${patient.nom}</h2>
-              <p>Dossier #${patient.numeroDossier}</p>
+              <p>${t('patient.file')} #${patient.numeroDossier}</p>
             </div>
             <div class="header-right">
-              <p>Date d'impression: ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr })}</p>
-              <p>Dernière mise à jour: ${format(new Date(patient.derniereMaj), 'dd/MM/yyyy à HH:mm', { locale: fr })}</p>
+              <p>Date d'impression: ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale })}</p>
+              <p>${t('patient.modal.updated')}: ${format(new Date(patient.derniereMaj), 'dd/MM/yyyy à HH:mm', { locale })}</p>
             </div>
           </div>
 
@@ -221,16 +245,16 @@ export const PatientModal: React.FC<PatientModalProps> = ({
 
           <!-- Informations personnelles -->
           <section class="section">
-            <h3>INFORMATIONS PERSONNELLES</h3>
+            <h3>${t('patient.modal.personal').toUpperCase()}</h3>
             <div class="info-grid">
               <div class="info-item">
-                <strong>Sexe:</strong> ${patient.sexe === 'M' ? 'Masculin' : 'Féminin'}
+                <strong>Sexe:</strong> ${patient.sexe === 'M' ? t('common.male') : t('common.female')}
               </div>
               <div class="info-item">
-                <strong>Âge:</strong> ${patient.age} ans
+                <strong>Âge:</strong> ${patient.age} ${t('patient.years')}
               </div>
               <div class="info-item">
-                <strong>Date de naissance:</strong> ${format(new Date(patient.dateNaissance), 'dd/MM/yyyy', { locale: fr })}
+                <strong>Date de naissance:</strong> ${format(new Date(patient.dateNaissance), 'dd/MM/yyyy', { locale })}
               </div>
               <div class="info-item">
                 <strong>Lieu de naissance:</strong> ${patient.lieuNaissance}
@@ -246,7 +270,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
 
           <!-- Coordonnées -->
           <section class="section">
-            <h3>COORDONNÉES</h3>
+            <h3>${t('patient.modal.contact').toUpperCase()}</h3>
             <div class="info-grid">
               <div class="info-item full-width">
                 <strong>Adresse:</strong> ${patient.adresse.rue}, ${patient.adresse.codePostal} ${patient.adresse.ville}, ${patient.adresse.pays}
@@ -267,7 +291,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
 
           <!-- Informations médicales critiques -->
           <section class="section medical-critical">
-            <h3>INFORMATIONS MÉDICALES CRITIQUES</h3>
+            <h3>${t('patient.modal.medical').toUpperCase()}</h3>
             <div class="info-grid">
               <div class="info-item">
                 <strong>Groupe sanguin:</strong> <span class="highlight">${patient.groupeSanguin}</span>
@@ -277,7 +301,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
               </div>
               ${patient.allergies.length > 0 ? `
                 <div class="info-item full-width allergies">
-                  <strong>⚠️ ALLERGIES:</strong> ${patient.allergies.join(', ')}
+                  <strong>⚠️ ${t('patient.allergies').toUpperCase()}:</strong> ${patient.allergies.join(', ')}
                 </div>
               ` : ''}
             </div>
@@ -285,19 +309,19 @@ export const PatientModal: React.FC<PatientModalProps> = ({
 
           <!-- Hospitalisation actuelle -->
           <section class="section">
-            <h3>HOSPITALISATION ACTUELLE</h3>
+            <h3>${t('patient.modal.hospitalization').toUpperCase()}</h3>
             <div class="info-grid">
               <div class="info-item">
                 <strong>Service:</strong> ${patient.service}
               </div>
               <div class="info-item">
-                <strong>Statut:</strong> ${patient.statut}
+                <strong>${t('common.status')}:</strong> ${patient.statut}
               </div>
               <div class="info-item">
                 <strong>Mode d'admission:</strong> ${patient.modeAdmission}
               </div>
               <div class="info-item">
-                <strong>Date d'admission:</strong> ${format(new Date(patient.dateAdmission), 'dd/MM/yyyy', { locale: fr })}
+                <strong>Date d'admission:</strong> ${format(new Date(patient.dateAdmission), 'dd/MM/yyyy', { locale })}
               </div>
               <div class="info-item full-width">
                 <strong>Motif d'hospitalisation:</strong> ${patient.motifHospitalisation}
@@ -313,32 +337,32 @@ export const PatientModal: React.FC<PatientModalProps> = ({
 
           <!-- Traitements en cours -->
           <section class="section">
-            <h3>TRAITEMENTS EN COURS</h3>
+            <h3>${t('patient.modal.treatments').toUpperCase()}</h3>
             ${patient.traitements.length > 0 ? `
               <div class="treatments">
                 ${patient.traitements.map(traitement => `
                   <div class="treatment-item">
                     <strong>${traitement.nom}</strong> - ${traitement.dosage} (${traitement.frequence})
-                    <span class="treatment-date">Depuis ${format(new Date(traitement.dateDebut), 'MM/yyyy', { locale: fr })}</span>
+                    <span class="treatment-date">Depuis ${format(new Date(traitement.dateDebut), 'MM/yyyy', { locale })}</span>
                   </div>
                 `).join('')}
               </div>
-            ` : '<p class="no-data">Aucun traitement en cours</p>'}
+            ` : `<p class="no-data">Aucun traitement en cours</p>`}
           </section>
 
           <!-- Antécédents médicaux -->
           <section class="section">
-            <h3>ANTÉCÉDENTS MÉDICAUX</h3>
+            <h3>${t('patient.modal.history').toUpperCase()}</h3>
             <div class="antecedents">
               <div class="antecedent-group">
-                <h4>Antécédents personnels</h4>
+                <h4>${t('patient.modal.personal.history')}</h4>
                 ${patient.antecedents.personnels.length > 0 
                   ? `<ul>${patient.antecedents.personnels.map(a => `<li>${a}</li>`).join('')}</ul>`
                   : '<p class="no-data">Aucun antécédent personnel notable</p>'
                 }
               </div>
               <div class="antecedent-group">
-                <h4>Antécédents familiaux</h4>
+                <h4>${t('patient.modal.family.history')}</h4>
                 ${patient.antecedents.familiaux.length > 0 
                   ? `<ul>${patient.antecedents.familiaux.map(a => `<li>${a}</li>`).join('')}</ul>`
                   : '<p class="no-data">Aucun antécédent familial notable</p>'
@@ -350,19 +374,19 @@ export const PatientModal: React.FC<PatientModalProps> = ({
           ${showCabinetFeatures ? `
             <!-- Consultations -->
             <section class="section page-break">
-              <h3>HISTORIQUE DES CONSULTATIONS</h3>
+              <h3>${t('patient.modal.consultations').toUpperCase()}</h3>
               ${consultationsHtml}
             </section>
 
             <!-- Factures -->
             <section class="section">
-              <h3>FACTURES ET PAIEMENTS</h3>
+              <h3>${t('patient.modal.invoices').toUpperCase()}</h3>
               ${facturesHtml}
             </section>
 
             <!-- Rendez-vous -->
             <section class="section">
-              <h3>RENDEZ-VOUS</h3>
+              <h3>${t('patient.modal.appointments').toUpperCase()}</h3>
               ${rdvHtml}
             </section>
           ` : ''}
@@ -684,9 +708,9 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                 <h2 className="text-2xl font-bold text-gray-900">
                   {patient.prenom} {patient.nom}
                 </h2>
-                <p className="text-gray-600">Dossier #{patient.numeroDossier}</p>
+                <p className="text-gray-600">{t('patient.file')} #{patient.numeroDossier}</p>
                 <p className="text-sm text-gray-500">
-                  Dernière mise à jour: {format(new Date(patient.derniereMaj), 'dd/MM/yyyy à HH:mm', { locale: fr })}
+                  {t('patient.modal.updated')} {format(new Date(patient.derniereMaj), 'dd/MM/yyyy à HH:mm', { locale })}
                 </p>
               </div>
             </div>
@@ -697,14 +721,14 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                 className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
               >
                 <Bot className="w-4 h-4" />
-                Assistant IA
+                {t('patient.modal.assistant')}
               </button>
               <button
                 onClick={handleExport}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
               >
                 <Download className="w-4 h-4" />
-                Exporter
+                {t('patient.modal.export')}
               </button>
               <button
                 onClick={onClose}
@@ -734,10 +758,13 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                 </div>
                 <div>
                   <p className="text-sm font-medium text-purple-900">
-                    Assistant IA Médical disponible
+                    {language === 'fr' ? 'Assistant IA Médical disponible' : 'Medical AI Assistant available'}
                   </p>
                   <p className="text-xs text-purple-700">
-                    Cliquez pour obtenir un résumé vidéo interactif de ce dossier patient
+                    {language === 'fr' 
+                      ? 'Cliquez pour obtenir un résumé vidéo interactif de ce dossier patient'
+                      : 'Click to get an interactive video summary of this patient file'
+                    }
                   </p>
                 </div>
               </div>
@@ -746,7 +773,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                 className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors"
               >
                 <Video className="w-3 h-3" />
-                Lancer l'IA
+                {language === 'fr' ? 'Lancer l\'IA' : 'Launch AI'}
               </button>
             </div>
           </div>
@@ -756,10 +783,10 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             <div className="px-6 border-b border-gray-200">
               <nav className="-mb-px flex space-x-8">
                 {[
-                  { id: 'medical', label: 'Dossier médical', icon: Heart },
-                  { id: 'consultations', label: 'Consultations', icon: Stethoscope },
-                  { id: 'factures', label: 'Factures', icon: Euro },
-                  { id: 'rendez-vous', label: 'Rendez-vous', icon: Calendar }
+                  { id: 'medical', label: t('patient.modal.medical'), icon: Heart },
+                  { id: 'consultations', label: t('patient.modal.consultations'), icon: Stethoscope },
+                  { id: 'factures', label: t('patient.modal.invoices'), icon: Euro },
+                  { id: 'rendez-vous', label: t('patient.modal.appointments'), icon: Calendar }
                 ].map((tab) => {
                   const Icon = tab.icon;
                   return (
@@ -790,23 +817,23 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                   <div className="bg-gray-50 rounded-xl p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <User className="w-5 h-5 text-blue-600" />
-                      Informations personnelles
+                      {t('patient.modal.personal')}
                     </h3>
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <span className="text-sm font-medium text-gray-500">Sexe</span>
-                          <p className="text-gray-900">{patient.sexe}</p>
+                          <p className="text-gray-900">{patient.sexe === 'M' ? t('common.male') : t('common.female')}</p>
                         </div>
                         <div>
                           <span className="text-sm font-medium text-gray-500">Âge</span>
-                          <p className="text-gray-900">{patient.age} ans</p>
+                          <p className="text-gray-900">{patient.age} {t('patient.years')}</p>
                         </div>
                       </div>
                       <div>
                         <span className="text-sm font-medium text-gray-500">Date de naissance</span>
                         <p className="text-gray-900">
-                          {format(new Date(patient.dateNaissance), 'dd MMMM yyyy', { locale: fr })}
+                          {format(new Date(patient.dateNaissance), 'dd MMMM yyyy', { locale })}
                         </p>
                       </div>
                       <div>
@@ -828,7 +855,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                   <div className="bg-gray-50 rounded-xl p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <Phone className="w-5 h-5 text-green-600" />
-                      Coordonnées
+                      {t('patient.modal.contact')}
                     </h3>
                     <div className="space-y-3">
                       <div>
@@ -867,7 +894,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                   <div className="bg-red-50 rounded-xl p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <Heart className="w-5 h-5 text-red-600" />
-                      Informations médicales critiques
+                      {t('patient.modal.medical')}
                     </h3>
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-4">
@@ -882,7 +909,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                       </div>
                       {patient.allergies.length > 0 && (
                         <div>
-                          <span className="text-sm font-medium text-red-600">Allergies</span>
+                          <span className="text-sm font-medium text-red-600">{t('patient.allergies')}</span>
                           <div className="flex flex-wrap gap-2 mt-1">
                             {patient.allergies.map((allergie, index) => (
                               <span key={index} className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
@@ -899,7 +926,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                   <div className="bg-blue-50 rounded-xl p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <Pill className="w-5 h-5 text-blue-600" />
-                      Traitements en cours
+                      {t('patient.modal.treatments')}
                     </h3>
                     <div className="space-y-3">
                       {patient.traitements.map((traitement, index) => (
@@ -910,7 +937,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                               <p className="text-sm text-gray-600">{traitement.dosage} - {traitement.frequence}</p>
                             </div>
                             <span className="text-xs text-gray-500">
-                              Depuis {format(new Date(traitement.dateDebut), 'MM/yyyy', { locale: fr })}
+                              Depuis {format(new Date(traitement.dateDebut), 'MM/yyyy', { locale })}
                             </span>
                           </div>
                         </div>
@@ -922,7 +949,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                   <div className="bg-teal-50 rounded-xl p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <Activity className="w-5 h-5 text-teal-600" />
-                      Hospitalisation actuelle
+                      {t('patient.modal.hospitalization')}
                     </h3>
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-4">
@@ -961,11 +988,11 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                 <div className="lg:col-span-2 bg-yellow-50 rounded-xl p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <FileText className="w-5 h-5 text-yellow-600" />
-                    Antécédents médicaux
+                    {t('patient.modal.history')}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <span className="text-sm font-medium text-gray-500">Antécédents personnels</span>
+                      <span className="text-sm font-medium text-gray-500">{t('patient.modal.personal.history')}</span>
                       <ul className="mt-2 space-y-1">
                         {patient.antecedents.personnels.map((antecedent, index) => (
                           <li key={index} className="text-sm text-gray-700 flex items-center gap-2">
@@ -976,7 +1003,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                       </ul>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-gray-500">Antécédents familiaux</span>
+                      <span className="text-sm font-medium text-gray-500">{t('patient.modal.family.history')}</span>
                       <ul className="mt-2 space-y-1">
                         {patient.antecedents.familiaux.map((antecedent, index) => (
                           <li key={index} className="text-sm text-gray-700 flex items-center gap-2">
@@ -995,9 +1022,9 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             {showCabinetFeatures && activeTab === 'consultations' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Historique des consultations</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.consultations')}</h3>
                   <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    Nouvelle consultation
+                    {t('patient.modal.new.consultation')}
                   </button>
                 </div>
                 {patient.consultations && patient.consultations.length > 0 ? (
@@ -1013,15 +1040,15 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                                 consultation.statut === 'en_cours' ? 'bg-orange-100 text-orange-800' :
                                 'bg-blue-100 text-blue-800'
                               }`}>
-                                {consultation.statut}
+                                {getConsultationStatusText(consultation.statut)}
                               </span>
                             </div>
                             <p className="text-sm text-gray-600 mb-2">{consultation.diagnostic}</p>
                             <div className="grid grid-cols-2 gap-4 text-sm text-gray-500">
-                              <div>Date: {format(new Date(consultation.date), 'dd/MM/yyyy à HH:mm', { locale: fr })}</div>
-                              <div>Durée: {consultation.duree} min</div>
-                              <div>Médecin: {consultation.medecinNom}</div>
-                              <div>Tarif: {consultation.tarif}€</div>
+                              <div>{t('common.date')}: {format(new Date(consultation.date), 'dd/MM/yyyy à HH:mm', { locale })}</div>
+                              <div>{t('common.duration')}: {consultation.duree} min</div>
+                              <div>{t('common.doctor')}: {consultation.medecinNom}</div>
+                              <div>{t('common.amount')}: {consultation.tarif}€</div>
                             </div>
                           </div>
                         </div>
@@ -1030,9 +1057,8 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
-                    
                     <Stethoscope className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>Aucune consultation enregistrée</p>
+                    <p>{t('patient.modal.no.consultations')}</p>
                   </div>
                 )}
               </div>
@@ -1042,9 +1068,9 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             {showCabinetFeatures && activeTab === 'factures' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Factures et paiements</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.invoices')}</h3>
                   <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                    Nouvelle facture
+                    {t('patient.modal.new.invoice')}
                   </button>
                 </div>
                 {patient.factures && patient.factures.length > 0 ? (
@@ -1060,9 +1086,9 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                               </span>
                             </div>
                             <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                              <div>Date: {format(new Date(facture.date), 'dd/MM/yyyy', { locale: fr })}</div>
-                              <div>Échéance: {format(new Date(facture.dateEcheance), 'dd/MM/yyyy', { locale: fr })}</div>
-                              <div>Montant total: {facture.montantTotal}€</div>
+                              <div>{t('common.date')}: {format(new Date(facture.date), 'dd/MM/yyyy', { locale })}</div>
+                              <div>Échéance: {format(new Date(facture.dateEcheance), 'dd/MM/yyyy', { locale })}</div>
+                              <div>{t('common.total')}: {facture.montantTotal}€</div>
                               <div>Reste à payer: {facture.montantRestant}€</div>
                             </div>
                           </div>
@@ -1073,7 +1099,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <Euro className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>Aucune facture enregistrée</p>
+                    <p>{t('patient.modal.no.invoices')}</p>
                   </div>
                 )}
               </div>
@@ -1083,9 +1109,9 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             {showCabinetFeatures && activeTab === 'rendez-vous' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Rendez-vous</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.appointments')}</h3>
                   <button className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
-                    Nouveau rendez-vous
+                    {t('patient.modal.new.appointment')}
                   </button>
                 </div>
                 {patient.rendezVous && patient.rendezVous.length > 0 ? (
@@ -1097,12 +1123,12 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                             <div className="flex items-center gap-3 mb-2">
                               <h4 className="font-medium text-gray-900">{rdv.motif}</h4>
                               <span className={`px-2 py-1 text-xs rounded-full ${getRdvStatusColor(rdv.statut)}`}>
-                                {rdv.statut}
+                                {getRdvStatusText(rdv.statut)}
                               </span>
                             </div>
                             <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                              <div>Date: {format(new Date(rdv.date), 'dd/MM/yyyy', { locale: fr })}</div>
-                              <div>Heure: {rdv.heureDebut} - {rdv.heureFin}</div>
+                              <div>{t('common.date')}: {format(new Date(rdv.date), 'dd/MM/yyyy', { locale })}</div>
+                              <div>{t('common.time')}: {rdv.heureDebut} - {rdv.heureFin}</div>
                               <div>Type: {rdv.type}</div>
                               <div>Salle: {rdv.salle}</div>
                             </div>
@@ -1114,7 +1140,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>Aucun rendez-vous programmé</p>
+                    <p>{t('patient.modal.no.appointments')}</p>
                   </div>
                 )}
               </div>

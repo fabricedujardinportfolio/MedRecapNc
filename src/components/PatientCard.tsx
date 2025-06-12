@@ -79,6 +79,14 @@ export const PatientCard: React.FC<PatientCardProps> = ({
     }
   };
 
+  const getTypePatientText = (type: string) => {
+    switch (type) {
+      case 'cabinet': return language === 'fr' ? 'Cabinet' : 'Practice';
+      case 'hospitalier': return language === 'fr' ? 'Hospitalier' : 'Hospital';
+      default: return type;
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 overflow-hidden">
       {/* Alert Banner */}
@@ -113,7 +121,7 @@ export const PatientCard: React.FC<PatientCardProps> = ({
             </div>
             {showCabinetInfo && patient.typePatient && (
               <div className={`px-3 py-1 rounded-full text-xs font-medium ${getTypePatientColor(patient.typePatient)}`}>
-                {patient.typePatient === 'cabinet' ? 'Cabinet' : 'Hospitalier'}
+                {getTypePatientText(patient.typePatient)}
               </div>
             )}
           </div>
@@ -148,7 +156,7 @@ export const PatientCard: React.FC<PatientCardProps> = ({
               <div className="flex items-center gap-2 text-sm text-blue-600">
                 <Stethoscope className="w-4 h-4" />
                 <span>
-                  Dernière consultation: {format(new Date(patient.derniereConsultation), 'dd/MM/yyyy', { locale })}
+                  {t('patient.last.consultation')} {format(new Date(patient.derniereConsultation), 'dd/MM/yyyy', { locale })}
                 </span>
               </div>
             )}
@@ -156,7 +164,7 @@ export const PatientCard: React.FC<PatientCardProps> = ({
               <div className="flex items-center gap-2 text-sm text-green-600">
                 <Calendar className="w-4 h-4" />
                 <span>
-                  Prochain RDV: {format(new Date(patient.prochainRendezVous), 'dd/MM/yyyy', { locale })}
+                  {t('patient.next.appointment')} {format(new Date(patient.prochainRendezVous), 'dd/MM/yyyy', { locale })}
                 </span>
               </div>
             )}
@@ -164,7 +172,7 @@ export const PatientCard: React.FC<PatientCardProps> = ({
               <div className="flex items-center gap-2 text-sm text-orange-600">
                 <Euro className="w-4 h-4" />
                 <span>
-                  {patient.factures.filter(f => f.statut === 'en_attente').length} facture(s) en attente
+                  {patient.factures.filter(f => f.statut === 'en_attente').length} {t('patient.pending.invoices')}
                 </span>
               </div>
             )}
