@@ -51,6 +51,10 @@ export interface CreatePixelResponse {
 class CollaborativeArtService {
   private static instance: CollaborativeArtService;
   private currentSessionId: string;
+  private pixelChannel: any = null;
+  private statsChannel: any = null;
+  private isPixelChannelSubscribed: boolean = false;
+  private isStatsChannelSubscribed: boolean = false;
 
   constructor() {
     // Générer un ID de session unique basé sur le navigateur et le timestamp
@@ -293,9 +297,25 @@ class CollaborativeArtService {
     }
   }
 
-  // Écouter les changements en temps réel
+  // Écouter les changements en temps réel - CORRIGÉ pour éviter les souscriptions multiples
   subscribeToPixelUpdates(callback: (payload: any) => void) {
-    return supabase
+    // Si le channel existe déjà et est souscrit, on retourne le channel existant
+    if (this.pixelChannel && this.isPixelChannelSubscribed) {
+      console.log('🔄 Channel pixels déjà souscrit, réutilisation');
+      return this.pixelChannel;
+    }
+
+    // Nettoyer l'ancien channel s'il existe
+    if (this.pixelChannel) {
+      console.log('🧹 Nettoyage de l\'ancien channel pixels');
+      this.pixelChannel.unsubscribe();
+      this.pixelChannel = null;
+      this.isPixelChannelSubscribed = false;
+    }
+
+    console.log('🆕 Création d\'un nouveau channel pixels');
+    
+    this.pixelChannel = supabase
       .channel('collaborative_pixels_changes')
       .on(
         'postgres_changes',
@@ -305,13 +325,50 @@ class CollaborativeArtService {
           table: 'collaborative_pixels'
         },
         callback
-      )
-      .subscribe();
+      );
+
+    // Marquer comme souscrit avant d'appeler subscribe
+    this.isPixelChannelSubscribed = true;
+    
+    // S'abonner au channel
+    this.pixelChannel.subscribe((status: string) => {
+      console.log('📡 Statut souscription pixels:', status);
+      if (status === 'SUBSCRIBED') {
+        console.log('✅ Souscription pixels réussie');
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('❌ Erreur de souscription pixels');
+        this.isPixelChannelSubscribed = false;
+      } else if (status === 'TIMED_OUT') {
+        console.error('⏰ Timeout de souscription pixels');
+        this.isPixelChannelSubscribed = false;
+      } else if (status === 'CLOSED') {
+        console.log('🔒 Channel pixels fermé');
+        this.isPixelChannelSubscribed = false;
+      }
+    });
+
+    return this.pixelChannel;
   }
 
-  // Écouter les changements de statistiques
+  // Écouter les changements de statistiques - CORRIGÉ pour éviter les souscriptions multiples
   subscribeToStatsUpdates(callback: (payload: any) => void) {
-    return supabase
+    // Si le channel existe déjà et est souscrit, on retourne le channel existant
+    if (this.statsChannel && this.isStatsChannelSubscribed) {
+      console.log('🔄 Channel stats déjà souscrit, réutilisation');
+      return this.statsChannel;
+    }
+
+    // Nettoyer l'ancien channel s'il existe
+    if (this.statsChannel) {
+      console.log('🧹 Nettoyage de l\'ancien channel stats');
+      this.statsChannel.unsubscribe();
+      this.statsChannel = null;
+      this.isStatsChannelSubscribed = false;
+    }
+
+    console.log('🆕 Création d\'un nouveau channel stats');
+    
+    this.statsChannel = supabase
       .channel('art_project_stats_changes')
       .on(
         'postgres_changes',
@@ -321,8 +378,46 @@ class CollaborativeArtService {
           table: 'art_project_stats'
         },
         callback
-      )
-      .subscribe();
+      );
+
+    // Marquer comme souscrit avant d'appeler subscribe
+    this.isStatsChannelSubscribed = true;
+    
+    // S'abonner au channel
+    this.statsChannel.subscribe((status: string) => {
+      console.log('📊 Statut souscription stats:', status);
+      if (status === 'SUBSCRIBED') {
+        console.log('✅ Souscription stats réussie');
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('❌ Erreur de souscription stats');
+        this.isStatsChannelSubscribed = false;
+      } else if (status === 'TIMED_OUT') {
+        console.error('⏰ Timeout de souscription stats');
+        this.isStatsChannelSubscribed = false;
+      } else if (status === 'CLOSED') {
+        console.log('🔒 Channel stats fermé');
+        this.isStatsChannelSubscribed = false;
+      }
+    });
+
+    return this.statsChannel;
+  }
+
+  // Méthode pour nettoyer toutes les souscriptions
+  unsubscribeAll() {
+    console.log('🧹 Nettoyage de toutes les souscriptions');
+    
+    if (this.pixelChannel) {
+      this.pixelChannel.unsubscribe();
+      this.pixelChannel = null;
+      this.isPixelChannelSubscribed = false;
+    }
+    
+    if (this.statsChannel) {
+      this.statsChannel.unsubscribe();
+      this.statsChannel = null;
+      this.isStatsChannelSubscribed = false;
+    }
   }
 
   // Obtenir l'ID de session actuel

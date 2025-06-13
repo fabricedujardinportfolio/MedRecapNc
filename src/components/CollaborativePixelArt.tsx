@@ -66,6 +66,12 @@ export const CollaborativePixelArt: React.FC = () => {
   useEffect(() => {
     loadInitialData();
     setupRealtimeSubscriptions();
+    
+    // Nettoyer les souscriptions au démontage du composant
+    return () => {
+      console.log('🧹 Nettoyage des souscriptions au démontage du composant');
+      collaborativeArtService.unsubscribeAll();
+    };
   }, []);
 
   const loadInitialData = async () => {
@@ -102,33 +108,41 @@ export const CollaborativePixelArt: React.FC = () => {
   };
 
   const setupRealtimeSubscriptions = () => {
-    // Écouter les nouveaux pixels
-    const pixelSubscription = collaborativeArtService.subscribeToPixelUpdates((payload) => {
-      console.log('🎨 Nouveau pixel reçu:', payload);
-      if (payload.new) {
-        setPixels(prev => [...prev, payload.new]);
-        // Recharger les stats
+    try {
+      console.log('🔄 Configuration des souscriptions temps réel');
+      
+      // Écouter les nouveaux pixels
+      const pixelSubscription = collaborativeArtService.subscribeToPixelUpdates((payload) => {
+        console.log('🎨 Nouveau pixel reçu:', payload);
+        if (payload.new) {
+          setPixels(prev => [...prev, payload.new]);
+          // Recharger les stats
+          loadStats();
+        }
+      });
+
+      // Écouter les mises à jour de statistiques
+      const statsSubscription = collaborativeArtService.subscribeToStatsUpdates((payload) => {
+        console.log('📊 Statistiques mises à jour:', payload);
         loadStats();
-      }
-    });
+      });
 
-    // Écouter les mises à jour de statistiques
-    const statsSubscription = collaborativeArtService.subscribeToStatsUpdates((payload) => {
-      console.log('📊 Statistiques mises à jour:', payload);
-      loadStats();
-    });
-
-    // Nettoyer les subscriptions au démontage
-    return () => {
-      pixelSubscription.unsubscribe();
-      statsSubscription.unsubscribe();
-    };
+      console.log('✅ Souscriptions configurées avec succès');
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la configuration des souscriptions:', error);
+      setError('Erreur lors de la configuration des mises à jour temps réel.');
+    }
   };
 
   const loadStats = async () => {
-    const detailedStats = await collaborativeArtService.getDetailedStats();
-    if (detailedStats) {
-      setStats(detailedStats);
+    try {
+      const detailedStats = await collaborativeArtService.getDetailedStats();
+      if (detailedStats) {
+        setStats(detailedStats);
+      }
+    } catch (error) {
+      console.error('Erreur lors du rechargement des stats:', error);
     }
   };
 
