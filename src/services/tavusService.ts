@@ -13,6 +13,7 @@ export interface TavusVideoSession {
   conversationId?: string;
   isDemoMode?: boolean;
   patientData?: Patient;
+  language?: 'fr' | 'en';
 }
 
 export interface TavusConversationRequest {
@@ -39,18 +40,24 @@ export class TavusService {
     return TavusService.instance;
   }
 
-  // Generate comprehensive medical summary with cabinet data
-  private generateComprehensiveMedicalSummary(patient: Patient): string {
+  // Generate comprehensive medical summary with cabinet data - MULTILINGUE
+  private generateComprehensiveMedicalSummary(patient: Patient, language: 'fr' | 'en' = 'fr'): string {
     const criticalInfo = [];
     
     // Add critical alerts
     if (patient.alerte && patient.alerte.niveau !== 'verte') {
-      criticalInfo.push(`ALERTE ${patient.alerte.niveau.toUpperCase()}: ${patient.alerte.message}`);
+      const alertText = language === 'fr' 
+        ? `ALERTE ${patient.alerte.niveau.toUpperCase()}: ${patient.alerte.message}`
+        : `ALERT ${patient.alerte.niveau.toUpperCase()}: ${patient.alerte.message}`;
+      criticalInfo.push(alertText);
     }
 
     // Add allergies
     if (patient.allergies.length > 0) {
-      criticalInfo.push(`Allergies importantes: ${patient.allergies.join(', ')}`);
+      const allergiesText = language === 'fr'
+        ? `Allergies importantes: ${patient.allergies.join(', ')}`
+        : `Important allergies: ${patient.allergies.join(', ')}`;
+      criticalInfo.push(allergiesText);
     }
 
     // Add current treatments
@@ -63,10 +70,11 @@ export class TavusService {
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 3);
       
+      const consultationsTitle = language === 'fr' ? 'DERNIÈRES CONSULTATIONS:' : 'RECENT CONSULTATIONS:';
       consultationsInfo = `
-DERNIÈRES CONSULTATIONS:
+${consultationsTitle}
 ${recentConsultations.map(c => 
-  `- ${new Date(c.date).toLocaleDateString('fr-FR')}: ${c.motif} - ${c.diagnostic} (Dr. ${c.medecinNom})`
+  `- ${new Date(c.date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}: ${c.motif} - ${c.diagnostic} (Dr. ${c.medecinNom})`
 ).join('\n')}`;
     }
 
@@ -76,11 +84,16 @@ ${recentConsultations.map(c =>
       const facturesEnAttente = patient.factures.filter(f => f.statut === 'en_attente');
       const totalEnAttente = facturesEnAttente.reduce((sum, f) => sum + f.montantRestant, 0);
       
+      const financialTitle = language === 'fr' ? 'SITUATION FINANCIÈRE:' : 'FINANCIAL SITUATION:';
+      const totalInvoicesText = language === 'fr' ? 'Total factures' : 'Total invoices';
+      const pendingInvoicesText = language === 'fr' ? 'Factures en attente' : 'Pending invoices';
+      const lastInvoiceText = language === 'fr' ? 'Dernière facture' : 'Last invoice';
+      
       facturesInfo = `
-SITUATION FINANCIÈRE:
-- Total factures: ${patient.factures.length}
-- Factures en attente: ${facturesEnAttente.length} (${totalEnAttente}€)
-- Dernière facture: ${patient.factures[0]?.numero} du ${new Date(patient.factures[0]?.date).toLocaleDateString('fr-FR')}`;
+${financialTitle}
+- ${totalInvoicesText}: ${patient.factures.length}
+- ${pendingInvoicesText}: ${facturesEnAttente.length} (${totalEnAttente}€)
+- ${lastInvoiceText}: ${patient.factures[0]?.numero} ${language === 'fr' ? 'du' : 'from'} ${new Date(patient.factures[0]?.date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}`;
     }
 
     // Prepare rendez-vous summary
@@ -94,20 +107,25 @@ SITUATION FINANCIÈRE:
         .filter(r => new Date(r.date) <= new Date())
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
+      const appointmentsTitle = language === 'fr' ? 'RENDEZ-VOUS:' : 'APPOINTMENTS:';
       rdvInfo = `
-RENDEZ-VOUS:`;
+${appointmentsTitle}`;
+      
       if (prochainRdv) {
+        const nextAppText = language === 'fr' ? 'Prochain RDV' : 'Next appointment';
         rdvInfo += `
-- Prochain RDV: ${new Date(prochainRdv.date).toLocaleDateString('fr-FR')} à ${prochainRdv.heureDebut} - ${prochainRdv.motif} (${prochainRdv.statut})`;
+- ${nextAppText}: ${new Date(prochainRdv.date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')} ${language === 'fr' ? 'à' : 'at'} ${prochainRdv.heureDebut} - ${prochainRdv.motif} (${prochainRdv.statut})`;
       }
       if (dernierRdv) {
+        const lastAppText = language === 'fr' ? 'Dernier RDV' : 'Last appointment';
         rdvInfo += `
-- Dernier RDV: ${new Date(dernierRdv.date).toLocaleDateString('fr-FR')} - ${dernierRdv.motif}`;
+- ${lastAppText}: ${new Date(dernierRdv.date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')} - ${dernierRdv.motif}`;
       }
     }
 
-    const summary = `
-Vous êtes Dr. IA Assistant, un assistant médical virtuel professionnel spécialisé dans l'analyse complète des dossiers patients. Vous avez accès à toutes les informations médicales, administratives et financières du patient.
+    // Generate summary based on language
+    const summary = language === 'fr' ? `
+Vous êtes Dr. Léa Martin, assistante médicale IA empathique et professionnelle. Vous avez accès à toutes les informations médicales, administratives et financières du patient.
 
 PATIENT: ${patient.prenom} ${patient.nom}
 ÂGE: ${patient.age} ans
@@ -144,23 +162,63 @@ Vous pouvez répondre aux questions sur:
 - Les traitements et leur évolution
 - Les recommandations de suivi
 
-Commencez par vous présenter, puis donnez un résumé structuré et professionnel de ce dossier patient. Soyez prêt à répondre aux questions spécifiques sur tous les aspects du dossier.
+Présentez-vous comme Dr. Léa Martin et donnez un résumé structuré et professionnel de ce dossier patient.
+    ` : `
+You are Dr. Léa Martin, an empathetic and professional AI medical assistant. You have access to all medical, administrative and financial information about the patient.
+
+PATIENT: ${patient.prenom} ${patient.nom}
+AGE: ${patient.age} years old
+GENDER: ${patient.sexe === 'M' ? 'Male' : 'Female'}
+BLOOD TYPE: ${patient.groupeSanguin}
+DEPARTMENT: ${patient.service}
+STATUS: ${patient.statut}
+PATIENT TYPE: ${patient.typePatient === 'cabinet' ? 'Medical practice patient' : 'Hospital patient'}
+
+${criticalInfo.length > 0 ? `CRITICAL INFORMATION:\n${criticalInfo.join('\n')}\n` : ''}
+
+HOSPITALIZATION REASON: ${patient.motifHospitalisation}
+
+DIAGNOSES: ${patient.diagnostics.join(', ')}
+
+CURRENT TREATMENTS: ${treatments || 'No current treatment'}
+
+MEDICAL HISTORY: ${patient.antecedents.personnels.join(', ') || 'No notable history'}
+
+${consultationsInfo}
+
+${facturesInfo}
+
+${rdvInfo}
+
+EMERGENCY CONTACT: ${patient.contactUrgence.nom} (${patient.contactUrgence.lien}) - ${patient.contactUrgence.telephone}
+
+ANALYSIS CAPABILITIES:
+You can answer questions about:
+- Complete medical history of the patient
+- Recent consultations and their results
+- Financial situation and invoices
+- Past and upcoming appointments
+- Treatments and their evolution
+- Follow-up recommendations
+
+Introduce yourself as Dr. Léa Martin and provide a structured and professional summary of this patient file.
     `;
 
     return summary.trim();
   }
 
-  // Analyze patient query and provide contextual response
-  public generateContextualResponse(question: string, patient: Patient): string {
+  // Analyze patient query and provide contextual response - MULTILINGUE
+  public generateContextualResponse(question: string, patient: Patient, language: 'fr' | 'en' = 'fr'): string {
     const lowerQuestion = question.toLowerCase();
     
     // Consultations queries
-    if (lowerQuestion.includes('consultation') || lowerQuestion.includes('dernière visite') || lowerQuestion.includes('dernier rendez-vous médical')) {
+    if (lowerQuestion.includes('consultation') || lowerQuestion.includes('dernière visite') || lowerQuestion.includes('dernier rendez-vous médical') || lowerQuestion.includes('last visit') || lowerQuestion.includes('recent consultation')) {
       if (patient.consultations && patient.consultations.length > 0) {
         const derniereConsultation = patient.consultations
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
         
-        return `La dernière consultation de ${patient.prenom} ${patient.nom} a eu lieu le ${new Date(derniereConsultation.date).toLocaleDateString('fr-FR')} avec ${derniereConsultation.medecinNom}. 
+        if (language === 'fr') {
+          return `La dernière consultation de ${patient.prenom} ${patient.nom} a eu lieu le ${new Date(derniereConsultation.date).toLocaleDateString('fr-FR')} avec ${derniereConsultation.medecinNom}. 
 
 Motif: ${derniereConsultation.motif}
 Diagnostic: ${derniereConsultation.diagnostic}
@@ -172,120 +230,31 @@ ${derniereConsultation.observations ? `Observations: ${derniereConsultation.obse
 
 ${derniereConsultation.ordonnance?.medicaments.length > 0 ? 
   `Médicaments prescrits: ${derniereConsultation.ordonnance.medicaments.map(m => `${m.nom} ${m.dosage} (${m.instructions})`).join(', ')}` : ''}`;
-      } else {
-        return `Aucune consultation n'est enregistrée dans le dossier de ${patient.prenom} ${patient.nom}.`;
-      }
-    }
-
-    // Factures/financial queries
-    if (lowerQuestion.includes('facture') || lowerQuestion.includes('paiement') || lowerQuestion.includes('financier') || lowerQuestion.includes('dette') || lowerQuestion.includes('doit')) {
-      if (patient.factures && patient.factures.length > 0) {
-        const facturesEnAttente = patient.factures.filter(f => f.statut === 'en_attente');
-        const totalEnAttente = facturesEnAttente.reduce((sum, f) => sum + f.montantRestant, 0);
-        const totalPaye = patient.factures.reduce((sum, f) => sum + f.montantPaye, 0);
-        
-        let response = `Situation financière de ${patient.prenom} ${patient.nom}:
-
-Total des factures: ${patient.factures.length}
-Montant total payé: ${totalPaye}€
-Factures en attente: ${facturesEnAttente.length}
-Montant en attente: ${totalEnAttente}€`;
-
-        if (facturesEnAttente.length > 0) {
-          response += `\n\nDétail des factures en attente:`;
-          facturesEnAttente.forEach(f => {
-            response += `\n- Facture ${f.numero} du ${new Date(f.date).toLocaleDateString('fr-FR')}: ${f.montantRestant}€ (échéance: ${new Date(f.dateEcheance).toLocaleDateString('fr-FR')})`;
-          });
-        }
-
-        return response;
-      } else {
-        return `Aucune facture n'est enregistrée pour ${patient.prenom} ${patient.nom}.`;
-      }
-    }
-
-    // Rendez-vous queries
-    if (lowerQuestion.includes('rendez-vous') || lowerQuestion.includes('rdv') || lowerQuestion.includes('prochain') || lowerQuestion.includes('planning')) {
-      if (patient.rendezVous && patient.rendezVous.length > 0) {
-        const prochainRdv = patient.rendezVous
-          .filter(r => new Date(r.date) > new Date())
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
-        
-        const dernierRdv = patient.rendezVous
-          .filter(r => new Date(r.date) <= new Date())
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-
-        let response = `Planning des rendez-vous pour ${patient.prenom} ${patient.nom}:`;
-
-        if (prochainRdv) {
-          response += `\n\nProchain rendez-vous:
-- Date: ${new Date(prochainRdv.date).toLocaleDateString('fr-FR')}
-- Heure: ${prochainRdv.heureDebut} - ${prochainRdv.heureFin}
-- Motif: ${prochainRdv.motif}
-- Type: ${prochainRdv.type}
-- Statut: ${prochainRdv.statut}
-- Médecin: ${prochainRdv.medecinNom}`;
         } else {
-          response += `\n\nAucun rendez-vous programmé à venir.`;
+          return `${patient.prenom} ${patient.nom}'s last consultation took place on ${new Date(derniereConsultation.date).toLocaleDateString('en-US')} with ${derniereConsultation.medecinNom}.
+
+Reason: ${derniereConsultation.motif}
+Diagnosis: ${derniereConsultation.diagnostic}
+Prescribed treatment: ${derniereConsultation.traitement}
+Duration: ${derniereConsultation.duree} minutes
+Fee: ${derniereConsultation.tarif}€
+
+${derniereConsultation.observations ? `Observations: ${derniereConsultation.observations}` : ''}
+
+${derniereConsultation.ordonnance?.medicaments.length > 0 ? 
+  `Prescribed medications: ${derniereConsultation.ordonnance.medicaments.map(m => `${m.nom} ${m.dosage} (${m.instructions})`).join(', ')}` : ''}`;
         }
-
-        if (dernierRdv) {
-          response += `\n\nDernier rendez-vous:
-- Date: ${new Date(dernierRdv.date).toLocaleDateString('fr-FR')}
-- Motif: ${dernierRdv.motif}
-- Statut: ${dernierRdv.statut}`;
-        }
-
-        return response;
       } else {
-        return `Aucun rendez-vous n'est programmé pour ${patient.prenom} ${patient.nom}.`;
+        return language === 'fr' 
+          ? `Aucune consultation n'est enregistrée dans le dossier de ${patient.prenom} ${patient.nom}.`
+          : `No consultations are recorded in ${patient.prenom} ${patient.nom}'s file.`;
       }
-    }
-
-    // Allergies queries
-    if (lowerQuestion.includes('allergie')) {
-      if (patient.allergies.length > 0) {
-        return `${patient.prenom} ${patient.nom} présente les allergies suivantes : ${patient.allergies.join(', ')}. Il est important de vérifier toute prescription médicamenteuse en tenant compte de ces allergies.`;
-      } else {
-        return `${patient.prenom} ${patient.nom} ne présente aucune allergie connue dans son dossier médical.`;
-      }
-    }
-    
-    // Treatment queries
-    if (lowerQuestion.includes('traitement') || lowerQuestion.includes('médicament')) {
-      if (patient.traitements.length > 0) {
-        const traitements = patient.traitements.map(t => `${t.nom} ${t.dosage} (${t.frequence})`).join(', ');
-        return `Les traitements actuels de ${patient.prenom} ${patient.nom} sont : ${traitements}.`;
-      } else {
-        return `${patient.prenom} ${patient.nom} ne suit actuellement aucun traitement médicamenteux.`;
-      }
-    }
-    
-    // Diagnostic queries
-    if (lowerQuestion.includes('diagnostic')) {
-      return `Les diagnostics pour ${patient.prenom} ${patient.nom} sont : ${patient.diagnostics.join(', ')}.`;
-    }
-    
-    // Medical history queries
-    if (lowerQuestion.includes('antécédent')) {
-      const antecedents = patient.antecedents.personnels.length > 0 
-        ? patient.antecedents.personnels.join(', ')
-        : 'aucun antécédent notable';
-      return `Les antécédents médicaux de ${patient.prenom} ${patient.nom} incluent : ${antecedents}.`;
-    }
-    
-    // Status queries
-    if (lowerQuestion.includes('statut') || lowerQuestion.includes('état')) {
-      let response = `${patient.prenom} ${patient.nom} est actuellement ${patient.statut.toLowerCase()} dans le service ${patient.service}.`;
-      if (patient.alerte && patient.alerte.niveau !== 'verte') {
-        response += ` Attention : ${patient.alerte.message}`;
-      }
-      return response;
     }
 
     // Summary queries
-    if (lowerQuestion.includes('résumé') || lowerQuestion.includes('synthèse') || lowerQuestion.includes('bilan')) {
-      let summary = `Résumé complet du dossier de ${patient.prenom} ${patient.nom}:
+    if (lowerQuestion.includes('résumé') || lowerQuestion.includes('synthèse') || lowerQuestion.includes('bilan') || lowerQuestion.includes('summary') || lowerQuestion.includes('overview')) {
+      if (language === 'fr') {
+        let summary = `Résumé complet du dossier de ${patient.prenom} ${patient.nom}:
 
 INFORMATIONS GÉNÉRALES:
 - Âge: ${patient.age} ans, ${patient.sexe === 'M' ? 'Masculin' : 'Féminin'}
@@ -293,43 +262,47 @@ INFORMATIONS GÉNÉRALES:
 - Service: ${patient.service}
 - Statut: ${patient.statut}`;
 
-      if (patient.allergies.length > 0) {
-        summary += `\n- Allergies: ${patient.allergies.join(', ')}`;
-      }
+        if (patient.allergies.length > 0) {
+          summary += `\n- Allergies: ${patient.allergies.join(', ')}`;
+        }
 
-      if (patient.consultations && patient.consultations.length > 0) {
-        const derniereConsultation = patient.consultations
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-        summary += `\n\nDERNIÈRE CONSULTATION (${new Date(derniereConsultation.date).toLocaleDateString('fr-FR')}):
+        if (patient.consultations && patient.consultations.length > 0) {
+          const derniereConsultation = patient.consultations
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+          summary += `\n\nDERNIÈRE CONSULTATION (${new Date(derniereConsultation.date).toLocaleDateString('fr-FR')}):
 - Motif: ${derniereConsultation.motif}
 - Diagnostic: ${derniereConsultation.diagnostic}`;
-      }
-
-      if (patient.factures && patient.factures.length > 0) {
-        const facturesEnAttente = patient.factures.filter(f => f.statut === 'en_attente');
-        if (facturesEnAttente.length > 0) {
-          const totalEnAttente = facturesEnAttente.reduce((sum, f) => sum + f.montantRestant, 0);
-          summary += `\n\nSITUATION FINANCIÈRE:
-- ${facturesEnAttente.length} facture(s) en attente pour un total de ${totalEnAttente}€`;
         }
-      }
 
-      if (patient.rendezVous && patient.rendezVous.length > 0) {
-        const prochainRdv = patient.rendezVous
-          .filter(r => new Date(r.date) > new Date())
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
-        
-        if (prochainRdv) {
-          summary += `\n\nPROCHAIN RENDEZ-VOUS:
-- ${new Date(prochainRdv.date).toLocaleDateString('fr-FR')} à ${prochainRdv.heureDebut} - ${prochainRdv.motif}`;
+        return summary;
+      } else {
+        let summary = `Complete summary of ${patient.prenom} ${patient.nom}'s file:
+
+GENERAL INFORMATION:
+- Age: ${patient.age} years old, ${patient.sexe === 'M' ? 'Male' : 'Female'}
+- Blood type: ${patient.groupeSanguin}
+- Department: ${patient.service}
+- Status: ${patient.statut}`;
+
+        if (patient.allergies.length > 0) {
+          summary += `\n- Allergies: ${patient.allergies.join(', ')}`;
         }
-      }
 
-      return summary;
+        if (patient.consultations && patient.consultations.length > 0) {
+          const derniereConsultation = patient.consultations
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+          summary += `\n\nLAST CONSULTATION (${new Date(derniereConsultation.date).toLocaleDateString('en-US')}):
+- Reason: ${derniereConsultation.motif}
+- Diagnosis: ${derniereConsultation.diagnostic}`;
+        }
+
+        return summary;
+      }
     }
     
     // General response
-    return `Concernant ${patient.prenom} ${patient.nom}, je peux vous fournir des informations détaillées sur:
+    if (language === 'fr') {
+      return `Concernant ${patient.prenom} ${patient.nom}, je peux vous fournir des informations détaillées sur:
 - Son historique médical et ses consultations récentes
 - Ses allergies, traitements et diagnostics
 - Sa situation financière et ses factures
@@ -337,18 +310,32 @@ INFORMATIONS GÉNÉRALES:
 - Son statut actuel et ses antécédents
 
 Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé complet, des détails sur ses consultations, sa situation financière, ou tout autre aspect de son dossier.`;
+    } else {
+      return `Regarding ${patient.prenom} ${patient.nom}, I can provide detailed information about:
+- Medical history and recent consultations
+- Allergies, treatments and diagnoses
+- Financial situation and invoices
+- Past and upcoming appointments
+- Current status and medical history
+
+What would you like to know specifically? You can ask me for a complete summary, consultation details, financial situation, or any other aspect of the file.`;
+    }
   }
 
   // Create Tavus conversation
-  private async createTavusConversation(patient: Patient): Promise<any> {
+  private async createTavusConversation(patient: Patient, language: 'fr' | 'en' = 'fr'): Promise<any> {
     if (!TAVUS_API_KEY || !TAVUS_REPLICA_ID || !TAVUS_PERSONA_ID) {
       throw new Error('Configuration Tavus incomplète. Vérifiez vos variables d\'environnement.');
     }
 
+    const conversationName = language === 'fr'
+      ? `Consultation médicale complète - ${patient.prenom} ${patient.nom}`
+      : `Complete medical consultation - ${patient.prenom} ${patient.nom}`;
+
     const conversationData: TavusConversationRequest = {
       replica_id: TAVUS_REPLICA_ID,
       persona_id: TAVUS_PERSONA_ID,
-      conversation_name: `Consultation médicale complète - ${patient.prenom} ${patient.nom}`,
+      conversation_name: conversationName,
       properties: {
         max_call_duration: 1800, // 30 minutes
         participant_left_timeout: 60,
@@ -358,10 +345,11 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
     };
 
     try {
-      console.log('Création de la conversation Tavus avec données complètes:', {
+      console.log('Création de la conversation Tavus avec Dr. Léa Martin:', {
         replica_id: TAVUS_REPLICA_ID,
         persona_id: TAVUS_PERSONA_ID,
         conversation_name: conversationData.conversation_name,
+        language: language,
         patient_data: {
           consultations: patient.consultations?.length || 0,
           factures: patient.factures?.length || 0,
@@ -390,7 +378,7 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
       }
 
       const result = await response.json();
-      console.log('Conversation Tavus créée avec succès:', result);
+      console.log('Conversation Tavus créée avec succès pour Dr. Léa Martin:', result);
       return result;
     } catch (error) {
       console.error('Erreur lors de la création de la conversation Tavus:', error);
@@ -398,12 +386,12 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
     }
   }
 
-  // Initialize Tavus video session for patient with complete data
-  async initializePatientSession(patient: Patient): Promise<TavusVideoSession> {
+  // Initialize Tavus video session for patient with complete data - MULTILINGUE
+  async initializePatientSession(patient: Patient, language: 'fr' | 'en' = 'fr'): Promise<TavusVideoSession> {
     const sessionId = `session_${patient.id}_${Date.now()}`;
     
     try {
-      console.log('Initialisation de la session Tavus avec données complètes pour:', patient.prenom, patient.nom);
+      console.log('Initialisation de la session Dr. Léa Martin avec données complètes pour:', patient.prenom, patient.nom, 'Langue:', language);
       console.log('Données disponibles:', {
         consultations: patient.consultations?.length || 0,
         factures: patient.factures?.length || 0,
@@ -412,7 +400,7 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
       });
       
       // Create conversation with Tavus API
-      const conversationResponse = await this.createTavusConversation(patient);
+      const conversationResponse = await this.createTavusConversation(patient, language);
       
       // Extract the conversation URL from the response
       let videoUrl = '#demo-mode';
@@ -428,14 +416,15 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
         status: 'initializing',
         conversationId: conversationResponse.conversation_id,
         isDemoMode: false,
-        patientData: patient
+        patientData: patient,
+        language: language
       };
 
       this.currentSession = session;
 
-      // Generate comprehensive medical summary with all data
-      const comprehensiveSummary = this.generateComprehensiveMedicalSummary(patient);
-      console.log('Résumé médical complet généré pour Tavus:', comprehensiveSummary.substring(0, 300) + '...');
+      // Generate comprehensive medical summary with all data in the correct language
+      const comprehensiveSummary = this.generateComprehensiveMedicalSummary(patient, language);
+      console.log('Résumé médical complet généré pour Dr. Léa Martin en', language, ':', comprehensiveSummary.substring(0, 300) + '...');
       
       // Simulate initialization process
       setTimeout(() => {
@@ -446,7 +435,7 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
 
       return session;
     } catch (error) {
-      console.error('Erreur lors de l\'initialisation de la session Tavus:', error);
+      console.error('Erreur lors de l\'initialisation de la session Dr. Léa Martin:', error);
       
       // Create fallback demo session with patient data
       const fallbackSession: TavusVideoSession = {
@@ -454,7 +443,8 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
         videoUrl: '#demo-mode',
         status: 'initializing',
         isDemoMode: true,
-        patientData: patient
+        patientData: patient,
+        language: language
       };
 
       this.currentSession = fallbackSession;
@@ -484,11 +474,11 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
     }
 
     try {
-      console.log('Message envoyé à Tavus avec contexte patient:', message);
+      console.log('Message envoyé à Dr. Léa Martin avec contexte patient:', message);
       
       // If we have a real conversation ID, send to Tavus API
       if (this.currentSession.conversationId && TAVUS_API_KEY && !this.currentSession.isDemoMode) {
-        console.log('Envoi du message via Tavus API avec données patient...');
+        console.log('Envoi du message via Tavus API avec Dr. Léa Martin...');
       }
       
       // Update session status
@@ -515,9 +505,9 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
             'x-api-key': TAVUS_API_KEY
           }
         });
-        console.log('Session Tavus fermée avec succès');
+        console.log('Session Dr. Léa Martin fermée avec succès');
       } catch (error) {
-        console.error('Erreur lors de la fermeture de la session Tavus:', error);
+        console.error('Erreur lors de la fermeture de la session Dr. Léa Martin:', error);
       }
     }
 
