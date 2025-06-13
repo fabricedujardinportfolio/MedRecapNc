@@ -120,7 +120,7 @@ class CollaborativeArtService {
     }
   }
 
-  // Récupérer les statistiques du projet avec retry
+  // 📊 MÉTHODE CORRIGÉE : Récupérer les statistiques avec calcul en temps réel
   async getProjectStats(): Promise<ArtProjectStats | null> {
     const maxRetries = 3;
     let retries = 0;
@@ -129,21 +129,58 @@ class CollaborativeArtService {
       try {
         console.log(`🔄 Tentative ${retries + 1}/${maxRetries} - Récupération des statistiques`);
         
-        const { data, error } = await supabase
-          .from('art_project_stats')
-          .select('*')
-          .single();
+        // 🔧 CALCUL EN TEMPS RÉEL : Compter les pixels actuels
+        const { count: actualPixelCount, error: countError } = await supabase
+          .from('collaborative_pixels')
+          .select('*', { count: 'exact', head: true });
 
-        if (error) {
-          console.error('Erreur lors de la récupération des statistiques:', error);
+        if (countError) {
+          console.error('Erreur lors du comptage des pixels:', countError);
           if (retries === maxRetries - 1) return null;
           retries++;
           await new Promise(resolve => setTimeout(resolve, 1000 * retries));
           continue;
         }
 
-        console.log('✅ Statistiques récupérées avec succès:', data);
-        return data;
+        const realPixelCount = actualPixelCount || 0;
+        console.log('🎨 Nombre réel de pixels dans la base:', realPixelCount);
+
+        // Récupérer les stats de la table (pour les sessions aujourd'hui)
+        const { data: statsData, error: statsError } = await supabase
+          .from('art_project_stats')
+          .select('*')
+          .single();
+
+        if (statsError) {
+          console.error('Erreur lors de la récupération des statistiques:', statsError);
+          // Créer des stats par défaut si la table est vide
+          const defaultStats: ArtProjectStats = {
+            id: 'default',
+            total_pixels: 1500000,
+            completed_pixels: realPixelCount,
+            percentage: (realPixelCount / 1500000) * 100,
+            sessions_today: 0,
+            last_updated: new Date().toISOString()
+          };
+          console.log('📊 Utilisation des statistiques par défaut:', defaultStats);
+          return defaultStats;
+        }
+
+        // 🔧 MISE À JOUR : Utiliser le compte réel au lieu de celui en base
+        const updatedStats: ArtProjectStats = {
+          ...statsData,
+          completed_pixels: realPixelCount,
+          percentage: (realPixelCount / statsData.total_pixels) * 100
+        };
+
+        console.log('✅ Statistiques récupérées et mises à jour:', {
+          total: updatedStats.total_pixels,
+          completed: updatedStats.completed_pixels,
+          percentage: updatedStats.percentage.toFixed(2) + '%',
+          sessionsToday: updatedStats.sessions_today
+        });
+
+        return updatedStats;
       } catch (error) {
         console.error(`❌ Erreur service statistiques (tentative ${retries + 1}):`, error);
         if (retries === maxRetries - 1) return null;
@@ -456,7 +493,7 @@ class CollaborativeArtService {
     }
   }
 
-  // Obtenir les statistiques détaillées
+  // 📊 MÉTHODE AMÉLIORÉE : Obtenir les statistiques détaillées avec calculs en temps réel
   async getDetailedStats(): Promise<{
     totalPixels: number;
     completedPixels: number;
@@ -467,38 +504,75 @@ class CollaborativeArtService {
     estimatedDaysRemaining: number;
   } | null> {
     try {
-      const stats = await this.getProjectStats();
-      if (!stats) return null;
+      console.log('📊 Calcul des statistiques détaillées en temps réel...');
+
+      // 🔧 CALCUL EN TEMPS RÉEL : Compter les pixels actuels
+      const { count: actualPixelCount, error: countError } = await supabase
+        .from('collaborative_pixels')
+        .select('*', { count: 'exact', head: true });
+
+      if (countError) {
+        console.error('Erreur lors du comptage des pixels:', countError);
+        return null;
+      }
+
+      const realPixelCount = actualPixelCount || 0;
+      const totalPixels = 1500000; // 1200 × 1250
+      const percentage = (realPixelCount / totalPixels) * 100;
+
+      console.log('🎨 Pixels actuels:', realPixelCount, '/', totalPixels, `(${percentage.toFixed(4)}%)`);
+
+      // Calculer les pixels d'aujourd'hui
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const { count: todayPixelCount, error: todayError } = await supabase
+        .from('collaborative_pixels')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', today.toISOString());
+
+      if (todayError) {
+        console.error('Erreur pixels aujourd\'hui:', todayError);
+      }
+
+      const pixelsToday = todayPixelCount || 0;
 
       // Calculer les pixels de cette semaine
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-      const { data: weeklyPixels, error: weeklyError } = await supabase
+      const { count: weeklyPixelCount, error: weeklyError } = await supabase
         .from('collaborative_pixels')
-        .select('id')
+        .select('*', { count: 'exact', head: true })
         .gte('created_at', oneWeekAgo.toISOString());
 
       if (weeklyError) {
         console.error('Erreur pixels hebdomadaires:', weeklyError);
       }
 
-      const pixelsThisWeek = weeklyPixels?.length || 0;
+      const pixelsThisWeek = weeklyPixelCount || 0;
       const averagePixelsPerDay = pixelsThisWeek / 7;
-      const remainingPixels = stats.total_pixels - stats.completed_pixels;
+      const remainingPixels = totalPixels - realPixelCount;
       const estimatedDaysRemaining = averagePixelsPerDay > 0 
         ? Math.ceil(remainingPixels / averagePixelsPerDay) 
         : 999999;
 
-      return {
-        totalPixels: stats.total_pixels,
-        completedPixels: stats.completed_pixels,
-        percentage: stats.percentage,
-        sessionsToday: stats.sessions_today,
+      const detailedStats = {
+        totalPixels,
+        completedPixels: realPixelCount,
+        percentage,
+        sessionsToday: pixelsToday, // Utiliser les pixels d'aujourd'hui comme proxy pour les sessions
         pixelsThisWeek,
         averagePixelsPerDay: Math.round(averagePixelsPerDay * 100) / 100,
         estimatedDaysRemaining
       };
+
+      console.log('📊 Statistiques détaillées calculées:', {
+        ...detailedStats,
+        percentage: detailedStats.percentage.toFixed(4) + '%'
+      });
+
+      return detailedStats;
     } catch (error) {
       console.error('Erreur service statistiques détaillées:', error);
       return null;
