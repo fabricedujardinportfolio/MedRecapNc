@@ -70,18 +70,18 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   // Initialiser la session Tavus avec protection contre les doubles instances
   useEffect(() => {
     if (isVisible && !session && !hasInitializedRef.current) {
-      // Vérifier le verrou global
+      // ⚠️ VÉRIFICATION ET ACTIVATION IMMÉDIATE DU VERROU GLOBAL
       if (window._tavusGlobalLock) {
         console.log('⚠️ Une session IA est déjà active globalement');
         setError('Une session IA est déjà active. Veuillez fermer l\'autre session avant d\'en ouvrir une nouvelle.');
         return;
       }
 
-      // Marquer cette instance comme initialisée
-      hasInitializedRef.current = true;
+      // ⬇️ ACTIVER IMMÉDIATEMENT LE VERROU POUR BLOQUER TOUTE AUTRE INITIALISATION
       window._tavusGlobalLock = true;
+      hasInitializedRef.current = true;
       
-      console.log(`🚀 [${instanceIdRef.current}] Initialisation de la session (verrou activé)`);
+      console.log(`🚀 [${instanceIdRef.current}] Initialisation de la session (verrou activé immédiatement)`);
       initializeSession();
     }
   }, [isVisible]);
@@ -103,6 +103,11 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const cleanupSession = () => {
     console.log(`🧹 [${instanceIdRef.current}] Nettoyage de la session`);
     
+    // ⚠️ LIBÉRER LE VERROU GLOBAL EN PREMIER
+    window._tavusGlobalLock = false;
+    hasInitializedRef.current = false;
+    hasSpokenWelcomeRef.current = false;
+    
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
@@ -115,11 +120,6 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
     }
-    
-    // Libérer le verrou global
-    window._tavusGlobalLock = false;
-    hasInitializedRef.current = false;
-    hasSpokenWelcomeRef.current = false;
   };
 
   // Fonction de synthèse vocale avec callback pour relancer l'écoute
@@ -239,6 +239,10 @@ Que souhaitez-vous savoir ?`,
     } catch (err) {
       console.error(`❌ [${instanceIdRef.current}] Erreur lors de l'initialisation:`, err);
       setError(err instanceof Error ? err.message : 'Erreur d\'initialisation');
+      
+      // ⚠️ LIBÉRER LE VERROU EN CAS D'ERREUR
+      window._tavusGlobalLock = false;
+      hasInitializedRef.current = false;
     } finally {
       setIsLoading(false);
     }
