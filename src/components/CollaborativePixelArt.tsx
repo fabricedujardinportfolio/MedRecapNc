@@ -22,6 +22,7 @@ import {
   X
 } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
+import { LanguageSelector } from './LanguageSelector';
 import { 
   collaborativeArtService, 
   PixelData, 
@@ -101,7 +102,7 @@ export const CollaborativePixelArt: React.FC = () => {
 
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
-      setError('Erreur lors du chargement des données. Veuillez réessayer.');
+      setError(t('common.error') + ': ' + (error instanceof Error ? error.message : 'Erreur inconnue'));
     } finally {
       setIsLoading(false);
     }
@@ -200,7 +201,7 @@ export const CollaborativePixelArt: React.FC = () => {
 
       const result = await collaborativeArtService.createPixelForCurrentSession(
         selectedColor,
-        'Contributeur MedRecap+'
+        t('pixel.art.contributor.name') || 'Contributeur MedRecap+'
       );
 
       if (result) {
@@ -210,7 +211,7 @@ export const CollaborativePixelArt: React.FC = () => {
           y: result.y,
           color: result.color,
           session_id: collaborativeArtService.getCurrentSessionId(),
-          contributor_name: 'Vous',
+          contributor_name: t('pixel.art.contributor.you') || 'Vous',
           created_at: result.created_at
         };
 
@@ -229,11 +230,11 @@ export const CollaborativePixelArt: React.FC = () => {
         setRecentContributors(contributors);
 
       } else {
-        setError('Impossible de créer le pixel. Veuillez réessayer.');
+        setError(t('pixel.art.error.create') || 'Impossible de créer le pixel. Veuillez réessayer.');
       }
     } catch (error) {
       console.error('Erreur lors de la création du pixel:', error);
-      setError('Erreur lors de la création du pixel. Veuillez réessayer.');
+      setError(t('pixel.art.error.create') || 'Erreur lors de la création du pixel. Veuillez réessayer.');
     } finally {
       setIsCreatingPixel(false);
     }
@@ -244,15 +245,18 @@ export const CollaborativePixelArt: React.FC = () => {
   };
 
   const shareProject = () => {
+    const title = t('pixel.art.share.title') || 'Art Collaboratif MedRecap+ - 1,5 Million de Pixels';
+    const text = t('pixel.art.share.text') || 'Participez à la création d\'une œuvre d\'art collaborative ! Chaque session génère un pixel unique.';
+    
     if (navigator.share) {
       navigator.share({
-        title: 'Art Collaboratif MedRecap+ - 1,5 Million de Pixels',
-        text: 'Participez à la création d\'une œuvre d\'art collaborative ! Chaque session génère un pixel unique.',
+        title,
+        text,
         url: window.location.href
       });
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert('Lien copié dans le presse-papiers !');
+      alert(t('pixel.art.share.copied') || 'Lien copié dans le presse-papiers !');
     }
   };
 
@@ -271,10 +275,10 @@ export const CollaborativePixelArt: React.FC = () => {
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600 text-lg">
-            {language === 'fr' ? 'Chargement de l\'art collaboratif...' : 'Loading collaborative art...'}
+            {t('pixel.art.loading')}
           </p>
           <p className="text-sm text-purple-600 mt-2">
-            {language === 'fr' ? 'Connexion à Supabase...' : 'Connecting to Supabase...'}
+            {t('pixel.art.loading.supabase')}
           </p>
         </div>
       </div>
@@ -292,7 +296,7 @@ export const CollaborativePixelArt: React.FC = () => {
               className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
-              <span>{language === 'fr' ? 'Retour' : 'Back'}</span>
+              <span>{t('pixel.art.back')}</span>
             </button>
             
             <div className="flex items-center gap-3">
@@ -301,26 +305,27 @@ export const CollaborativePixelArt: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
-                  {language === 'fr' ? 'Art Collaboratif' : 'Collaborative Art'}
+                  {t('pixel.art.title')}
                 </h1>
                 <p className="text-sm text-gray-600">
-                  {language === 'fr' ? '1,5 Million de Pixels' : '1.5 Million Pixels'}
+                  {t('pixel.art.subtitle')}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
+              <LanguageSelector className="mr-2" showLabel={false} />
               <button
                 onClick={shareProject}
                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                title={language === 'fr' ? 'Partager' : 'Share'}
+                title={t('pixel.art.share')}
               >
                 <Share2 className="w-5 h-5" />
               </button>
               <button
                 onClick={downloadProgress}
                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                title={language === 'fr' ? 'Télécharger' : 'Download'}
+                title={t('pixel.art.download')}
               >
                 <Download className="w-5 h-5" />
               </button>
@@ -355,13 +360,10 @@ export const CollaborativePixelArt: React.FC = () => {
           </div>
           
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            🎨 {language === 'fr' ? 'Œuvre Collaborative' : 'Collaborative Artwork'}
+            🎨 {t('pixel.art.hero.title')}
           </h1>
           <p className="text-xl text-gray-600 mb-6 max-w-3xl mx-auto">
-            {language === 'fr' 
-              ? 'Chaque session sur MedRecap+ génère un pixel unique stocké dans Supabase. Ensemble, créons une œuvre d\'art de 1,5 million de pixels !'
-              : 'Each session on MedRecap+ generates a unique pixel stored in Supabase. Together, let\'s create a 1.5 million pixel artwork!'
-            }
+            {t('pixel.art.hero.description')}
           </p>
 
           {/* Progress Stats */}
@@ -371,19 +373,19 @@ export const CollaborativePixelArt: React.FC = () => {
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
                   <div className="text-2xl font-bold text-purple-600">{stats.completedPixels.toLocaleString()}</div>
                   <div className="text-sm text-gray-600">
-                    {language === 'fr' ? 'Pixels générés' : 'Pixels generated'}
+                    {t('pixel.art.stats.generated')}
                   </div>
                 </div>
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
                   <div className="text-2xl font-bold text-blue-600">{stats.percentage.toFixed(2)}%</div>
                   <div className="text-sm text-gray-600">
-                    {language === 'fr' ? 'Progression' : 'Progress'}
+                    {t('pixel.art.stats.progress')}
                   </div>
                 </div>
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
                   <div className="text-2xl font-bold text-green-600">{stats.sessionsToday}</div>
                   <div className="text-sm text-gray-600">
-                    {language === 'fr' ? 'Sessions aujourd\'hui' : 'Sessions today'}
+                    {t('pixel.art.stats.sessions.today')}
                   </div>
                 </div>
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
@@ -391,7 +393,7 @@ export const CollaborativePixelArt: React.FC = () => {
                     {(stats.totalPixels - stats.completedPixels).toLocaleString()}
                   </div>
                   <div className="text-sm text-gray-600">
-                    {language === 'fr' ? 'Pixels restants' : 'Pixels remaining'}
+                    {t('pixel.art.stats.remaining')}
                   </div>
                 </div>
               </div>
@@ -405,10 +407,7 @@ export const CollaborativePixelArt: React.FC = () => {
                   ></div>
                 </div>
                 <p className="text-sm text-gray-600 mt-2">
-                  {language === 'fr' 
-                    ? `Estimation : ${stats.estimatedDaysRemaining} jours restants`
-                    : `Estimated: ${stats.estimatedDaysRemaining} days remaining`
-                  }
+                  {t('pixel.art.progress.estimated').replace('{days}', stats.estimatedDaysRemaining.toString())}
                 </p>
               </div>
             </>
@@ -421,12 +420,12 @@ export const CollaborativePixelArt: React.FC = () => {
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {language === 'fr' ? 'Progression en Temps Réel' : 'Real-time Progress'}
+                  {t('pixel.art.realtime.title')}
                 </h2>
                 <button
                   onClick={loadInitialData}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                  title={language === 'fr' ? 'Actualiser' : 'Refresh'}
+                  title={t('pixel.art.realtime.refresh')}
                 >
                   <RefreshCw className="w-5 h-5" />
                 </button>
@@ -442,13 +441,10 @@ export const CollaborativePixelArt: React.FC = () => {
               
               <div className="mt-4 text-center">
                 <p className="text-sm text-gray-600">
-                  {language === 'fr' 
-                    ? 'Image finale : 1200 × 1250 pixels (1,5 million de pixels)'
-                    : 'Final image: 1200 × 1250 pixels (1.5 million pixels)'
-                  }
+                  {t('pixel.art.realtime.final')}
                 </p>
                 <p className="text-xs text-green-600 mt-1">
-                  ✅ {language === 'fr' ? 'Données stockées dans Supabase' : 'Data stored in Supabase'}
+                  ✅ {t('pixel.art.realtime.stored')}
                 </p>
               </div>
             </div>
@@ -457,7 +453,7 @@ export const CollaborativePixelArt: React.FC = () => {
             {recentContributors.length > 0 && (
               <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  {language === 'fr' ? 'Contributeurs Récents' : 'Recent Contributors'}
+                  {t('pixel.art.contributors.title')}
                 </h3>
                 <div className="space-y-2">
                   {recentContributors.map((contributor, index) => (
@@ -482,7 +478,7 @@ export const CollaborativePixelArt: React.FC = () => {
             {/* Votre Contribution */}
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                {language === 'fr' ? 'Votre Contribution' : 'Your Contribution'}
+                {t('pixel.art.contribution.title')}
               </h2>
               
               {currentUserPixel ? (
@@ -496,27 +492,21 @@ export const CollaborativePixelArt: React.FC = () => {
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <CheckCircle className="w-5 h-5 text-green-600" />
                     <p className="text-green-600 font-medium">
-                      {language === 'fr' ? 'Pixel généré avec succès !' : 'Pixel generated successfully!'}
+                      {t('pixel.art.contribution.success')}
                     </p>
                   </div>
                   <p className="text-sm text-gray-600 mb-2">
-                    {language === 'fr' 
-                      ? `Position: (${currentUserPixel.x}, ${currentUserPixel.y})`
-                      : `Position: (${currentUserPixel.x}, ${currentUserPixel.y})`
-                    }
+                    {t('pixel.art.contribution.position').replace('{x}', currentUserPixel.x.toString()).replace('{y}', currentUserPixel.y.toString())}
                   </p>
                   <p className="text-xs text-blue-600">
-                    {language === 'fr' ? 'Stocké dans Supabase' : 'Stored in Supabase'}
+                    {t('pixel.art.contribution.stored')}
                   </p>
                 </div>
               ) : (
                 <div className="text-center">
                   <div className="mb-4">
                     <p className="text-gray-600 mb-4">
-                      {language === 'fr' 
-                        ? 'Choisissez une couleur et générez votre pixel unique !'
-                        : 'Choose a color and generate your unique pixel!'
-                      }
+                      {t('pixel.art.contribution.choose')}
                     </p>
                     
                     {/* Color Picker */}
@@ -549,11 +539,11 @@ export const CollaborativePixelArt: React.FC = () => {
                     {isCreatingPixel ? (
                       <div className="flex items-center gap-2">
                         <Loader className="w-5 h-5 animate-spin" />
-                        {language === 'fr' ? 'Création...' : 'Creating...'}
+                        {t('pixel.art.contribution.creating')}
                       </div>
                     ) : (
                       <>
-                        {language === 'fr' ? '🎨 Générer Mon Pixel' : '🎨 Generate My Pixel'}
+                        🎨 {t('pixel.art.contribution.generate')}
                       </>
                     )}
                   </button>
@@ -565,7 +555,7 @@ export const CollaborativePixelArt: React.FC = () => {
             {stats && (
               <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  {language === 'fr' ? 'Statistiques Avancées' : 'Advanced Statistics'}
+                  {t('pixel.art.stats.advanced')}
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
@@ -573,7 +563,7 @@ export const CollaborativePixelArt: React.FC = () => {
                       {stats.pixelsThisWeek}
                     </div>
                     <div className="text-xs text-gray-600">
-                      {language === 'fr' ? 'Cette semaine' : 'This week'}
+                      {t('pixel.art.stats.week')}
                     </div>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
@@ -581,7 +571,7 @@ export const CollaborativePixelArt: React.FC = () => {
                       {stats.averagePixelsPerDay}
                     </div>
                     <div className="text-xs text-gray-600">
-                      {language === 'fr' ? 'Moyenne/jour' : 'Average/day'}
+                      {t('pixel.art.stats.average')}
                     </div>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
@@ -589,7 +579,7 @@ export const CollaborativePixelArt: React.FC = () => {
                       {stats.estimatedDaysRemaining}
                     </div>
                     <div className="text-xs text-gray-600">
-                      {language === 'fr' ? 'Jours restants' : 'Days remaining'}
+                      {t('pixel.art.stats.days.remaining')}
                     </div>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
@@ -597,7 +587,7 @@ export const CollaborativePixelArt: React.FC = () => {
                       {(stats.percentage * 10).toFixed(1)}
                     </div>
                     <div className="text-xs text-gray-600">
-                      {language === 'fr' ? 'Score art' : 'Art score'}
+                      {t('pixel.art.stats.art.score')}
                     </div>
                   </div>
                 </div>
@@ -607,43 +597,31 @@ export const CollaborativePixelArt: React.FC = () => {
             {/* Comment ça marche */}
             <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {language === 'fr' ? 'Comment ça marche ?' : 'How does it work?'}
+                {t('pixel.art.how.title')}
               </h3>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="flex items-center justify-center w-6 h-6 bg-blue-600 text-white rounded-full text-xs font-bold">1</div>
                   <p className="text-sm text-gray-700">
-                    {language === 'fr' 
-                      ? 'Chaque session génère un pixel unique stocké dans Supabase'
-                      : 'Each session generates a unique pixel stored in Supabase'
-                    }
+                    {t('pixel.art.how.step1')}
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="flex items-center justify-center w-6 h-6 bg-purple-600 text-white rounded-full text-xs font-bold">2</div>
                   <p className="text-sm text-gray-700">
-                    {language === 'fr' 
-                      ? 'Votre pixel est placé aléatoirement sur l\'image de 1200×1250'
-                      : 'Your pixel is randomly placed on the 1200×1250 image'
-                    }
+                    {t('pixel.art.how.step2')}
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="flex items-center justify-center w-6 h-6 bg-green-600 text-white rounded-full text-xs font-bold">3</div>
                   <p className="text-sm text-gray-700">
-                    {language === 'fr' 
-                      ? 'Les données sont persistantes et synchronisées en temps réel'
-                      : 'Data is persistent and synchronized in real-time'
-                    }
+                    {t('pixel.art.how.step3')}
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="flex items-center justify-center w-6 h-6 bg-orange-600 text-white rounded-full text-xs font-bold">4</div>
                   <p className="text-sm text-gray-700">
-                    {language === 'fr' 
-                      ? 'Objectif : 1,5 million de sessions pour révéler l\'œuvre complète'
-                      : 'Goal: 1.5 million sessions to reveal the complete artwork'
-                    }
+                    {t('pixel.art.how.step4')}
                   </p>
                 </div>
               </div>
@@ -652,20 +630,17 @@ export const CollaborativePixelArt: React.FC = () => {
             {/* Call to Action */}
             <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-6 text-white text-center">
               <h3 className="text-xl font-bold mb-2">
-                {language === 'fr' ? 'Participez à l\'Histoire !' : 'Be Part of History!'}
+                {t('pixel.art.cta.title')}
               </h3>
               <p className="text-purple-100 mb-4">
-                {language === 'fr' 
-                  ? 'Chaque session compte. Votre pixel fait partie d\'une œuvre collective unique stockée de façon permanente.'
-                  : 'Every session counts. Your pixel is part of a unique collective artwork stored permanently.'
-                }
+                {t('pixel.art.cta.description')}
               </p>
               <a
                 href="/"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
               >
                 <Zap className="w-5 h-5" />
-                {language === 'fr' ? 'Retour à MedRecap+' : 'Back to MedRecap+'}
+                {t('pixel.art.cta.back')}
               </a>
             </div>
           </div>
@@ -675,40 +650,37 @@ export const CollaborativePixelArt: React.FC = () => {
         <div className="mt-12 text-center">
           <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 max-w-4xl mx-auto">
             <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              {language === 'fr' ? 'Stockage Persistant avec Supabase' : 'Persistent Storage with Supabase'}
+              {t('pixel.art.storage.title')}
             </h3>
             <p className="text-gray-600 leading-relaxed mb-4">
-              {language === 'fr' 
-                ? 'Ce projet artistique collaboratif utilise Supabase pour un stockage persistant et sécurisé. Chaque pixel est unique, chaque session est trackée, et les données sont synchronisées en temps réel entre tous les utilisateurs.'
-                : 'This collaborative art project uses Supabase for persistent and secure storage. Each pixel is unique, each session is tracked, and data is synchronized in real-time between all users.'
-              }
+              {t('pixel.art.storage.description')}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div className="bg-green-50 rounded-lg p-4">
-                <div className="font-semibold text-green-800 mb-2">✅ Stockage Persistant</div>
-                <div className="text-green-700">Les pixels ne disparaissent jamais</div>
+                <div className="font-semibold text-green-800 mb-2">✅ {t('pixel.art.storage.persistent')}</div>
+                <div className="text-green-700">{t('pixel.art.storage.persistent.desc')}</div>
               </div>
               <div className="bg-blue-50 rounded-lg p-4">
-                <div className="font-semibold text-blue-800 mb-2">🔄 Temps Réel</div>
-                <div className="text-blue-700">Synchronisation instantanée</div>
+                <div className="font-semibold text-blue-800 mb-2">🔄 {t('pixel.art.storage.realtime')}</div>
+                <div className="text-blue-700">{t('pixel.art.storage.realtime.desc')}</div>
               </div>
               <div className="bg-purple-50 rounded-lg p-4">
-                <div className="font-semibold text-purple-800 mb-2">🔒 Sécurisé</div>
-                <div className="text-purple-700">Protection des données</div>
+                <div className="font-semibold text-purple-800 mb-2">🔒 {t('pixel.art.storage.secure')}</div>
+                <div className="text-purple-700">{t('pixel.art.storage.secure.desc')}</div>
               </div>
             </div>
             <div className="flex items-center justify-center gap-6 mt-6 text-sm text-gray-500">
               <div className="flex items-center gap-2">
                 <Globe className="w-4 h-4" />
-                <span>{language === 'fr' ? 'Nouvelle-Calédonie' : 'New Caledonia'}</span>
+                <span>{t('pixel.art.location')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Heart className="w-4 h-4 text-red-500" />
-                <span>{language === 'fr' ? 'Fait avec passion' : 'Made with passion'}</span>
+                <span>{t('pixel.art.made.passion')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Award className="w-4 h-4" />
-                <span>{language === 'fr' ? 'Innovation 2025' : 'Innovation 2025'}</span>
+                <span>{t('pixel.art.innovation')}</span>
               </div>
             </div>
           </div>
