@@ -86,7 +86,7 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   }, [isLoading]);
 
-  // 🎯 EFFET CORRIGÉ : Rendu du canvas avec vérification canvasReady
+  // 🎯 EFFET CORRIGÉ : Rendu du canvas avec vérification canvasReady ET taille cohérente
   useEffect(() => {
     if (!canvasRef.current) {
       console.log('⛔️ Canvas ref non prêt, attente...');
@@ -122,20 +122,20 @@ export const CollaborativePixelArt: React.FC = () => {
       console.log('🎨 Pixels chargés:', allPixels.length, 'pixels');
       
       // Validation et filtrage des pixels
-const validPixels = allPixels.filter(pixel => {
-  const isValid = pixel &&
-    typeof pixel.x === 'number' &&
-    typeof pixel.y === 'number' &&
-    typeof pixel.color === 'string' &&
-    pixel.color.match(/^#[0-9A-Fa-f]{6}$/) &&
-    pixel.x >= 0 && pixel.x < 1200 &&
-    pixel.y >= 0 && pixel.y < 1250;
+      const validPixels = allPixels.filter(pixel => {
+        const isValid = pixel &&
+          typeof pixel.x === 'number' &&
+          typeof pixel.y === 'number' &&
+          typeof pixel.color === 'string' &&
+          pixel.color.match(/^#[0-9A-Fa-f]{6}$/) &&
+          pixel.x >= 0 && pixel.x < 1200 &&
+          pixel.y >= 0 && pixel.y < 1250;
 
-  if (!isValid) {
-    console.warn('⚠️ Pixel invalide filtré:', pixel);
-  }
-  return isValid;
-});
+        if (!isValid) {
+          console.warn('⚠️ Pixel invalide filtré:', pixel);
+        }
+        return isValid;
+      });
 
       console.log('✅ Pixels valides:', validPixels.length, '/', allPixels.length);
       setPixels(validPixels);
@@ -247,7 +247,7 @@ const validPixels = allPixels.filter(pixel => {
     }
   };
 
-  // 🎯 FONCTION DE RENDU AMÉLIORÉE avec logs détaillés
+  // 🎯 FONCTION DE RENDU CORRIGÉE avec taille de pixel COHÉRENTE
   const renderCanvas = () => {
     if (!canvasRef.current) {
       console.log('⚠️ Canvas ref non disponible pour le rendu');
@@ -266,27 +266,24 @@ const validPixels = allPixels.filter(pixel => {
       return;
     }
 
-    console.log('🖼️ Début du rendu canvas avec', pixels.length, 'pixels (TAILLE AUGMENTÉE)');
+    console.log('🖼️ Début du rendu canvas avec', pixels.length, 'pixels (TAILLE COHÉRENTE)');
 
     try {
-      // CONFIGURATION AGRANDIE : Canvas plus grand avec pixels plus visibles
-      const displayWidth = 800;  // Augmenté de 600 à 800
-      const displayHeight = 833; // Augmenté proportionnellement (800 * 1250/1200)
-      canvas.width = displayWidth;
-      canvas.height = displayHeight;
+      // 🎯 CONFIGURATION FIXE : Taille de canvas et pixels TOUJOURS identique
+      const CANVAS_WIDTH = 800;
+      const CANVAS_HEIGHT = 833;
+      const PIXEL_SIZE = 2; // 🔧 TAILLE FIXE pour tous les pixels
+      
+      canvas.width = CANVAS_WIDTH;
+      canvas.height = CANVAS_HEIGHT;
 
       // Fond gris pour les pixels non remplis
       ctx.fillStyle = '#F3F4F6';
-      ctx.fillRect(0, 0, displayWidth, displayHeight);
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-      // Dessiner les pixels existants seulement s'il y en a
+      // Dessiner les pixels existants avec TAILLE FIXE
       if (pixels.length > 0) {
-        // NOUVELLE ÉCHELLE : Pixels plus grands et plus visibles
-        const scaleX = displayWidth / 1200;   // ~0.67 pixels par unité
-        const scaleY = displayHeight / 1250;  // ~0.67 pixels par unité
-
-        console.log('🎨 Début du rendu des pixels AGRANDIS...');
-        console.log('📏 Nouvelle échelle (pixels plus grands):', { scaleX, scaleY });
+        console.log('🎨 Début du rendu des pixels avec TAILLE FIXE:', PIXEL_SIZE + 'px');
 
         let renderedCount = 0;
         pixels.forEach((pixel, index) => {
@@ -311,20 +308,22 @@ const validPixels = allPixels.filter(pixel => {
 
             ctx.fillStyle = pixel.color;
             
-            // PIXELS PLUS GRANDS : Calcul amélioré pour une meilleure visibilité
+            // 🎯 CALCUL COHÉRENT : Même logique pour TOUS les pixels
+            const scaleX = CANVAS_WIDTH / 1200;
+            const scaleY = CANVAS_HEIGHT / 1250;
+            
             const pixelX = Math.floor(pixel.x * scaleX);
             const pixelY = Math.floor(pixel.y * scaleY);
-            const pixelWidth = Math.max(1, Math.ceil(scaleX));   // Minimum 1 pixel de large
-            const pixelHeight = Math.max(1, Math.ceil(scaleY));  // Minimum 1 pixel de haut
-
-            ctx.fillRect(pixelX, pixelY, pixelWidth, pixelHeight);
+            
+            // 🔧 TAILLE FIXE : Tous les pixels ont la même taille
+            ctx.fillRect(pixelX, pixelY, PIXEL_SIZE, PIXEL_SIZE);
             renderedCount++;
 
             // Log pour les premiers pixels pour debug
             if (index < 3) {
-              console.log(`🎨 Pixel ${index} (TAILLE AUGMENTÉE):`, {
+              console.log(`🎨 Pixel ${index} (TAILLE FIXE ${PIXEL_SIZE}px):`, {
                 original: { x: pixel.x, y: pixel.y, color: pixel.color },
-                rendered: { x: pixelX, y: pixelY, width: pixelWidth, height: pixelHeight }
+                rendered: { x: pixelX, y: pixelY, size: PIXEL_SIZE }
               });
             }
           } catch (error) {
@@ -332,35 +331,37 @@ const validPixels = allPixels.filter(pixel => {
           }
         });
 
-        console.log(`✅ ${renderedCount}/${pixels.length} pixels rendus avec TAILLE AUGMENTÉE`);
+        console.log(`✅ ${renderedCount}/${pixels.length} pixels rendus avec TAILLE FIXE ${PIXEL_SIZE}px`);
 
-        // Dessiner le pixel de l'utilisateur actuel avec un contour plus visible
+        // Dessiner le pixel de l'utilisateur actuel avec un contour
         if (currentUserPixel) {
           try {
             ctx.fillStyle = currentUserPixel.color;
             ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 3; // Contour plus épais
+            ctx.lineWidth = 2;
+            
+            const scaleX = CANVAS_WIDTH / 1200;
+            const scaleY = CANVAS_HEIGHT / 1250;
             
             const x = Math.floor(currentUserPixel.x * scaleX);
             const y = Math.floor(currentUserPixel.y * scaleY);
-            const width = Math.max(1, Math.ceil(scaleX));
-            const height = Math.max(1, Math.ceil(scaleY));
             
-            ctx.fillRect(x, y, width, height);
-            ctx.strokeRect(x, y, width, height);
+            // 🔧 MÊME TAILLE pour le pixel utilisateur
+            ctx.fillRect(x, y, PIXEL_SIZE, PIXEL_SIZE);
+            ctx.strokeRect(x, y, PIXEL_SIZE, PIXEL_SIZE);
             
-            console.log('👤 Pixel utilisateur rendu avec contour ÉPAIS:', {
+            console.log('👤 Pixel utilisateur rendu avec TAILLE FIXE:', {
               x: currentUserPixel.x,
               y: currentUserPixel.y,
               color: currentUserPixel.color,
-              rendered: { x, y, width, height }
+              rendered: { x, y, size: PIXEL_SIZE }
             });
           } catch (error) {
             console.warn('❌ Erreur lors du rendu du pixel utilisateur:', error);
           }
         }
 
-        console.log('✅ Canvas rendu avec PIXELS AGRANDIS -', renderedCount, 'pixels affichés');
+        console.log('✅ Canvas rendu avec PIXELS COHÉRENTS -', renderedCount, 'pixels affichés');
       } else {
         console.log('⚠️ Aucun pixel à afficher');
       }
@@ -644,7 +645,7 @@ const validPixels = allPixels.filter(pixel => {
                   ✅ {t('pixel.art.realtime.stored')} • {pixels.length} pixels chargés
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
-                  🔍 <strong>Pixels agrandis</strong> pour une meilleure visibilité !
+                  🔧 <strong>Pixels cohérents</strong> - Taille fixe 2px pour tous !
                 </p>
               </div>
             </div>
