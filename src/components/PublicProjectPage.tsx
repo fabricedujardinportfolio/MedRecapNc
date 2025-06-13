@@ -25,7 +25,9 @@ import {
   TestTube,
   DollarSign,
   Eye,
-  Gift
+  Gift,
+  Palette,
+  Sparkles
 } from 'lucide-react';
 
 export const PublicProjectPage: React.FC = () => {
@@ -264,6 +266,28 @@ export const PublicProjectPage: React.FC = () => {
                   'Ce projet vise à développer un assistant médical IA pour améliorer la gestion des dossiers patients en Nouvelle-Calédonie, en réponse à la pénurie de médecins dans les zones rurales.',
                   'This project aims to develop a medical AI assistant to improve patient record management in New Caledonia, addressing the shortage of doctors in rural areas.'
                 )}
+              </div>
+            </div>
+
+            {/* 🎨 NOUVELLE SECTION : Allusion mystérieuse à l'easter egg */}
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 mb-8 max-w-2xl mx-auto border border-purple-200">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-purple-600" />
+                <span className="text-sm font-medium text-purple-800">
+                  {t('Exploration Interactive', 'Interactive Exploration')}
+                </span>
+              </div>
+              <p className="text-xs text-purple-700 leading-relaxed">
+                {t(
+                  '🎨 Ce projet cache des expériences collaboratives uniques... Les plus curieux découvriront des fonctionnalités artistiques surprenantes en explorant attentivement.',
+                  '🎨 This project hides unique collaborative experiences... The most curious will discover surprising artistic features by exploring carefully.'
+                )}
+              </p>
+              <div className="flex items-center justify-center gap-1 mt-2 text-xs text-purple-600">
+                <Palette className="w-3 h-3" />
+                <span className="italic">
+                  {t('Indice : cherchez les interactions cachées...', 'Hint: look for hidden interactions...')}
+                </span>
               </div>
             </div>
 
@@ -782,69 +806,94 @@ export const PublicProjectPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Easter Egg Modal */}
+      {/* Easter Egg Modal avec scroll */}
       {showEasterEgg && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
-          <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-8 max-w-lg w-full text-center text-white shadow-2xl">
-            <div className="text-8xl mb-6">🎊</div>
-            <h3 className="text-3xl font-bold mb-4">
-              {t('INCROYABLE ! 🏆', 'AMAZING! 🏆')}
-            </h3>
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-6">
-              <p className="text-lg font-semibold mb-3">
-                🕵️ {t(
-                  'Félicitations ! Vous avez trouvé l\'easter egg !',
-                  'Congratulations! You found the easter egg!'
-                )}
-              </p>
-              <p className="text-sm opacity-90 mb-4">
-                🎁 {t(
-                  'Merci d\'avoir exploré cette page avec attention ! Votre curiosité est appréciée.',
-                  'Thank you for exploring this page carefully! Your curiosity is appreciated.'
-                )}
-              </p>
-              <div className="bg-yellow-300/20 rounded-lg p-4 border border-yellow-300/30">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Gift className="w-5 h-5 text-yellow-300" />
-                  <span className="font-bold text-yellow-300">
-                    {t('RÉCOMPENSE EXCLUSIVE', 'EXCLUSIVE REWARD')}
-                  </span>
-                </div>
-                <p className="text-xs text-yellow-100 leading-relaxed">
-                  🎁 {t(
-                    'Vous êtes officiellement un "Maître Détective d\'Easter Eggs" !',
-                    'You are officially a "Master Easter Egg Detective"!'
-                  )}<br/>
-                  🔍 {t(
-                    'Votre persévérance et votre logique sont exceptionnelles.',
-                    'Your perseverance and logic are exceptional.'
-                  )}<br/>
-                  ⭐ {t(
-                    'Vous faites partie des 0.01% d\'utilisateurs à avoir trouvé ceci !',
-                    'You are part of the 0.01% of users who found this!'
+          <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl max-w-lg w-full text-center text-white shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header fixe */}
+            <div className="p-6 pb-4">
+              <div className="text-6xl mb-4">🎊</div>
+              <h3 className="text-2xl font-bold">
+                {t('INCROYABLE ! 🏆', 'AMAZING! 🏆')}
+              </h3>
+            </div>
+
+            {/* Contenu avec scroll */}
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
+              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-6">
+                <p className="text-lg font-semibold mb-3">
+                  🕵️ {t(
+                    'Félicitations ! Vous avez trouvé l\'easter egg !',
+                    'Congratulations! You found the easter egg!'
                   )}
                 </p>
+                <p className="text-sm opacity-90 mb-4">
+                  🎁 {t(
+                    'Merci d\'avoir exploré cette page avec attention ! Votre curiosité est appréciée.',
+                    'Thank you for exploring this page carefully! Your curiosity is appreciated.'
+                  )}
+                </p>
+                <div className="bg-yellow-300/20 rounded-lg p-4 border border-yellow-300/30 mb-4">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Gift className="w-5 h-5 text-yellow-300" />
+                    <span className="font-bold text-yellow-300">
+                      {t('RÉCOMPENSE EXCLUSIVE', 'EXCLUSIVE REWARD')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-yellow-100 leading-relaxed">
+                    🎁 {t(
+                      'Vous êtes officiellement un "Maître Détective d\'Easter Eggs" !',
+                      'You are officially a "Master Easter Egg Detective"!'
+                    )}<br/>
+                    🔍 {t(
+                      'Votre persévérance et votre logique sont exceptionnelles.',
+                      'Your perseverance and logic are exceptional.'
+                    )}<br/>
+                    ⭐ {t(
+                      'Vous faites partie des 0.01% d\'utilisateurs à avoir trouvé ceci !',
+                      'You are part of the 0.01% of users who found this!'
+                    )}
+                  </p>
+                </div>
+
+                {/* 🎨 NOUVELLE SECTION : Allusion à l'art collaboratif */}
+                <div className="bg-gradient-to-r from-blue-400/30 to-purple-400/30 rounded-lg p-4 border border-blue-300/30">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Palette className="w-5 h-5 text-blue-200" />
+                    <span className="font-bold text-blue-200">
+                      {t('DÉCOUVERTE SPÉCIALE', 'SPECIAL DISCOVERY')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-blue-100 leading-relaxed">
+                    🎨 {t(
+                      'Votre esprit d\'exploration vous donne accès à une expérience artistique collaborative unique... Cherchez les liens cachés vers la création collective !',
+                      'Your spirit of exploration gives you access to a unique collaborative artistic experience... Look for hidden links to collective creation!'
+                    )}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="text-xs opacity-75 mb-4">
-              💡 {t(
-                'Un autre easter egg est caché quelque part sur le site principal. Saurez-vous le retrouver ?',
-                'Another easter egg is hidden somewhere on the main site. Can you find it?'
-              )}
-            </div>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => setShowEasterEgg(false)}
-                className="px-8 py-3 bg-white hover:bg-gray-100 text-purple-600 rounded-lg font-bold transition-colors shadow-lg"
-              >
-                {t('Mission accomplie ! 🎯', 'Mission accomplished! 🎯')}
-              </button>
-              <a
-                href="/collaborative-pixel-art"
-                className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white rounded-lg font-bold transition-colors shadow-lg"
-              >
-                🎨 {t('Découvrir l\'Art Collaboratif', 'Discover Collaborative Art')}
-              </a>
+
+              <div className="text-xs opacity-75 mb-4">
+                💡 {t(
+                  'Un autre easter egg est caché quelque part sur le site principal. Saurez-vous le retrouver ?',
+                  'Another easter egg is hidden somewhere on the main site. Can you find it?'
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => setShowEasterEgg(false)}
+                  className="px-8 py-3 bg-white hover:bg-gray-100 text-purple-600 rounded-lg font-bold transition-colors shadow-lg"
+                >
+                  {t('Mission accomplie ! 🎯', 'Mission accomplished! 🎯')}
+                </button>
+                <a
+                  href="/collaborative-pixel-art"
+                  className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white rounded-lg font-bold transition-colors shadow-lg"
+                >
+                  🎨 {t('Découvrir l\'Art Collaboratif', 'Discover Collaborative Art')}
+                </a>
+              </div>
             </div>
           </div>
         </div>
