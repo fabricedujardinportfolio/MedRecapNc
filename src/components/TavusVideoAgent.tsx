@@ -23,6 +23,7 @@ declare global {
     webkitSpeechRecognition: any;
     speechSynthesis: any;
     SpeechSynthesisUtterance: any;
+    _tavusGlobalLock?: boolean;
   }
 }
 
@@ -52,6 +53,8 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isProcessingRef = useRef(false);
   const instanceIdRef = useRef<string>(`instance-${Date.now()}-${Math.random()}`);
+  const hasInitializedRef = useRef(false);
+  const hasSpokenWelcomeRef = useRef(false);
 
   // Vérifier le support de la reconnaissance vocale et synthèse vocale
   useEffect(() => {
@@ -64,10 +67,21 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     }
   }, []);
 
-  // Initialiser la session Tavus
+  // Initialiser la session Tavus avec protection contre les doubles instances
   useEffect(() => {
-    if (isVisible && !session) {
-      console.log(`🚀 [${instanceIdRef.current}] Initialisation de la session`);
+    if (isVisible && !session && !hasInitializedRef.current) {
+      // Vérifier le verrou global
+      if (window._tavusGlobalLock) {
+        console.log('⚠️ Une session IA est déjà active globalement');
+        setError('Une session IA est déjà active. Veuillez fermer l\'autre session avant d\'en ouvrir une nouvelle.');
+        return;
+      }
+
+      // Marquer cette instance comme initialisée
+      hasInitializedRef.current = true;
+      window._tavusGlobalLock = true;
+      
+      console.log(`🚀 [${instanceIdRef.current}] Initialisation de la session (verrou activé)`);
       initializeSession();
     }
   }, [isVisible]);
@@ -101,6 +115,11 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
     }
+    
+    // Libérer le verrou global
+    window._tavusGlobalLock = false;
+    hasInitializedRef.current = false;
+    hasSpokenWelcomeRef.current = false;
   };
 
   // Fonction de synthèse vocale avec callback pour relancer l'écoute
@@ -209,10 +228,13 @@ Que souhaitez-vous savoir ?`,
       };
       setChatMessages([welcomeMessage]);
       
-      // Présentation vocale automatique
-      setTimeout(() => {
-        speakText(`Bonjour ! Je suis Dr. IA Assistant. J'ai accès au dossier complet de ${patient.prenom} ${patient.nom}, incluant ses consultations, factures et rendez-vous. Que souhaitez-vous savoir ?`);
-      }, 1000);
+      // Présentation vocale automatique - UNE SEULE FOIS
+      if (!hasSpokenWelcomeRef.current) {
+        hasSpokenWelcomeRef.current = true;
+        setTimeout(() => {
+          speakText(`Bonjour ! Je suis Dr. IA Assistant. J'ai accès au dossier complet de ${patient.prenom} ${patient.nom}, incluant ses consultations, factures et rendez-vous. Que souhaitez-vous savoir ?`);
+        }, 1000);
+      }
       
     } catch (err) {
       console.error(`❌ [${instanceIdRef.current}] Erreur lors de l'initialisation:`, err);
@@ -583,6 +605,8 @@ Que souhaitez-vous savoir ?`,
                 <button
                   onClick={() => {
                     setError(null);
+                    hasInitializedRef.current = false;
+                    window._tavusGlobalLock = false;
                     initializeSession();
                   }}
                   className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
