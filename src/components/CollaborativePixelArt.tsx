@@ -21,7 +21,11 @@ import {
   AlertCircle,
   X,
   Shield,
-  User
+  User,
+  Sparkles,
+  Trophy,
+  Star,
+  Confetti
 } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { LanguageSelector } from './LanguageSelector';
@@ -76,6 +80,11 @@ export const CollaborativePixelArt: React.FC = () => {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
 
+  // 🎉 NOUVEAUX ÉTATS POUR LA MODAL DE CÉLÉBRATION
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [isArtworkCompleted, setIsArtworkCompleted] = useState(false);
+  const [completionAnimationPhase, setCompletionAnimationPhase] = useState(0);
+
   // Couleurs prédéfinies pour l'art collaboratif
   const predefinedColors = [
     '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
@@ -102,6 +111,20 @@ export const CollaborativePixelArt: React.FC = () => {
       setupRealtimeSubscriptions();
     }
   }, [isLoading]);
+
+  // 🎉 EFFET POUR VÉRIFIER L'ACHÈVEMENT DE L'ŒUVRE
+  useEffect(() => {
+    if (stats && stats.completedPixels >= stats.totalPixels && !isArtworkCompleted) {
+      console.log('🎉 ŒUVRE TERMINÉE ! Déclenchement de la célébration');
+      setIsArtworkCompleted(true);
+      setShowCompletionModal(true);
+      
+      // Démarrer l'animation de célébration
+      setTimeout(() => setCompletionAnimationPhase(1), 500);
+      setTimeout(() => setCompletionAnimationPhase(2), 2000);
+      setTimeout(() => setCompletionAnimationPhase(3), 4000);
+    }
+  }, [stats, isArtworkCompleted]);
 
   // 🎯 EFFET CORRIGÉ : Rendu du canvas avec vérification canvasReady ET taille cohérente
   useEffect(() => {
@@ -244,6 +267,12 @@ export const CollaborativePixelArt: React.FC = () => {
       if (detailedStats) {
         setStats(detailedStats);
         console.log('📊 Statistiques chargées:', detailedStats);
+        
+        // 🎉 VÉRIFICATION IMMÉDIATE DE L'ACHÈVEMENT
+        if (detailedStats.completedPixels >= detailedStats.totalPixels) {
+          console.log('🎉 ŒUVRE DÉJÀ TERMINÉE ! Activation du mode célébration');
+          setIsArtworkCompleted(true);
+        }
       }
 
       // 3. 🔒 Vérifier si l'utilisateur a déjà un pixel (par IP ET session)
@@ -324,6 +353,13 @@ export const CollaborativePixelArt: React.FC = () => {
       const detailedStats = await collaborativeArtService.getDetailedStats();
       if (detailedStats) {
         setStats(detailedStats);
+        
+        // 🎉 VÉRIFICATION DE L'ACHÈVEMENT À CHAQUE MISE À JOUR
+        if (detailedStats.completedPixels >= detailedStats.totalPixels && !isArtworkCompleted) {
+          console.log('🎉 ŒUVRE TERMINÉE ! Déclenchement de la célébration');
+          setIsArtworkCompleted(true);
+          setShowCompletionModal(true);
+        }
       }
     } catch (error) {
       console.error('Erreur lors du rechargement des stats:', error);
@@ -484,10 +520,17 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   };
 
-  // 🔒 FONCTION CORRIGÉE : Générer un pixel avec vérification IP stricte
+  // 🔒 FONCTION CORRIGÉE : Générer un pixel avec vérification IP stricte ET vérification d'achèvement
   const generateUserPixel = async () => {
     if (isCreatingPixel) {
       console.log('🚫 Création déjà en cours, ignoré');
+      return;
+    }
+
+    // 🎉 VÉRIFICATION CRITIQUE : L'œuvre est-elle terminée ?
+    if (isArtworkCompleted) {
+      console.log('🎉 Œuvre terminée, création de pixels désactivée');
+      setError(t('pixel.art.completed.no.more.pixels'));
       return;
     }
 
@@ -789,6 +832,28 @@ export const CollaborativePixelArt: React.FC = () => {
           </div>
         )}
 
+        {/* 🎉 BANNIÈRE DE CÉLÉBRATION pour œuvre terminée */}
+        {isArtworkCompleted && (
+          <div className="mb-6 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 text-white rounded-xl p-6 shadow-lg animate-pulse">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <Trophy className="w-8 h-8 text-yellow-300" />
+              <h2 className="text-2xl font-bold">🎉 {t('pixel.art.completed.title')} 🎉</h2>
+              <Trophy className="w-8 h-8 text-yellow-300" />
+            </div>
+            <p className="text-center text-lg">
+              {t('pixel.art.completed.subtitle')}
+            </p>
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={() => setShowCompletionModal(true)}
+                className="px-6 py-3 bg-white text-purple-600 rounded-lg font-bold hover:bg-gray-100 transition-colors"
+              >
+                🏆 {t('pixel.art.completed.view.celebration')}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Hero Section */}
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
@@ -840,12 +905,19 @@ export const CollaborativePixelArt: React.FC = () => {
               <div className="max-w-2xl mx-auto mb-8">
                 <div className="bg-gray-200 rounded-full h-4 overflow-hidden">
                   <div 
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 h-full transition-all duration-1000 ease-out"
+                    className={`h-full transition-all duration-1000 ease-out ${
+                      isArtworkCompleted 
+                        ? 'bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 animate-pulse' 
+                        : 'bg-gradient-to-r from-purple-600 to-blue-600'
+                    }`}
                     style={{ width: `${Math.min(stats.percentage, 100)}%` }}
                   ></div>
                 </div>
                 <p className="text-sm text-gray-600 mt-2">
-                  {t('pixel.art.progress.estimated').replace('{days}', stats.estimatedDaysRemaining.toString())}
+                  {isArtworkCompleted 
+                    ? t('pixel.art.completed.progress.complete')
+                    : t('pixel.art.progress.estimated').replace('{days}', stats.estimatedDaysRemaining.toString())
+                  }
                 </p>
               </div>
             </>
@@ -932,127 +1004,159 @@ export const CollaborativePixelArt: React.FC = () => {
 
           {/* Interaction Section */}
           <div className="space-y-6">
-            {/* 🔒 Votre Contribution - AVEC PROTECTION IP */}
+            {/* 🔒 Votre Contribution - AVEC PROTECTION IP ET VÉRIFICATION D'ACHÈVEMENT */}
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
                 {t('pixel.art.contribution.title')}
               </h2>
               
-              {currentUserPixel || ipLimitReached ? (
+              {/* 🎉 AFFICHAGE SPÉCIAL SI L'ŒUVRE EST TERMINÉE */}
+              {isArtworkCompleted ? (
                 <div className="text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 border-4 border-gray-300 rounded-lg flex items-center justify-center">
-                    <div 
-                      className="w-8 h-8 rounded"
-                      style={{ backgroundColor: currentUserPixel?.color || selectedColor }}
-                    ></div>
+                  <div className="w-16 h-16 mx-auto mb-4 border-4 border-yellow-400 rounded-lg flex items-center justify-center bg-gradient-to-br from-yellow-400 to-orange-500">
+                    <Trophy className="w-8 h-8 text-white" />
                   </div>
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <p className="text-green-600 font-medium">
-                      {currentUserPixel ? t('pixel.art.contribution.success') : 'Contribution déjà effectuée'}
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    <Sparkles className="w-6 h-6 text-yellow-500" />
+                    <p className="text-xl font-bold text-yellow-600">
+                      {t('pixel.art.completed.title')}
                     </p>
+                    <Sparkles className="w-6 h-6 text-yellow-500" />
                   </div>
-                  {/* 🔒 AFFICHAGE CONDITIONNEL : Seulement pour les NOUVEAUX pixels */}
-                  {currentUserPixel && !error && (
-                    <>
-                      <p className="text-sm text-gray-600 mb-2">
-                        {t('pixel.art.contribution.position').replace('{x}', currentUserPixel.x.toString()).replace('{y}', currentUserPixel.y.toString())}
-                      </p>
-                      <p className="text-xs text-blue-600">
-                        {t('pixel.art.contribution.stored')}
-                      </p>
-                    </>
-                  )}
+                  <p className="text-gray-700 mb-4">
+                    {t('pixel.art.completed.no.more.pixels')}
+                  </p>
                   
-                  {/* 🔒 Message de protection IP */}
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Shield className="w-5 h-5 text-blue-600" />
-                      <span className="font-medium text-blue-800">{t('pixel.art.security.title')}</span>
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 border border-yellow-200">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <Award className="w-5 h-5 text-yellow-600" />
+                      <span className="font-medium text-yellow-800">{t('pixel.art.completed.thanks')}</span>
                     </div>
-                    <p className="text-sm text-blue-700">
-                      {t('pixel.art.security.description')}
+                    <p className="text-sm text-yellow-700">
+                      {t('pixel.art.completed.thanks.description')}
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="text-center">
-                  <div className="mb-4">
-                    <p className="text-gray-600 mb-4">
-                      {t('pixel.art.contribution.choose')}
-                    </p>
-                    
-                    {/* 🆕 Champ nom du contributeur */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4" />
-                          {t('pixel.art.contributor.name.label')}
-                        </div>
-                      </label>
-                      <input
-                        type="text"
-                        value={contributorName}
-                        onChange={(e) => setContributorName(e.target.value)}
-                        placeholder={t('pixel.art.contributor.name.placeholder')}
-                        maxLength={30}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-center"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        {t('pixel.art.contributor.name.help')}
-                      </p>
-                    </div>
-                    
-                    {/* Color Picker */}
-                    <div className="flex flex-wrap justify-center gap-2 mb-4">
-                      {predefinedColors.map((color, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setSelectedColor(color)}
-                          className={`w-8 h-8 rounded-lg border-2 transition-all ${
-                            selectedColor === color ? 'border-gray-800 scale-110' : 'border-gray-300'
-                          }`}
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
-                    </div>
-                    
-                    <input
-                      type="color"
-                      value={selectedColor}
-                      onChange={(e) => setSelectedColor(e.target.value)}
-                      className="w-16 h-8 rounded border border-gray-300 mb-4"
-                    />
-                  </div>
-                  
-                  <button
-                    onClick={generateUserPixel}
-                    disabled={isCreatingPixel || ipLimitReached}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                  >
-                    {isCreatingPixel ? (
-                      <div className="flex items-center gap-2">
-                        <Loader className="w-5 h-5 animate-spin" />
-                        {t('pixel.art.contribution.creating')}
+                // Affichage normal si l'œuvre n'est pas terminée
+                <>
+                  {currentUserPixel || ipLimitReached ? (
+                    <div className="text-center">
+                      <div className="w-16 h-16 mx-auto mb-4 border-4 border-gray-300 rounded-lg flex items-center justify-center">
+                        <div 
+                          className="w-8 h-8 rounded"
+                          style={{ backgroundColor: currentUserPixel?.color || selectedColor }}
+                        ></div>
                       </div>
-                    ) : (
-                      <>
-                        🎨 {t('pixel.art.contribution.generate')}
-                      </>
-                    )}
-                  </button>
-                  
-                  {/* 🔒 Information de sécurité */}
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Shield className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm font-medium text-gray-700">{t('pixel.art.security.ip.title')}</span>
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <p className="text-green-600 font-medium">
+                          {currentUserPixel ? t('pixel.art.contribution.success') : 'Contribution déjà effectuée'}
+                        </p>
+                      </div>
+                      {/* 🔒 AFFICHAGE CONDITIONNEL : Seulement pour les NOUVEAUX pixels */}
+                      {currentUserPixel && !error && (
+                        <>
+                          <p className="text-sm text-gray-600 mb-2">
+                            {t('pixel.art.contribution.position').replace('{x}', currentUserPixel.x.toString()).replace('{y}', currentUserPixel.y.toString())}
+                          </p>
+                          <p className="text-xs text-blue-600">
+                            {t('pixel.art.contribution.stored')}
+                          </p>
+                        </>
+                      )}
+                      
+                      {/* 🔒 Message de protection IP */}
+                      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Shield className="w-5 h-5 text-blue-600" />
+                          <span className="font-medium text-blue-800">{t('pixel.art.security.title')}</span>
+                        </div>
+                        <p className="text-sm text-blue-700">
+                          {t('pixel.art.security.description')}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-600">
-                      {t('pixel.art.security.ip.description')}
-                    </p>
-                  </div>
-                </div>
+                  ) : (
+                    <div className="text-center">
+                      <div className="mb-4">
+                        <p className="text-gray-600 mb-4">
+                          {t('pixel.art.contribution.choose')}
+                        </p>
+                        
+                        {/* 🆕 Champ nom du contributeur */}
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4" />
+                              {t('pixel.art.contributor.name.label')}
+                            </div>
+                          </label>
+                          <input
+                            type="text"
+                            value={contributorName}
+                            onChange={(e) => setContributorName(e.target.value)}
+                            placeholder={t('pixel.art.contributor.name.placeholder')}
+                            maxLength={30}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-center"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            {t('pixel.art.contributor.name.help')}
+                          </p>
+                        </div>
+                        
+                        {/* Color Picker */}
+                        <div className="flex flex-wrap justify-center gap-2 mb-4">
+                          {predefinedColors.map((color, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setSelectedColor(color)}
+                              className={`w-8 h-8 rounded-lg border-2 transition-all ${
+                                selectedColor === color ? 'border-gray-800 scale-110' : 'border-gray-300'
+                              }`}
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </div>
+                        
+                        <input
+                          type="color"
+                          value={selectedColor}
+                          onChange={(e) => setSelectedColor(e.target.value)}
+                          className="w-16 h-8 rounded border border-gray-300 mb-4"
+                        />
+                      </div>
+                      
+                      <button
+                        onClick={generateUserPixel}
+                        disabled={isCreatingPixel || ipLimitReached || isArtworkCompleted}
+                        className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                      >
+                        {isCreatingPixel ? (
+                          <div className="flex items-center gap-2">
+                            <Loader className="w-5 h-5 animate-spin" />
+                            {t('pixel.art.contribution.creating')}
+                          </div>
+                        ) : (
+                          <>
+                            🎨 {t('pixel.art.contribution.generate')}
+                          </>
+                        )}
+                      </button>
+                      
+                      {/* 🔒 Information de sécurité */}
+                      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Shield className="w-4 h-4 text-gray-600" />
+                          <span className="text-sm font-medium text-gray-700">{t('pixel.art.security.ip.title')}</span>
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          {t('pixel.art.security.ip.description')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -1081,10 +1185,10 @@ export const CollaborativePixelArt: React.FC = () => {
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
                     <div className="text-lg font-bold text-purple-600">
-                      {stats.estimatedDaysRemaining}
+                      {isArtworkCompleted ? '🎉' : stats.estimatedDaysRemaining}
                     </div>
                     <div className="text-xs text-gray-600">
-                      {t('pixel.art.stats.days.remaining')}
+                      {isArtworkCompleted ? t('pixel.art.completed.days') : t('pixel.art.stats.days.remaining')}
                     </div>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
@@ -1223,6 +1327,147 @@ export const CollaborativePixelArt: React.FC = () => {
             </div>
             {/* Flèche du tooltip */}
             <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+          </div>
+        </div>
+      )}
+
+      {/* 🎉 MODAL DE CÉLÉBRATION SPECTACULAIRE */}
+      {showCompletionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[9999] overflow-hidden">
+          {/* Particules d'animation en arrière-plan */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {[...Array(50)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute animate-bounce"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 2}s`,
+                  animationDuration: `${2 + Math.random() * 3}s`
+                }}
+              >
+                {Math.random() > 0.5 ? (
+                  <Star className="w-4 h-4 text-yellow-400" />
+                ) : (
+                  <Sparkles className="w-4 h-4 text-purple-400" />
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-600 via-pink-500 to-yellow-400 rounded-3xl p-8 max-w-2xl w-full text-center text-white shadow-2xl relative overflow-hidden">
+            {/* Animation de confettis */}
+            <div className="absolute inset-0 pointer-events-none">
+              {[...Array(30)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute animate-ping"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    animationDelay: `${Math.random() * 3}s`,
+                    animationDuration: `${1 + Math.random() * 2}s`
+                  }}
+                >
+                  <div className="w-2 h-2 bg-white rounded-full opacity-70"></div>
+                </div>
+              ))}
+            </div>
+
+            {/* Contenu principal */}
+            <div className="relative z-10">
+              {/* Phase 1 : Apparition */}
+              {completionAnimationPhase >= 1 && (
+                <div className="animate-bounce">
+                  <div className="text-8xl mb-6">🎊</div>
+                  <h1 className="text-4xl md:text-6xl font-bold mb-4 animate-pulse">
+                    {t('pixel.art.completed.modal.title')}
+                  </h1>
+                </div>
+              )}
+
+              {/* Phase 2 : Statistiques */}
+              {completionAnimationPhase >= 2 && (
+                <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 mb-6 animate-fade-in">
+                  <h2 className="text-2xl font-bold mb-4">
+                    🏆 {t('pixel.art.completed.modal.achievement')}
+                  </h2>
+                  <div className="grid grid-cols-2 gap-4 text-lg">
+                    <div className="bg-white/10 rounded-lg p-4">
+                      <div className="text-3xl font-bold text-yellow-300">
+                        {stats?.totalPixels.toLocaleString()}
+                      </div>
+                      <div className="text-sm opacity-90">
+                        {t('pixel.art.completed.modal.total.pixels')}
+                      </div>
+                    </div>
+                    <div className="bg-white/10 rounded-lg p-4">
+                      <div className="text-3xl font-bold text-green-300">
+                        100%
+                      </div>
+                      <div className="text-sm opacity-90">
+                        {t('pixel.art.completed.modal.completion')}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-lg mt-4 opacity-90">
+                    {t('pixel.art.completed.modal.description')}
+                  </p>
+                </div>
+              )}
+
+              {/* Phase 3 : Remerciements et actions */}
+              {completionAnimationPhase >= 3 && (
+                <div className="animate-slide-up">
+                  <div className="bg-gradient-to-r from-yellow-400/20 to-orange-500/20 rounded-2xl p-6 mb-6 border border-yellow-300/30">
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      <Heart className="w-8 h-8 text-red-400" />
+                      <h3 className="text-2xl font-bold">
+                        {t('pixel.art.completed.modal.thanks.title')}
+                      </h3>
+                      <Heart className="w-8 h-8 text-red-400" />
+                    </div>
+                    <p className="text-lg leading-relaxed opacity-90">
+                      {t('pixel.art.completed.modal.thanks.message')}
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button
+                      onClick={downloadProgress}
+                      className="flex items-center gap-2 px-8 py-4 bg-white hover:bg-gray-100 text-purple-600 rounded-xl font-bold transition-colors shadow-lg"
+                    >
+                      <Download className="w-5 h-5" />
+                      {t('pixel.art.completed.modal.download')}
+                    </button>
+                    <button
+                      onClick={shareProject}
+                      className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl font-bold transition-colors shadow-lg"
+                    >
+                      <Share2 className="w-5 h-5" />
+                      {t('pixel.art.completed.modal.share')}
+                    </button>
+                    <button
+                      onClick={() => setShowCompletionModal(false)}
+                      className="flex items-center gap-2 px-8 py-4 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-bold transition-colors shadow-lg"
+                    >
+                      <Eye className="w-5 h-5" />
+                      {t('pixel.art.completed.modal.continue')}
+                    </button>
+                  </div>
+
+                  {/* Bouton de fermeture */}
+                  <button
+                    onClick={() => setShowCompletionModal(false)}
+                    className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-lg transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

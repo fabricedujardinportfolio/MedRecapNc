@@ -125,7 +125,7 @@ export const translations = {
     'patient.modal.invoices': 'Factures et paiements',
     'patient.modal.appointments': 'Rendez-vous',
     'patient.modal.new.consultation': 'Nouvelle consultation',
-    'pixel.modal.new.invoice': 'Nouvelle facture',
+    'patient.modal.new.invoice': 'Nouvelle facture',
     'patient.modal.new.appointment': 'Nouveau rendez-vous',
     'patient.modal.no.consultations': 'Aucune consultation enregistrée',
     'patient.modal.no.invoices': 'Aucune facture enregistrée',
@@ -258,6 +258,28 @@ export const translations = {
     
     // 🆕 NOUVELLE TRADUCTION POUR L'ALERTE PIXEL EXISTANT
     'pixel.art.existing.pixel.alert': 'Vous avez déjà contribué à cette œuvre d\'art ! Voici votre pixel existant.',
+
+    // 🎉 NOUVELLES TRADUCTIONS POUR LA CÉLÉBRATION D'ACHÈVEMENT
+    'pixel.art.completed.title': 'ŒUVRE TERMINÉE',
+    'pixel.art.completed.subtitle': 'L\'art collaboratif de 1,5 million de pixels est maintenant complet !',
+    'pixel.art.completed.no.more.pixels': 'L\'œuvre est maintenant terminée ! Plus aucun pixel ne peut être ajouté.',
+    'pixel.art.completed.thanks': 'Merci à tous les contributeurs !',
+    'pixel.art.completed.thanks.description': 'Grâce à votre participation, cette œuvre d\'art collaborative unique est maintenant achevée.',
+    'pixel.art.completed.view.celebration': 'Voir la célébration',
+    'pixel.art.completed.progress.complete': 'Progression : 100% - Œuvre terminée !',
+    'pixel.art.completed.days': 'Terminé !',
+    
+    // Modal de célébration
+    'pixel.art.completed.modal.title': 'FÉLICITATIONS !',
+    'pixel.art.completed.modal.achievement': 'Exploit Accompli',
+    'pixel.art.completed.modal.total.pixels': 'Pixels Total',
+    'pixel.art.completed.modal.completion': 'Achèvement',
+    'pixel.art.completed.modal.description': 'Cette œuvre d\'art collaborative unique a été créée grâce à la participation de milliers de contributeurs !',
+    'pixel.art.completed.modal.thanks.title': 'Merci à Tous !',
+    'pixel.art.completed.modal.thanks.message': 'Chaque pixel raconte une histoire, chaque contributeur a participé à cette création collective extraordinaire. Cette œuvre restera pour toujours comme témoignage de la collaboration humaine.',
+    'pixel.art.completed.modal.download': 'Télécharger l\'Œuvre',
+    'pixel.art.completed.modal.share': 'Partager la Réussite',
+    'pixel.art.completed.modal.continue': 'Continuer à Explorer',
 
     // Common
     'common.loading': 'Chargement...',
@@ -546,6 +568,28 @@ export const translations = {
     
     // 🆕 NOUVELLE TRADUCTION POUR L'ALERTE PIXEL EXISTANT EN ANGLAIS
     'pixel.art.existing.pixel.alert': 'You have already contributed to this artwork! Here is your existing pixel.',
+
+    // 🎉 NOUVELLES TRADUCTIONS POUR LA CÉLÉBRATION D'ACHÈVEMENT EN ANGLAIS
+    'pixel.art.completed.title': 'ARTWORK COMPLETED',
+    'pixel.art.completed.subtitle': 'The 1.5 million pixel collaborative artwork is now complete!',
+    'pixel.art.completed.no.more.pixels': 'The artwork is now finished! No more pixels can be added.',
+    'pixel.art.completed.thanks': 'Thank you to all contributors!',
+    'pixel.art.completed.thanks.description': 'Thanks to your participation, this unique collaborative artwork is now complete.',
+    'pixel.art.completed.view.celebration': 'View celebration',
+    'pixel.art.completed.progress.complete': 'Progress: 100% - Artwork completed!',
+    'pixel.art.completed.days': 'Completed!',
+    
+    // Modal de célébration en anglais
+    'pixel.art.completed.modal.title': 'CONGRATULATIONS!',
+    'pixel.art.completed.modal.achievement': 'Achievement Unlocked',
+    'pixel.art.completed.modal.total.pixels': 'Total Pixels',
+    'pixel.art.completed.modal.completion': 'Completion',
+    'pixel.art.completed.modal.description': 'This unique collaborative artwork was created through the participation of thousands of contributors!',
+    'pixel.art.completed.modal.thanks.title': 'Thank You All!',
+    'pixel.art.completed.modal.thanks.message': 'Each pixel tells a story, each contributor participated in this extraordinary collective creation. This artwork will remain forever as a testament to human collaboration.',
+    'pixel.art.completed.modal.download': 'Download Artwork',
+    'pixel.art.completed.modal.share': 'Share Success',
+    'pixel.art.completed.modal.continue': 'Continue Exploring',
 
     // Common
     'common.loading': 'Loading...',
