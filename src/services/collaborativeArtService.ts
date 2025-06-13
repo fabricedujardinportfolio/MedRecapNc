@@ -190,7 +190,7 @@ class CollaborativeArtService {
         .from('pixel_sessions')
         .select('id')
         .eq('session_id', this.currentSessionId)
-        .single();
+        .maybeSingle();
 
       if (sessionError || !sessionData) {
         return null;
@@ -200,7 +200,7 @@ class CollaborativeArtService {
         .from('collaborative_pixels')
         .select('*')
         .eq('session_id', sessionData.id)
-        .single();
+        .maybeSingle();
 
       if (pixelError || !pixelData) {
         return null;
