@@ -99,6 +99,7 @@ export const PublicProjectPage: React.FC = () => {
     };
   }, [sequenceTimeout]);
 
+  // Fonction de traduction simplifiée - AFFICHE SEULEMENT LA LANGUE SÉLECTIONNÉE
   const t = (fr: string, en: string) => language === 'fr' ? fr : en;
 
   return (
@@ -255,28 +256,14 @@ export const PublicProjectPage: React.FC = () => {
               <div className="flex items-center justify-center gap-2 mb-4">
                 <Globe className="w-5 h-5 text-blue-600" />
                 <span className="font-semibold text-blue-900">
-                  {t('À propos des traductions', 'About the Translations')}
+                  {t('À propos de ce projet', 'About this Project')}
                 </span>
               </div>
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div className="flex items-start gap-2">
-                  <span className="text-lg">🇫🇷</span>
-                  <span className="text-gray-700">
-                    {t(
-                      'Chaque section est présentée en français puis en anglais pour faciliter la compréhension.',
-                      'Each section is provided in French and English for easier understanding.'
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-lg">🇬🇧</span>
-                  <span className="text-gray-700">
-                    {t(
-                      'Each section is provided in French and English for easier understanding.',
-                      'Chaque section est présentée en français puis en anglais pour faciliter la compréhension.'
-                    )}
-                  </span>
-                </div>
+              <div className="text-sm text-gray-700 leading-relaxed">
+                {t(
+                  'Ce projet vise à développer un assistant médical IA pour améliorer la gestion des dossiers patients en Nouvelle-Calédonie, en réponse à la pénurie de médecins dans les zones rurales.',
+                  'This project aims to develop a medical AI assistant to improve patient record management in New Caledonia, addressing the shortage of doctors in rural areas.'
+                )}
               </div>
             </div>
 
@@ -319,40 +306,26 @@ export const PublicProjectPage: React.FC = () => {
 
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
-              {/* French Version */}
+              {/* Contenu unifié selon la langue */}
               <div className="bg-blue-50 rounded-xl p-8">
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="text-2xl">🇫🇷</span>
-                  <h3 className="text-xl font-semibold text-blue-900">Français</h3>
+                  <span className="text-2xl">{language === 'fr' ? '🇫🇷' : '🇬🇧'}</span>
+                  <h3 className="text-xl font-semibold text-blue-900">
+                    {t('Contexte du Projet', 'Project Context')}
+                  </h3>
                 </div>
-                <p className="text-gray-700 leading-relaxed">
-                  Face à la pénurie croissante de médecins en Nouvelle-Calédonie, notamment dans les zones rurales ou isolées, 
-                  ce projet vise à proposer une solution technologique innovante pour soulager les professionnels de santé 
-                  et améliorer le suivi des patients.
+                <p className="text-gray-700 leading-relaxed mb-4">
+                  {t(
+                    'Face à la pénurie croissante de médecins en Nouvelle-Calédonie, notamment dans les zones rurales ou isolées, ce projet vise à proposer une solution technologique innovante pour soulager les professionnels de santé et améliorer le suivi des patients.',
+                    'In response to the growing shortage of doctors in New Caledonia, especially in rural or remote areas, this project aims to provide an innovative technological solution to support healthcare professionals and improve patient follow-up.'
+                  )}
                 </p>
-                <div className="mt-4 p-4 bg-blue-100 rounded-lg">
+                <div className="p-4 bg-blue-100 rounded-lg">
                   <p className="text-blue-800 font-medium">
-                    💡 L'idée : développer un assistant IA vidéo médical qui peut présenter vocalement les fiches patients 
-                    de manière synthétique et claire.
-                  </p>
-                </div>
-              </div>
-
-              {/* English Version */}
-              <div className="bg-teal-50 rounded-xl p-8">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-2xl">🇬🇧</span>
-                  <h3 className="text-xl font-semibold text-teal-900">English</h3>
-                </div>
-                <p className="text-gray-700 leading-relaxed">
-                  In response to the growing shortage of doctors in New Caledonia, especially in rural or remote areas, 
-                  this project aims to provide an innovative technological solution to support healthcare professionals 
-                  and improve patient follow-up.
-                </p>
-                <div className="mt-4 p-4 bg-teal-100 rounded-lg">
-                  <p className="text-teal-800 font-medium">
-                    💡 The idea: develop a medical video AI assistant capable of vocally presenting patient records 
-                    in a clear and concise manner.
+                    💡 {t(
+                      'L\'idée : développer un assistant IA vidéo médical qui peut présenter vocalement les fiches patients de manière synthétique et claire.',
+                      'The idea: develop a medical video AI assistant capable of vocally presenting patient records in a clear and concise manner.'
+                    )}
                   </p>
                 </div>
               </div>
@@ -366,7 +339,9 @@ export const PublicProjectPage: React.FC = () => {
                   title="🤫"
                 >
                   <MapPin className="w-12 h-12 opacity-80" />
-                  <h3 className="text-xl font-semibold">Nouvelle-Calédonie</h3>
+                  <h3 className="text-xl font-semibold">
+                    {t('Nouvelle-Calédonie', 'New Caledonia')}
+                  </h3>
                 </button>
                 <div className="space-y-3 text-blue-100">
                   <button
@@ -375,15 +350,21 @@ export const PublicProjectPage: React.FC = () => {
                     title="🤫"
                   >
                     <Users className="w-4 h-4" />
-                    <span className="text-sm">280 000 habitants</span>
+                    <span className="text-sm">
+                      {t('280 000 habitants', '280,000 inhabitants')}
+                    </span>
                   </button>
                   <div className="flex items-center gap-2">
                     <Stethoscope className="w-4 h-4" />
-                    <span className="text-sm">{t('Pénurie médicale', 'Medical shortage')}</span>
+                    <span className="text-sm">
+                      {t('Pénurie médicale', 'Medical shortage')}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Target className="w-4 h-4" />
-                    <span className="text-sm">{t('Zones isolées', 'Remote areas')}</span>
+                    <span className="text-sm">
+                      {t('Zones isolées', 'Remote areas')}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -391,11 +372,15 @@ export const PublicProjectPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-orange-50 rounded-xl p-6 text-center">
                   <div className="text-2xl font-bold text-orange-600 mb-2">15%</div>
-                  <div className="text-sm text-orange-800">{t('Médecins manquants', 'Missing doctors')}</div>
+                  <div className="text-sm text-orange-800">
+                    {t('Médecins manquants', 'Missing doctors')}
+                  </div>
                 </div>
                 <div className="bg-green-50 rounded-xl p-6 text-center">
                   <div className="text-2xl font-bold text-green-600 mb-2">24/7</div>
-                  <div className="text-sm text-green-800">{t('Assistant IA', 'AI Assistant')}</div>
+                  <div className="text-sm text-green-800">
+                    {t('Assistant IA', 'AI Assistant')}
+                  </div>
                 </div>
               </div>
             </div>
@@ -415,65 +400,54 @@ export const PublicProjectPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-12">
-            {/* French Version */}
+          <div className="max-w-4xl mx-auto">
             <div className="bg-white rounded-xl p-8 shadow-lg">
               <div className="flex items-center gap-2 mb-6">
-                <span className="text-2xl">🇫🇷</span>
-                <h3 className="text-xl font-semibold text-gray-900">Français</h3>
+                <span className="text-2xl">{language === 'fr' ? '🇫🇷' : '🇬🇧'}</span>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  {t('Technologies Utilisées', 'Technologies Used')}
+                </h3>
               </div>
               
               <div className="space-y-4">
                 <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
                   <Code className="w-5 h-5 text-blue-600" />
-                  <span className="text-gray-700">React (actuellement), migration vers Vue 3 + TypeScript</span>
+                  <span className="text-gray-700">
+                    {t(
+                      'React (actuellement), migration vers Vue 3 + TypeScript',
+                      'React (currently), migrating to Vue 3 + TypeScript'
+                    )}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
                   <div className="w-5 h-5 bg-purple-600 rounded"></div>
-                  <span className="text-gray-700">Tailwind CSS pour l'UI</span>
+                  <span className="text-gray-700">
+                    {t('Tailwind CSS pour l\'UI', 'Tailwind CSS for UI')}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
                   <Video className="w-5 h-5 text-green-600" />
-                  <span className="text-gray-700">Tavus pour l'avatar IA vidéo</span>
+                  <span className="text-gray-700">
+                    {t('Tavus pour l\'avatar IA vidéo', 'Tavus for video AI avatar')}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-pink-50 rounded-lg">
                   <Heart className="w-5 h-5 text-pink-600" />
-                  <span className="text-gray-700">Persona IA : Dr. Léa Martin, empathique et rigoureuse</span>
+                  <span className="text-gray-700">
+                    {t(
+                      'Persona IA : Dr. Léa Martin, empathique et rigoureuse',
+                      'AI persona: Dr. Léa Martin, empathetic and rigorous'
+                    )}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
                   <Award className="w-5 h-5 text-yellow-600" />
-                  <span className="text-gray-700">Prototype fonctionnel avec fiches patients et agent IA</span>
-                </div>
-              </div>
-            </div>
-
-            {/* English Version */}
-            <div className="bg-white rounded-xl p-8 shadow-lg">
-              <div className="flex items-center gap-2 mb-6">
-                <span className="text-2xl">🇬🇧</span>
-                <h3 className="text-xl font-semibold text-gray-900">English</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                  <Code className="w-5 h-5 text-blue-600" />
-                  <span className="text-gray-700">React (currently), migrating to Vue 3 + TypeScript</span>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
-                  <div className="w-5 h-5 bg-purple-600 rounded"></div>
-                  <span className="text-gray-700">Tailwind CSS for UI</span>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                  <Video className="w-5 h-5 text-green-600" />
-                  <span className="text-gray-700">Tavus for video AI avatar</span>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-pink-50 rounded-lg">
-                  <Heart className="w-5 h-5 text-pink-600" />
-                  <span className="text-gray-700">AI persona: Dr. Léa Martin, empathetic and rigorous</span>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
-                  <Award className="w-5 h-5 text-yellow-600" />
-                  <span className="text-gray-700">Functional prototype with patient records and AI agent</span>
+                  <span className="text-gray-700">
+                    {t(
+                      'Prototype fonctionnel avec fiches patients et agent IA',
+                      'Functional prototype with patient records and AI agent'
+                    )}
+                  </span>
                 </div>
               </div>
             </div>
@@ -611,12 +585,13 @@ export const PublicProjectPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-12">
-            {/* French Version */}
+          <div className="max-w-4xl mx-auto">
             <div className="bg-white rounded-xl p-8 shadow-lg">
               <div className="flex items-center gap-2 mb-6">
-                <span className="text-2xl">🇫🇷</span>
-                <h3 className="text-xl font-semibold text-gray-900">Français</h3>
+                <span className="text-2xl">{language === 'fr' ? '🇫🇷' : '🇬🇧'}</span>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  {t('Compétences Développées', 'Skills Developed')}
+                </h3>
               </div>
               
               <div className="space-y-6">
@@ -625,8 +600,18 @@ export const PublicProjectPage: React.FC = () => {
                     <Video className="w-4 h-4 text-blue-600" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Intégration d'un agent IA vidéo en temps réel</h4>
-                    <p className="text-gray-600 text-sm">Maîtrise de l'API Tavus et gestion des flux vidéo</p>
+                    <h4 className="font-semibold text-gray-900 mb-1">
+                      {t(
+                        'Intégration d\'un agent IA vidéo en temps réel',
+                        'Integrating a real-time video AI agent'
+                      )}
+                    </h4>
+                    <p className="text-gray-600 text-sm">
+                      {t(
+                        'Maîtrise de l\'API Tavus et gestion des flux vidéo',
+                        'Mastering Tavus API and video stream management'
+                      )}
+                    </p>
                   </div>
                 </div>
                 
@@ -635,8 +620,18 @@ export const PublicProjectPage: React.FC = () => {
                     <Database className="w-4 h-4 text-green-600" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Structuration de fiches patients dynamiques</h4>
-                    <p className="text-gray-600 text-sm">Architecture de données complexes et relations</p>
+                    <h4 className="font-semibold text-gray-900 mb-1">
+                      {t(
+                        'Structuration de fiches patients dynamiques',
+                        'Structuring dynamic patient records'
+                      )}
+                    </h4>
+                    <p className="text-gray-600 text-sm">
+                      {t(
+                        'Architecture de données complexes et relations',
+                        'Complex data architecture and relationships'
+                      )}
+                    </p>
                   </div>
                 </div>
                 
@@ -645,8 +640,18 @@ export const PublicProjectPage: React.FC = () => {
                     <Stethoscope className="w-4 h-4 text-purple-600" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Optimisation de l'interface pour un usage médical</h4>
-                    <p className="text-gray-600 text-sm">UX/UI adaptée aux contraintes du secteur santé</p>
+                    <h4 className="font-semibold text-gray-900 mb-1">
+                      {t(
+                        'Optimisation de l\'interface pour un usage médical',
+                        'Optimizing the interface for medical use'
+                      )}
+                    </h4>
+                    <p className="text-gray-600 text-sm">
+                      {t(
+                        'UX/UI adaptée aux contraintes du secteur santé',
+                        'UX/UI adapted to healthcare sector constraints'
+                      )}
+                    </p>
                   </div>
                 </div>
                 
@@ -655,58 +660,18 @@ export const PublicProjectPage: React.FC = () => {
                     <Rocket className="w-4 h-4 text-orange-600" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Structuration pour un déploiement progressif</h4>
-                    <p className="text-gray-600 text-sm">Architecture scalable et modulaire</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* English Version */}
-            <div className="bg-white rounded-xl p-8 shadow-lg">
-              <div className="flex items-center gap-2 mb-6">
-                <span className="text-2xl">🇬🇧</span>
-                <h3 className="text-xl font-semibold text-gray-900">English</h3>
-              </div>
-              
-              <div className="space-y-6">
-                <div className="flex gap-4">
-                  <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-lg flex-shrink-0">
-                    <Video className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Integrating a real-time video AI agent</h4>
-                    <p className="text-gray-600 text-sm">Mastering Tavus API and video stream management</p>
-                  </div>
-                </div>
-                
-                <div className="flex gap-4">
-                  <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-lg flex-shrink-0">
-                    <Database className="w-4 h-4 text-green-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Structuring dynamic patient records</h4>
-                    <p className="text-gray-600 text-sm">Complex data architecture and relationships</p>
-                  </div>
-                </div>
-                
-                <div className="flex gap-4">
-                  <div className="flex items-center justify-center w-8 h-8 bg-purple-100 rounded-lg flex-shrink-0">
-                    <Stethoscope className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Optimizing the interface for medical use</h4>
-                    <p className="text-gray-600 text-sm">UX/UI adapted to healthcare sector constraints</p>
-                  </div>
-                </div>
-                
-                <div className="flex gap-4">
-                  <div className="flex items-center justify-center w-8 h-8 bg-orange-100 rounded-lg flex-shrink-0">
-                    <Rocket className="w-4 h-4 text-orange-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Structuring for progressive deployment</h4>
-                    <p className="text-gray-600 text-sm">Scalable and modular architecture</p>
+                    <h4 className="font-semibold text-gray-900 mb-1">
+                      {t(
+                        'Structuration pour un déploiement progressif',
+                        'Structuring for progressive deployment'
+                      )}
+                    </h4>
+                    <p className="text-gray-600 text-sm">
+                      {t(
+                        'Architecture scalable et modulaire',
+                        'Scalable and modular architecture'
+                      )}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -817,35 +782,55 @@ export const PublicProjectPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Easter Egg Modal - Animation réduite et durée augmentée */}
+      {/* Easter Egg Modal */}
       {showEasterEgg && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
           <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-8 max-w-lg w-full text-center text-white shadow-2xl">
             <div className="text-8xl mb-6">🎊</div>
             <h3 className="text-3xl font-bold mb-4">
-              INCROYABLE ! 🏆
+              {t('INCROYABLE ! 🏆', 'AMAZING! 🏆')}
             </h3>
             <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-6">
               <p className="text-lg font-semibold mb-3">
-                🕵️ Félicitations ! Vous avez trouvé l'easter egg !
+                🕵️ {t(
+                  'Félicitations ! Vous avez trouvé l\'easter egg !',
+                  'Congratulations! You found the easter egg!'
+                )}
               </p>
               <p className="text-sm opacity-90 mb-4">
-                🎁 Merci d'avoir exploré cette page avec attention ! Votre curiosité est appréciée.
+                🎁 {t(
+                  'Merci d\'avoir exploré cette page avec attention ! Votre curiosité est appréciée.',
+                  'Thank you for exploring this page carefully! Your curiosity is appreciated.'
+                )}
               </p>
               <div className="bg-yellow-300/20 rounded-lg p-4 border border-yellow-300/30">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <Gift className="w-5 h-5 text-yellow-300" />
-                  <span className="font-bold text-yellow-300">RÉCOMPENSE EXCLUSIVE</span>
+                  <span className="font-bold text-yellow-300">
+                    {t('RÉCOMPENSE EXCLUSIVE', 'EXCLUSIVE REWARD')}
+                  </span>
                 </div>
                 <p className="text-xs text-yellow-100 leading-relaxed">
-                  🎁 Vous êtes officiellement un "Maître Détective d'Easter Eggs" !<br/>
-                  🔍 Votre persévérance et votre logique sont exceptionnelles.<br/>
-                  ⭐ Vous faites partie des 0.01% d'utilisateurs à avoir trouvé ceci !
+                  🎁 {t(
+                    'Vous êtes officiellement un "Maître Détective d\'Easter Eggs" !',
+                    'You are officially a "Master Easter Egg Detective"!'
+                  )}<br/>
+                  🔍 {t(
+                    'Votre persévérance et votre logique sont exceptionnelles.',
+                    'Your perseverance and logic are exceptional.'
+                  )}<br/>
+                  ⭐ {t(
+                    'Vous faites partie des 0.01% d\'utilisateurs à avoir trouvé ceci !',
+                    'You are part of the 0.01% of users who found this!'
+                  )}
                 </p>
               </div>
             </div>
             <div className="text-xs opacity-75 mb-4">
-              💡 {t('Un autre easter egg est caché quelque part sur le site principal. Saurez-vous le retrouver ?', 'Another easter egg is hidden somewhere on the main site. Can you find it?')}
+              💡 {t(
+                'Un autre easter egg est caché quelque part sur le site principal. Saurez-vous le retrouver ?',
+                'Another easter egg is hidden somewhere on the main site. Can you find it?'
+              )}
             </div>
             <div className="flex flex-col gap-3">
               <button
@@ -888,7 +873,9 @@ export const PublicProjectPage: React.FC = () => {
             </div>
 
             <div>
-              <h4 className="text-lg font-semibold mb-4">{t('Liens', 'Links')}</h4>
+              <h4 className="text-lg font-semibold mb-4">
+                {t('Liens', 'Links')}
+              </h4>
               <div className="space-y-2">
                 <a href="/" className="block text-gray-300 hover:text-white transition-colors text-sm">
                   {t('Démo en ligne', 'Online demo')}
@@ -903,7 +890,9 @@ export const PublicProjectPage: React.FC = () => {
             </div>
 
             <div>
-              <h4 className="text-lg font-semibold mb-4">{t('Technologie', 'Technology')}</h4>
+              <h4 className="text-lg font-semibold mb-4">
+                {t('Technologie', 'Technology')}
+              </h4>
               <div className="space-y-2 text-sm text-gray-300">
                 <div className="flex items-center gap-2">
                   <Code className="w-4 h-4" />
@@ -915,7 +904,7 @@ export const PublicProjectPage: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4" />
-                  <span>Sécurisé HDS</span>
+                  <span>{t('Sécurisé HDS', 'HDS Secure')}</span>
                 </div>
               </div>
             </div>
