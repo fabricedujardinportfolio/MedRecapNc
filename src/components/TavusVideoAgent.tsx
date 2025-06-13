@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mic, MicOff, Send, Bot, Video, MessageCircle, Volume2, VolumeX, ExternalLink, AlertTriangle } from 'lucide-react';
+import { X, Mic, MicOff, Send, Bot, Video, MessageCircle, Volume2, VolumeX, ExternalLink, AlertTriangle, Users } from 'lucide-react';
 import { Patient } from '../types/Patient';
 import { tavusService, TavusVideoSession } from '../services/tavusService';
 
@@ -23,7 +23,6 @@ declare global {
     webkitSpeechRecognition: any;
     speechSynthesis: any;
     SpeechSynthesisUtterance: any;
-    _tavusGlobalLock?: boolean;
   }
 }
 
@@ -66,31 +65,11 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     }
   }, []);
 
-  // Initialiser la session Tavus avec protection contre les doubles instances
+  // Initialiser la session Tavus avec système de queue
   useEffect(() => {
     if (isVisible && !session && !hasInitializedRef.current) {
-      // ⚠️ VÉRIFICATION ET ACTIVATION IMMÉDIATE DU VERROU GLOBAL
-      if (window._tavusGlobalLock) {
-        console.log('⚠️ Une session IA est déjà active globalement');
-        // Ne pas afficher d'erreur, juste créer une session demo avec message informatif
-        const demoSession: TavusVideoSession = {
-          sessionId: `demo-${Date.now()}`,
-          videoUrl: '#demo-mode',
-          status: 'ready',
-          isDemoMode: true,
-          patientData: patient,
-          errorMessage: 'Une autre session IA est déjà active. Cette session fonctionne en mode démonstration.'
-        };
-        setSession(demoSession);
-        hasInitializedRef.current = true;
-        return;
-      }
-
-      // ⬇️ ACTIVER IMMÉDIATEMENT LE VERROU POUR BLOQUER TOUTE AUTRE INITIALISATION
-      window._tavusGlobalLock = true;
       hasInitializedRef.current = true;
-      
-      console.log(`🚀 [${instanceIdRef.current}] Initialisation de la session (verrou activé immédiatement)`);
+      console.log(`🚀 [${instanceIdRef.current}] Initialisation de la session avec queue`);
       initializeSession();
     }
   }, [isVisible]);
@@ -112,8 +91,6 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const cleanupSession = () => {
     console.log(`🧹 [${instanceIdRef.current}] Nettoyage de la session`);
     
-    // ⚠️ LIBÉRER LE VERROU GLOBAL EN PREMIER
-    window._tavusGlobalLock = false;
     hasInitializedRef.current = false;
     hasSpokenWelcomeRef.current = false;
     
@@ -272,8 +249,6 @@ Que souhaitez-vous savoir ?`;
       };
       setSession(fallbackSession);
       
-      // ⚠️ LIBÉRER LE VERROU EN CAS D'ERREUR
-      window._tavusGlobalLock = false;
       hasInitializedRef.current = false;
     } finally {
       setIsLoading(false);
@@ -642,6 +617,19 @@ Que souhaitez-vous savoir ?`;
                       <span className="text-sm font-medium text-blue-800">Information</span>
                     </div>
                     <p className="text-sm text-blue-700">{session.errorMessage}</p>
+                  </div>
+                )}
+
+                {/* Session sharing indicator */}
+                {session.errorMessage?.includes('Session partagée') && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="w-5 h-5 text-yellow-600" />
+                      <span className="text-sm font-medium text-yellow-800">Session Partagée</span>
+                    </div>
+                    <p className="text-sm text-yellow-700">
+                      Vous consultez maintenant le dossier de {patient.prenom} {patient.nom} dans une session partagée.
+                    </p>
                   </div>
                 )}
 

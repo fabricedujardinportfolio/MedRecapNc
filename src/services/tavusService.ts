@@ -31,6 +31,14 @@ export interface TavusConversationRequest {
 
 // Variable globale pour éviter les sessions multiples
 let globalActiveSession: TavusVideoSession | null = null;
+// Verrou global pour empêcher les initialisations simultanées
+let globalInitializationLock = false;
+// Queue des demandes d'initialisation
+let initializationQueue: Array<{
+  patient: Patient;
+  resolve: (session: TavusVideoSession) => void;
+  reject: (error: Error) => void;
+}> = [];
 
 export class TavusService {
   private static instance: TavusService;
@@ -429,24 +437,95 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
     }
   }
 
-  // Initialize Tavus video session for patient with complete data
-  async initializePatientSession(patient: Patient): Promise<TavusVideoSession> {
-    // Vérifier s'il y a déjà une session active
-    if (globalActiveSession) {
-      console.log('⚠️ Session Tavus déjà active, fermeture de l\'ancienne session');
-      await this.endSession();
+  // Process initialization queue
+  private async processInitializationQueue(): Promise<void> {
+    if (globalInitializationLock || initializationQueue.length === 0) {
+      return;
     }
 
+    globalInitializationLock = true;
+    console.log(`🔄 Traitement de la queue d'initialisation: ${initializationQueue.length} demande(s)`);
+
+    try {
+      // Prendre la première demande de la queue
+      const request = initializationQueue.shift();
+      if (!request) {
+        return;
+      }
+
+      // Si une session est déjà active, retourner une session partagée
+      if (globalActiveSession) {
+        console.log('🔄 Session déjà active, création d\'une session partagée');
+        const sharedSession: TavusVideoSession = {
+          ...globalActiveSession,
+          sessionId: `shared-${Date.now()}`,
+          patientData: request.patient,
+          errorMessage: `Session partagée avec le patient ${globalActiveSession.patientData?.prenom} ${globalActiveSession.patientData?.nom}. Vous consultez maintenant ${request.patient.prenom} ${request.patient.nom}.`
+        };
+        request.resolve(sharedSession);
+      } else {
+        // Créer une nouvelle session
+        const session = await this.createNewSession(request.patient);
+        request.resolve(session);
+      }
+
+      // Traiter les autres demandes en attente avec la session existante
+      while (initializationQueue.length > 0) {
+        const nextRequest = initializationQueue.shift();
+        if (nextRequest && globalActiveSession) {
+          const sharedSession: TavusVideoSession = {
+            ...globalActiveSession,
+            sessionId: `shared-${Date.now()}`,
+            patientData: nextRequest.patient,
+            errorMessage: `Session partagée. Vous consultez maintenant ${nextRequest.patient.prenom} ${nextRequest.patient.nom}.`
+          };
+          nextRequest.resolve(sharedSession);
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Erreur lors du traitement de la queue:', error);
+      
+      // En cas d'erreur, créer des sessions demo pour toutes les demandes
+      const allRequests = [initializationQueue.shift()].filter(Boolean);
+      allRequests.forEach(request => {
+        if (request) {
+          const demoSession: TavusVideoSession = {
+            sessionId: `demo-${Date.now()}`,
+            videoUrl: '#demo-mode',
+            status: 'ready',
+            isDemoMode: true,
+            patientData: request.patient,
+            errorMessage: 'Service Tavus temporairement indisponible. Fonctionnement en mode démonstration.'
+          };
+          request.resolve(demoSession);
+        }
+      });
+      
+      // Vider la queue restante
+      initializationQueue.forEach(request => {
+        const demoSession: TavusVideoSession = {
+          sessionId: `demo-${Date.now()}`,
+          videoUrl: '#demo-mode',
+          status: 'ready',
+          isDemoMode: true,
+          patientData: request.patient,
+          errorMessage: 'Service Tavus temporairement indisponible. Fonctionnement en mode démonstration.'
+        };
+        request.resolve(demoSession);
+      });
+      initializationQueue = [];
+    } finally {
+      globalInitializationLock = false;
+    }
+  }
+
+  // Create new session (internal method)
+  private async createNewSession(patient: Patient): Promise<TavusVideoSession> {
     const sessionId = `session_${patient.id}_${Date.now()}`;
     
     try {
-      console.log('🚀 Initialisation session Tavus unique pour:', patient.prenom, patient.nom);
-      console.log('📊 Données disponibles:', {
-        consultations: patient.consultations?.length || 0,
-        factures: patient.factures?.length || 0,
-        rendezVous: patient.rendezVous?.length || 0,
-        typePatient: patient.typePatient
-      });
+      console.log('🚀 Création d\'une nouvelle session Tavus pour:', patient.prenom, patient.nom);
       
       // Create conversation with Tavus API
       const conversationResponse = await this.createTavusConversation(patient);
@@ -484,7 +563,7 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
 
       return session;
     } catch (error) {
-      console.error('❌ Erreur lors de l\'initialisation de la session Tavus:', error);
+      console.error('❌ Erreur lors de la création de la session:', error);
       
       // Create fallback demo session with patient data and error message
       const fallbackSession: TavusVideoSession = {
@@ -524,6 +603,30 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
 
       return fallbackSession;
     }
+  }
+
+  // Initialize Tavus video session for patient with queue management
+  async initializePatientSession(patient: Patient): Promise<TavusVideoSession> {
+    console.log(`🎯 Demande d'initialisation pour: ${patient.prenom} ${patient.nom}`);
+    
+    // Si une session est déjà active pour le même patient, la retourner
+    if (globalActiveSession && globalActiveSession.patientData?.id === patient.id) {
+      console.log('🔄 Session déjà active pour ce patient');
+      return globalActiveSession;
+    }
+
+    // Créer une promesse pour cette demande d'initialisation
+    return new Promise<TavusVideoSession>((resolve, reject) => {
+      // Ajouter à la queue
+      initializationQueue.push({ patient, resolve, reject });
+      console.log(`📝 Ajouté à la queue (position: ${initializationQueue.length})`);
+      
+      // Traiter la queue
+      this.processInitializationQueue().catch(error => {
+        console.error('❌ Erreur lors du traitement de la queue:', error);
+        reject(error);
+      });
+    });
   }
 
   // Send message to Tavus AI
@@ -574,6 +677,12 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
       globalActiveSession.status = 'ended';
       globalActiveSession = null;
     }
+
+    // Réinitialiser les verrous
+    globalInitializationLock = false;
+    initializationQueue = [];
+    
+    console.log('🧹 Session fermée et verrous réinitialisés');
   }
 
   // Get current session
@@ -591,8 +700,8 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
     hasApiKey: boolean;
     hasReplicaId: boolean;
     hasPersonaId: boolean;
-    isFullyConfigured: boolean;
     isValidApiKey: boolean;
+    isFullyConfigured: boolean;
   } {
     return {
       hasApiKey: !!TAVUS_API_KEY,
@@ -600,6 +709,19 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
       hasPersonaId: !!TAVUS_PERSONA_ID,
       isValidApiKey: this.isValidApiKey(TAVUS_API_KEY),
       isFullyConfigured: this.isConfigured()
+    };
+  }
+
+  // Get queue status (for debugging)
+  getQueueStatus(): {
+    queueLength: number;
+    isLocked: boolean;
+    hasActiveSession: boolean;
+  } {
+    return {
+      queueLength: initializationQueue.length,
+      isLocked: globalInitializationLock,
+      hasActiveSession: !!globalActiveSession
     };
   }
 }
