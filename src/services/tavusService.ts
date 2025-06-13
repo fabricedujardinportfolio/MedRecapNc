@@ -13,6 +13,7 @@ export interface TavusVideoSession {
   conversationId?: string;
   isDemoMode?: boolean;
   patientData?: Patient;
+  errorMessage?: string;
 }
 
 export interface TavusConversationRequest {
@@ -485,7 +486,7 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
     } catch (error) {
       console.error('❌ Erreur lors de l\'initialisation de la session Tavus:', error);
       
-      // Create fallback demo session with patient data
+      // Create fallback demo session with patient data and error message
       const fallbackSession: TavusVideoSession = {
         sessionId,
         videoUrl: '#demo-mode',
@@ -493,6 +494,25 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
         isDemoMode: true,
         patientData: patient
       };
+
+      // Set appropriate error message based on error type
+      if (error instanceof Error) {
+        if (error.message === 'TAVUS_NOT_CONFIGURED') {
+          console.log('ℹ️ Tavus non configuré - mode démonstration activé');
+          fallbackSession.errorMessage = 'Service Tavus non configuré. Fonctionnement en mode démonstration avec toutes les fonctionnalités disponibles.';
+        } else if (error.message === 'INVALID_API_KEY') {
+          console.log('ℹ️ Clé API Tavus invalide - mode démonstration activé');
+          fallbackSession.errorMessage = 'Clé API Tavus invalide. Fonctionnement en mode démonstration avec toutes les fonctionnalités disponibles.';
+        } else if (error.message === 'CONCURRENT_LIMIT_REACHED') {
+          console.log('ℹ️ Limite de conversations simultanées atteinte - mode démonstration activé');
+          fallbackSession.errorMessage = 'Limite de conversations simultanées Tavus atteinte. Fonctionnement en mode démonstration. Veuillez fermer d\'autres sessions Tavus actives ou réessayer plus tard.';
+        } else {
+          console.log('ℹ️ Erreur API Tavus - mode démonstration activé');
+          fallbackSession.errorMessage = 'Service Tavus temporairement indisponible. Fonctionnement en mode démonstration avec toutes les fonctionnalités disponibles.';
+        }
+      } else {
+        fallbackSession.errorMessage = 'Service Tavus temporairement indisponible. Fonctionnement en mode démonstration avec toutes les fonctionnalités disponibles.';
+      }
 
       globalActiveSession = fallbackSession;
 
@@ -502,21 +522,6 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
         }
       }, 1000);
 
-      if (error instanceof Error) {
-        if (error.message === 'TAVUS_NOT_CONFIGURED') {
-          console.log('ℹ️ Tavus non configuré - mode démonstration activé');
-          // Don't throw error, just use demo mode silently
-          return fallbackSession;
-        } else if (error.message === 'INVALID_API_KEY') {
-          console.log('ℹ️ Clé API Tavus invalide - mode démonstration activé');
-          // Don't throw error, just use demo mode silently
-          return fallbackSession;
-        } else if (error.message === 'CONCURRENT_LIMIT_REACHED') {
-          throw new Error('Limite de conversations simultanées atteinte. Veuillez réessayer dans quelques minutes ou fermer d\'autres sessions Tavus actives.');
-        }
-      }
-
-      console.log('ℹ️ Service Tavus indisponible - mode démonstration activé');
       return fallbackSession;
     }
   }

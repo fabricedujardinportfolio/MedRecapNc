@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mic, MicOff, Send, Bot, Video, MessageCircle, Volume2, VolumeX, ExternalLink } from 'lucide-react';
+import { X, Mic, MicOff, Send, Bot, Video, MessageCircle, Volume2, VolumeX, ExternalLink, AlertTriangle } from 'lucide-react';
 import { Patient } from '../types/Patient';
 import { tavusService, TavusVideoSession } from '../services/tavusService';
 
@@ -34,7 +34,6 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
 }) => {
   const [session, setSession] = useState<TavusVideoSession | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -73,7 +72,17 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       // ⚠️ VÉRIFICATION ET ACTIVATION IMMÉDIATE DU VERROU GLOBAL
       if (window._tavusGlobalLock) {
         console.log('⚠️ Une session IA est déjà active globalement');
-        setError('Une session IA est déjà active. Veuillez fermer l\'autre session avant d\'en ouvrir une nouvelle.');
+        // Ne pas afficher d'erreur, juste créer une session demo avec message informatif
+        const demoSession: TavusVideoSession = {
+          sessionId: `demo-${Date.now()}`,
+          videoUrl: '#demo-mode',
+          status: 'ready',
+          isDemoMode: true,
+          patientData: patient,
+          errorMessage: 'Une autre session IA est déjà active. Cette session fonctionne en mode démonstration.'
+        };
+        setSession(demoSession);
+        hasInitializedRef.current = true;
         return;
       }
 
@@ -190,7 +199,6 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
 
   const initializeSession = async () => {
     setIsLoading(true);
-    setError(null);
     
     try {
       console.log(`🚀 [${instanceIdRef.current}] Initialisation de la session avec données complètes du patient:`, {
@@ -206,10 +214,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       setSession(newSession);
       
       // Message de bienvenue enrichi avec informations sur les capacités
-      const welcomeMessage: ChatMessage = {
-        id: `msg-${Date.now()}`,
-        type: 'ai',
-        content: `Bonjour ! Je suis Dr. IA Assistant, votre assistant médical virtuel spécialisé. J'ai accès à l'ensemble du dossier de ${patient.prenom} ${patient.nom}, incluant :
+      let welcomeContent = `Bonjour ! Je suis Dr. IA Assistant, votre assistant médical virtuel spécialisé. J'ai accès à l'ensemble du dossier de ${patient.prenom} ${patient.nom}, incluant :
 
 📋 Historique médical complet
 🩺 ${patient.consultations?.length || 0} consultation(s) enregistrée(s)
@@ -223,7 +228,17 @@ Je peux répondre à vos questions sur tous ces aspects. Vous pouvez me demander
 - Les rendez-vous passés et à venir
 - Les traitements et recommandations
 
-Que souhaitez-vous savoir ?`,
+Que souhaitez-vous savoir ?`;
+
+      // Ajouter le message d'information si nécessaire
+      if (newSession.errorMessage) {
+        welcomeContent = `ℹ️ ${newSession.errorMessage}\n\n${welcomeContent}`;
+      }
+
+      const welcomeMessage: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        type: 'ai',
+        content: welcomeContent,
         timestamp: new Date()
       };
       setChatMessages([welcomeMessage]);
@@ -232,13 +247,30 @@ Que souhaitez-vous savoir ?`,
       if (!hasSpokenWelcomeRef.current) {
         hasSpokenWelcomeRef.current = true;
         setTimeout(() => {
-          speakText(`Bonjour ! Je suis Dr. IA Assistant. J'ai accès au dossier complet de ${patient.prenom} ${patient.nom}, incluant ses consultations, factures et rendez-vous. Que souhaitez-vous savoir ?`);
+          let spokenText = `Bonjour ! Je suis Dr. IA Assistant. J'ai accès au dossier complet de ${patient.prenom} ${patient.nom}, incluant ses consultations, factures et rendez-vous. Que souhaitez-vous savoir ?`;
+          
+          if (newSession.errorMessage) {
+            spokenText = `${newSession.errorMessage} ${spokenText}`;
+          }
+          
+          speakText(spokenText);
         }, 1000);
       }
       
     } catch (err) {
       console.error(`❌ [${instanceIdRef.current}] Erreur lors de l'initialisation:`, err);
-      setError(err instanceof Error ? err.message : 'Erreur d\'initialisation');
+      
+      // Cette erreur ne devrait plus se produire car le service retourne toujours une session
+      // Mais on garde une sécurité au cas où
+      const fallbackSession: TavusVideoSession = {
+        sessionId: `fallback-${Date.now()}`,
+        videoUrl: '#demo-mode',
+        status: 'ready',
+        isDemoMode: true,
+        patientData: patient,
+        errorMessage: 'Erreur d\'initialisation. Fonctionnement en mode démonstration.'
+      };
+      setSession(fallbackSession);
       
       // ⚠️ LIBÉRER LE VERROU EN CAS D'ERREUR
       window._tavusGlobalLock = false;
@@ -600,26 +632,19 @@ Que souhaitez-vous savoir ?`,
                 <p className="text-gray-600">Initialisation de l'assistant IA...</p>
                 <p className="text-sm text-purple-600 mt-2">Chargement des données patient complètes</p>
               </div>
-            ) : error ? (
-              <div className="text-center max-w-md">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Bot className="w-8 h-8 text-red-600" />
-                </div>
-                <p className="text-red-600 mb-4">{error}</p>
-                <button
-                  onClick={() => {
-                    setError(null);
-                    hasInitializedRef.current = false;
-                    window._tavusGlobalLock = false;
-                    initializeSession();
-                  }}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-                >
-                  Réessayer
-                </button>
-              </div>
             ) : session ? (
               <div className="text-center w-full">
+                {/* Error message display */}
+                {session.errorMessage && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-5 h-5 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800">Information</span>
+                    </div>
+                    <p className="text-sm text-blue-700">{session.errorMessage}</p>
+                  </div>
+                )}
+
                 {/* Avatar simulé */}
                 <div className={`w-48 h-48 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl transition-all duration-300 ${
                   isSpeaking ? 'scale-110 shadow-purple-300' : ''
