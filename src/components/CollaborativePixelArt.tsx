@@ -56,6 +56,7 @@ export const CollaborativePixelArt: React.FC = () => {
     color: string;
   }>>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loadingStep, setLoadingStep] = useState<string>('');
 
   // Couleurs prédéfinies pour l'art collaboratif
   const predefinedColors = [
@@ -67,7 +68,6 @@ export const CollaborativePixelArt: React.FC = () => {
   // Charger les données initiales
   useEffect(() => {
     loadInitialData();
-    setupRealtimeSubscriptions();
     
     // Nettoyer les souscriptions au démontage du composant
     return () => {
@@ -76,42 +76,58 @@ export const CollaborativePixelArt: React.FC = () => {
     };
   }, []);
 
+  // Configurer les souscriptions temps réel après le chargement initial
+  useEffect(() => {
+    if (!isLoading && pixels.length >= 0) {
+      setupRealtimeSubscriptions();
+    }
+  }, [isLoading]);
+
   const loadInitialData = async () => {
     try {
       setIsLoading(true);
       setError(null);
+      setLoadingStep('Initialisation...');
 
       console.log('🚀 Chargement initial des données...');
 
-      // Charger les statistiques
+      // 1. Charger les pixels en premier (le plus important)
+      setLoadingStep('Chargement des pixels...');
+      const allPixels = await collaborativeArtService.getAllPixels(true); // Force refresh
+      console.log('🎨 Pixels chargés:', allPixels.length, 'pixels');
+      setPixels(allPixels);
+
+      // 2. Charger les statistiques
+      setLoadingStep('Chargement des statistiques...');
       const detailedStats = await collaborativeArtService.getDetailedStats();
       if (detailedStats) {
         setStats(detailedStats);
         console.log('📊 Statistiques chargées:', detailedStats);
       }
 
-      // Vérifier si l'utilisateur a déjà un pixel
+      // 3. Vérifier si l'utilisateur a déjà un pixel
+      setLoadingStep('Vérification du pixel utilisateur...');
       const existingPixel = await collaborativeArtService.getCurrentSessionPixel();
       if (existingPixel) {
         setCurrentUserPixel(existingPixel);
         console.log('👤 Pixel utilisateur existant trouvé:', existingPixel);
       }
 
-      // Charger tous les pixels avec retry automatique
-      const allPixels = await collaborativeArtService.getAllPixels(true); // Force refresh
-      setPixels(allPixels);
-      console.log('🎨 Pixels chargés:', allPixels.length, 'pixels');
-
-      // Charger les contributeurs récents
+      // 4. Charger les contributeurs récents
+      setLoadingStep('Chargement des contributeurs...');
       const contributors = await collaborativeArtService.getRecentContributors(5);
       setRecentContributors(contributors);
       console.log('👥 Contributeurs récents chargés:', contributors.length);
+
+      setLoadingStep('Finalisation...');
+      console.log('✅ Chargement initial terminé avec succès');
 
     } catch (error) {
       console.error('❌ Erreur lors du chargement des données:', error);
       setError(t('common.error') + ': ' + (error instanceof Error ? error.message : 'Erreur inconnue'));
     } finally {
       setIsLoading(false);
+      setLoadingStep('');
     }
   };
 
@@ -183,9 +199,9 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   };
 
-  // Dessiner l'image sur le canvas
+  // Dessiner l'image sur le canvas - AMÉLIORÉ
   useEffect(() => {
-    if (!canvasRef.current || isLoading || !stats) return;
+    if (!canvasRef.current || isLoading) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -203,33 +219,45 @@ export const CollaborativePixelArt: React.FC = () => {
     ctx.fillStyle = '#F3F4F6';
     ctx.fillRect(0, 0, displayWidth, displayHeight);
 
-    // Dessiner les pixels existants
-    const scaleX = displayWidth / 1200;
-    const scaleY = displayHeight / 1250;
+    // Dessiner les pixels existants seulement s'il y en a
+    if (pixels.length > 0) {
+      const scaleX = displayWidth / 1200;
+      const scaleY = displayHeight / 1250;
 
-    pixels.forEach(pixel => {
-      ctx.fillStyle = pixel.color;
-      ctx.fillRect(
-        Math.floor(pixel.x * scaleX),
-        Math.floor(pixel.y * scaleY),
-        Math.ceil(scaleX),
-        Math.ceil(scaleY)
-      );
-    });
+      pixels.forEach((pixel, index) => {
+        try {
+          ctx.fillStyle = pixel.color;
+          ctx.fillRect(
+            Math.floor(pixel.x * scaleX),
+            Math.floor(pixel.y * scaleY),
+            Math.ceil(scaleX),
+            Math.ceil(scaleY)
+          );
+        } catch (error) {
+          console.warn(`Erreur lors du rendu du pixel ${index}:`, error);
+        }
+      });
 
-    // Dessiner le pixel de l'utilisateur actuel avec un contour
-    if (currentUserPixel) {
-      ctx.fillStyle = currentUserPixel.color;
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      const x = Math.floor(currentUserPixel.x * scaleX);
-      const y = Math.floor(currentUserPixel.y * scaleY);
-      ctx.fillRect(x, y, Math.ceil(scaleX), Math.ceil(scaleY));
-      ctx.strokeRect(x, y, Math.ceil(scaleX), Math.ceil(scaleY));
+      // Dessiner le pixel de l'utilisateur actuel avec un contour
+      if (currentUserPixel) {
+        try {
+          ctx.fillStyle = currentUserPixel.color;
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 2;
+          const x = Math.floor(currentUserPixel.x * scaleX);
+          const y = Math.floor(currentUserPixel.y * scaleY);
+          ctx.fillRect(x, y, Math.ceil(scaleX), Math.ceil(scaleY));
+          ctx.strokeRect(x, y, Math.ceil(scaleX), Math.ceil(scaleY));
+        } catch (error) {
+          console.warn('Erreur lors du rendu du pixel utilisateur:', error);
+        }
+      }
+
+      console.log('✅ Canvas rendu avec succès -', pixels.length, 'pixels affichés');
+    } else {
+      console.log('⚠️ Aucun pixel à afficher');
     }
-
-    console.log('✅ Canvas rendu avec succès');
-  }, [pixels, currentUserPixel, isLoading, stats]);
+  }, [pixels, currentUserPixel, isLoading]);
 
   // Générer un pixel pour l'utilisateur actuel
   const generateUserPixel = async () => {
@@ -314,12 +342,22 @@ export const CollaborativePixelArt: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-teal-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-lg mb-2">
             {t('pixel.art.loading')}
           </p>
-          <p className="text-sm text-purple-600 mt-2">
-            {t('pixel.art.loading.supabase')}
-          </p>
+          {loadingStep && (
+            <p className="text-sm text-purple-600">
+              {loadingStep}
+            </p>
+          )}
+          <div className="mt-4 bg-white rounded-lg p-4 shadow-sm max-w-md mx-auto">
+            <p className="text-xs text-gray-500">
+              🔄 Chargement des données depuis Supabase...
+            </p>
+            <div className="mt-2 bg-gray-200 rounded-full h-2">
+              <div className="bg-purple-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+            </div>
+          </div>
         </div>
       </div>
     );

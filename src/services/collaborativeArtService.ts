@@ -131,7 +131,7 @@ class CollaborativeArtService {
     return null;
   }
 
-  // Récupérer tous les pixels existants avec cache et retry
+  // Récupérer tous les pixels existants avec cache et retry - AMÉLIORÉ
   async getAllPixels(forceRefresh: boolean = false): Promise<PixelData[]> {
     const now = Date.now();
     
@@ -148,15 +148,23 @@ class CollaborativeArtService {
       try {
         console.log(`🔄 Tentative ${retries + 1}/${maxRetries} - Chargement de tous les pixels`);
         
-        const { data, error } = await supabase
+        // Utiliser un timeout pour éviter les requêtes qui traînent
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 10000)
+        );
+        
+        const queryPromise = supabase
           .from('collaborative_pixels')
           .select('*')
           .order('created_at', { ascending: true });
+
+        const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
         if (error) {
           console.error('Erreur lors de la récupération des pixels:', error);
           if (retries === maxRetries - 1) {
             // En cas d'échec final, retourner le cache s'il existe
+            console.log('🔄 Retour au cache après échec:', this.pixelsCache.length, 'pixels');
             return this.pixelsCache;
           }
           retries++;
@@ -167,15 +175,18 @@ class CollaborativeArtService {
         const pixels = data || [];
         console.log('✅ Pixels récupérés avec succès:', pixels.length, 'pixels');
         
-        // Mettre à jour le cache
-        this.pixelsCache = pixels;
-        this.lastLoadTime = now;
+        // Mettre à jour le cache seulement si on a des données valides
+        if (Array.isArray(pixels)) {
+          this.pixelsCache = pixels;
+          this.lastLoadTime = now;
+        }
         
         return pixels;
       } catch (error) {
         console.error(`❌ Erreur service pixels (tentative ${retries + 1}):`, error);
         if (retries === maxRetries - 1) {
           // En cas d'échec final, retourner le cache s'il existe
+          console.log('🔄 Retour au cache après erreur:', this.pixelsCache.length, 'pixels');
           return this.pixelsCache;
         }
         retries++;
@@ -482,11 +493,16 @@ class CollaborativeArtService {
     }
   }
 
-  // Méthode pour forcer le rechargement des données
+  // Méthode pour forcer le rechargement des données - AMÉLIORÉE
   async forceRefresh(): Promise<void> {
     console.log('🔄 Rechargement forcé des données');
     this.lastLoadTime = 0;
     this.pixelsCache = [];
+    
+    // Attendre un peu pour s'assurer que le cache est vidé
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Recharger les pixels
     await this.getAllPixels(true);
   }
 
