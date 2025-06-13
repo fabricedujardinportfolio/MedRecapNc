@@ -23,11 +23,14 @@ declare global {
     webkitSpeechRecognition: any;
     speechSynthesis: any;
     SpeechSynthesisUtterance: any;
+    _tavusSessionLock?: boolean;
   }
 }
 
-// Variable globale pour empêcher les instances multiples
-let globalSessionActive = false;
+// Initialiser le verrou global dans window pour éviter les problèmes de hot reload
+if (typeof window !== 'undefined' && !window._tavusSessionLock) {
+  window._tavusSessionLock = false;
+}
 
 export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({ 
   patient, 
@@ -58,6 +61,10 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const isProcessingRef = useRef(false);
   const autoRestartTimerRef = useRef<NodeJS.Timeout | null>(null);
   const instanceIdRef = useRef<string>(`instance-${Date.now()}-${Math.random()}`);
+  
+  // Protection locale contre les initialisations multiples
+  const hasInitializedRef = useRef(false);
+  const isInitializingRef = useRef(false);
 
   // Vérifier le support de la reconnaissance vocale et synthèse vocale
   useEffect(() => {
@@ -70,14 +77,22 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     }
   }, []);
 
-  // Initialiser la session Tavus avec protection contre les instances multiples
+  // Initialiser la session Tavus avec protection renforcée contre les instances multiples
   useEffect(() => {
-    if (isVisible && !session) {
-      if (globalSessionActive) {
-        console.log('⚠️ Une session IA est déjà active, fermeture de cette instance');
+    if (isVisible && !session && !hasInitializedRef.current && !isInitializingRef.current) {
+      // Vérification du verrou global
+      if (window._tavusSessionLock) {
+        console.log('⚠️ Une session IA est déjà active globalement, fermeture de cette instance');
         setError('Une session IA est déjà active. Veuillez fermer l\'autre session avant d\'en ouvrir une nouvelle.');
         return;
       }
+      
+      // Marquer cette instance comme ayant initialisé
+      hasInitializedRef.current = true;
+      isInitializingRef.current = true;
+      
+      console.log(`🔒 [${instanceIdRef.current}] Début d'initialisation - Verrouillage local et global`);
+      
       initializeSession();
     }
   }, [isVisible]);
@@ -97,7 +112,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   }, [chatMessages]);
 
   const cleanupSession = () => {
-    console.log(`🧹 Nettoyage de la session ${instanceIdRef.current}`);
+    console.log(`🧹 [${instanceIdRef.current}] Nettoyage de la session`);
     
     if (recognitionRef.current) {
       recognitionRef.current.stop();
@@ -115,11 +130,15 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       clearTimeout(autoRestartTimerRef.current);
     }
     
-    // Libérer le verrou global seulement si c'est notre instance
-    if (globalSessionActive) {
-      globalSessionActive = false;
-      console.log('🔓 Session globale libérée');
+    // Libérer le verrou global seulement si c'est notre instance qui l'a pris
+    if (window._tavusSessionLock && session) {
+      window._tavusSessionLock = false;
+      console.log(`🔓 [${instanceIdRef.current}] Session globale libérée`);
     }
+    
+    // Réinitialiser les flags locaux
+    hasInitializedRef.current = false;
+    isInitializingRef.current = false;
   };
 
   // Fonction de synthèse vocale avec callback pour relancer l'écoute
@@ -197,21 +216,24 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   };
 
   const initializeSession = async () => {
-    // Vérifier si une session est déjà active
-    if (globalSessionActive) {
+    // Double vérification du verrou global
+    if (window._tavusSessionLock) {
+      console.log(`⚠️ [${instanceIdRef.current}] Verrou global déjà pris, abandon`);
       setError('Une session IA est déjà active. Veuillez fermer l\'autre session avant d\'en ouvrir une nouvelle.');
+      hasInitializedRef.current = false;
+      isInitializingRef.current = false;
       return;
     }
 
-    // Marquer cette session comme active
-    globalSessionActive = true;
-    console.log(`🔒 Session ${instanceIdRef.current} verrouillée`);
+    // Prendre le verrou global
+    window._tavusSessionLock = true;
+    console.log(`🔒 [${instanceIdRef.current}] Verrou global pris`);
 
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('🚀 Initialisation de la session avec données complètes du patient:', {
+      console.log(`🚀 [${instanceIdRef.current}] Initialisation de la session avec données complètes du patient:`, {
         nom: patient.nom,
         prenom: patient.prenom,
         consultations: patient.consultations?.length || 0,
@@ -252,12 +274,15 @@ Que souhaitez-vous savoir ?`,
       }, 1000);
       
     } catch (err) {
-      console.error('Erreur lors de l\'initialisation:', err);
+      console.error(`❌ [${instanceIdRef.current}] Erreur lors de l'initialisation:`, err);
       setError(err instanceof Error ? err.message : 'Erreur d\'initialisation');
       // Libérer le verrou en cas d'erreur
-      globalSessionActive = false;
+      window._tavusSessionLock = false;
+      hasInitializedRef.current = false;
+      console.log(`🔓 [${instanceIdRef.current}] Verrou global libéré suite à erreur`);
     } finally {
       setIsLoading(false);
+      isInitializingRef.current = false;
     }
   };
 
@@ -586,7 +611,7 @@ Que souhaitez-vous savoir ?`,
   };
 
   const handleClose = async () => {
-    console.log(`🚪 Fermeture de la session ${instanceIdRef.current}`);
+    console.log(`🚪 [${instanceIdRef.current}] Fermeture de la session`);
     
     // Arrêter la conversation si elle est active
     if (conversationActive) {
@@ -681,7 +706,13 @@ Que souhaitez-vous savoir ?`,
                 </div>
                 <p className="text-red-600 mb-4">{error}</p>
                 <button
-                  onClick={initializeSession}
+                  onClick={() => {
+                    // Réinitialiser les flags avant de réessayer
+                    hasInitializedRef.current = false;
+                    isInitializingRef.current = false;
+                    window._tavusSessionLock = false;
+                    initializeSession();
+                  }}
                   className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
                 >
                   Réessayer
