@@ -1,5 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Users, Image as ImageIcon, Palette, Target, TrendingUp, Share2, Download, RefreshCw, Eye, Heart, Zap, Globe, Award, Clock, MapPin, Loader, CheckCircle, AlertCircle, X, Shield, User, Sparkles, Trophy, Star, SettingsIcon as Confetti } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Users, 
+  Image as ImageIcon, 
+  Palette, 
+  Target, 
+  TrendingUp,
+  Share2,
+  Download,
+  RefreshCw,
+  Eye,
+  Heart,
+  Zap,
+  Globe,
+  Award,
+  Clock,
+  MapPin,
+  Loader,
+  CheckCircle,
+  AlertCircle,
+  X,
+  Shield,
+  Sparkles,
+  Trophy,
+  Star,
+  PartyPopper
+} from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { LanguageSelector } from './LanguageSelector';
 import { 
@@ -19,14 +45,6 @@ interface DetailedStats {
   estimatedDaysRemaining: number;
 }
 
-interface TooltipData {
-  x: number;
-  y: number;
-  contributorName: string;
-  color: string;
-  createdAt: string;
-}
-
 export const CollaborativePixelArt: React.FC = () => {
   const { t, language } = useLanguage();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -36,7 +54,6 @@ export const CollaborativePixelArt: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingPixel, setIsCreatingPixel] = useState(false);
   const [selectedColor, setSelectedColor] = useState('#3B82F6');
-  const [contributorName, setContributorName] = useState(''); // 🆕 Nom du contributeur
   const [error, setError] = useState<string | null>(null);
   const [recentContributors, setRecentContributors] = useState<Array<{
     contributor_name: string;
@@ -48,15 +65,13 @@ export const CollaborativePixelArt: React.FC = () => {
   const [canvasReady, setCanvasReady] = useState(false);
   const [ipLimitReached, setIpLimitReached] = useState(false);
   
-  // 🆕 États pour le tooltip
-  const [tooltip, setTooltip] = useState<TooltipData | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
-
-  // 🎉 NOUVEAUX ÉTATS POUR LA MODAL DE CÉLÉBRATION
+  // 🎉 NOUVEAUX ÉTATS POUR LA CÉLÉBRATION
+  const [isCompleted, setIsCompleted] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const [isArtworkCompleted, setIsArtworkCompleted] = useState(false);
-  const [completionAnimationPhase, setCompletionAnimationPhase] = useState(0);
+  const [celebrationPhase, setCelebrationPhase] = useState(0);
+  
+  // 🧪 ÉTAT POUR LA SIMULATION
+  const [isSimulationMode, setIsSimulationMode] = useState(false);
 
   // Couleurs prédéfinies pour l'art collaboratif
   const predefinedColors = [
@@ -85,19 +100,23 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   }, [isLoading]);
 
-  // 🎉 EFFET POUR VÉRIFIER L'ACHÈVEMENT DE L'ŒUVRE
+  // 🎉 EFFET POUR DÉTECTER L'ACHÈVEMENT
   useEffect(() => {
-    if (stats && stats.completedPixels >= stats.totalPixels && !isArtworkCompleted) {
-      console.log('🎉 ŒUVRE TERMINÉE ! Déclenchement de la célébration');
-      setIsArtworkCompleted(true);
-      setShowCompletionModal(true);
+    if (stats && !isSimulationMode) {
+      const isArtworkCompleted = stats.completedPixels >= stats.totalPixels;
       
-      // Démarrer l'animation de célébration
-      setTimeout(() => setCompletionAnimationPhase(1), 500);
-      setTimeout(() => setCompletionAnimationPhase(2), 2000);
-      setTimeout(() => setCompletionAnimationPhase(3), 4000);
+      if (isArtworkCompleted && !isCompleted) {
+        console.log('🎉 ŒUVRE TERMINÉE ! Déclenchement de la célébration');
+        setIsCompleted(true);
+        setShowCompletionModal(true);
+        setCelebrationPhase(1);
+        
+        // Animation en phases
+        setTimeout(() => setCelebrationPhase(2), 2000);
+        setTimeout(() => setCelebrationPhase(3), 4000);
+      }
     }
-  }, [stats, isArtworkCompleted]);
+  }, [stats, isCompleted, isSimulationMode]);
 
   // 🎯 EFFET CORRIGÉ : Rendu du canvas avec vérification canvasReady ET taille cohérente
   useEffect(() => {
@@ -120,99 +139,18 @@ export const CollaborativePixelArt: React.FC = () => {
     renderCanvas();
   }, [pixels, currentUserPixel, canvasReady, isLoading, language]);
 
-  // 🔧 GESTIONNAIRE DE SURVOL CORRIGÉ - Détection améliorée
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !canvasReady || pixels.length === 0) return;
-
-    const handleMouseMove = (event: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = event.clientX - rect.left;
-      const mouseY = event.clientY - rect.top;
-      
-      // Convertir les coordonnées de la souris en coordonnées du canvas
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      const canvasX = mouseX * scaleX;
-      const canvasY = mouseY * scaleY;
-      
-      // 🔧 CORRECTION CRITIQUE : Convertir en coordonnées de pixel avec la même logique que le rendu
-      const CANVAS_WIDTH = 800;
-      const CANVAS_HEIGHT = 833;
-      const PIXEL_SIZE = 2;
-      
-      // Calculer la position du pixel en utilisant la même logique que renderCanvas
-      const pixelX = Math.floor((canvasX / CANVAS_WIDTH) * 1200);
-      const pixelY = Math.floor((canvasY / CANVAS_HEIGHT) * 1250);
-      
-      console.log('🖱️ Survol détecté:', {
-        mouse: { x: mouseX, y: mouseY },
-        canvas: { x: canvasX, y: canvasY },
-        pixel: { x: pixelX, y: pixelY },
-        totalPixels: pixels.length
-      });
-      
-      // 🔍 RECHERCHE AMÉLIORÉE : Chercher un pixel dans une zone de tolérance
-      const tolerance = 1; // Tolérance de 1 pixel
-      const hoveredPixel = pixels.find(p => 
-        Math.abs(p.x - pixelX) <= tolerance && 
-        Math.abs(p.y - pixelY) <= tolerance
-      );
-      
-      if (hoveredPixel) {
-        console.log('🎯 Pixel trouvé au survol:', hoveredPixel);
-        setTooltip({
-          x: hoveredPixel.x,
-          y: hoveredPixel.y,
-          contributorName: hoveredPixel.contributor_name || t('pixel.art.contributor.name'),
-          color: hoveredPixel.color,
-          createdAt: hoveredPixel.created_at
-        });
-        setTooltipPosition({ 
-          x: event.clientX + 15, 
-          y: event.clientY - 10 
-        });
-        setIsTooltipVisible(true);
-      } else {
-        setIsTooltipVisible(false);
-        setTooltip(null);
-      }
-    };
-
-    const handleMouseLeave = () => {
-      setIsTooltipVisible(false);
-      setTooltip(null);
-    };
-
-    // 🔧 AJOUT D'UN DÉLAI pour éviter les calculs trop fréquents
-    let mouseMoveTimeout: NodeJS.Timeout;
-    const throttledMouseMove = (event: MouseEvent) => {
-      clearTimeout(mouseMoveTimeout);
-      mouseMoveTimeout = setTimeout(() => handleMouseMove(event), 50); // 50ms de délai
-    };
-
-    canvas.addEventListener('mousemove', throttledMouseMove);
-    canvas.addEventListener('mouseleave', handleMouseLeave);
-
-    return () => {
-      canvas.removeEventListener('mousemove', throttledMouseMove);
-      canvas.removeEventListener('mouseleave', handleMouseLeave);
-      clearTimeout(mouseMoveTimeout);
-    };
-  }, [pixels, canvasReady, t]);
-
   const loadInitialData = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      setLoadingStep(t('pixel.art.loading'));
-      setCanvasReady(false); // 🔧 Reset du canvas ready
+      setLoadingStep('Initialisation...');
+      setCanvasReady(false);
 
       console.log('🚀 Chargement initial des données...');
 
       // 1. Charger les pixels en premier (le plus important)
-      setLoadingStep(t('pixel.art.loading.supabase'));
-      const allPixels = await collaborativeArtService.getAllPixels(true); // Force refresh
+      setLoadingStep('Chargement des pixels...');
+      const allPixels = await collaborativeArtService.getAllPixels(true);
       console.log('🎨 Pixels chargés:', allPixels.length, 'pixels');
       
       // Validation et filtrage des pixels
@@ -240,12 +178,6 @@ export const CollaborativePixelArt: React.FC = () => {
       if (detailedStats) {
         setStats(detailedStats);
         console.log('📊 Statistiques chargées:', detailedStats);
-        
-        // 🎉 VÉRIFICATION IMMÉDIATE DE L'ACHÈVEMENT
-        if (detailedStats.completedPixels >= detailedStats.totalPixels) {
-          console.log('🎉 ŒUVRE DÉJÀ TERMINÉE ! Activation du mode célébration');
-          setIsArtworkCompleted(true);
-        }
       }
 
       // 3. 🔒 Vérifier si l'utilisateur a déjà un pixel (par IP ET session)
@@ -253,7 +185,7 @@ export const CollaborativePixelArt: React.FC = () => {
       const existingPixel = await collaborativeArtService.getCurrentSessionPixel();
       if (existingPixel) {
         setCurrentUserPixel(existingPixel);
-        setIpLimitReached(true); // Cette IP a déjà un pixel
+        setIpLimitReached(true);
         console.log('👤 Pixel utilisateur existant trouvé:', existingPixel);
         console.log('🔒 Limite IP atteinte, création bloquée');
       } else {
@@ -272,7 +204,7 @@ export const CollaborativePixelArt: React.FC = () => {
       // 🎯 CORRECTION CRITIQUE : Attendre que le canvas soit dans le DOM
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      setCanvasReady(true); // ✅ Canvas maintenant prêt pour le rendu
+      setCanvasReady(true);
       console.log('✅ Chargement initial terminé avec succès, canvas prêt');
 
     } catch (error) {
@@ -301,9 +233,8 @@ export const CollaborativePixelArt: React.FC = () => {
             }
             return prev;
           });
-          // Recharger les stats et contributeurs
+          // Recharger les stats
           loadStats();
-          loadRecentContributors();
         }
       });
 
@@ -326,26 +257,9 @@ export const CollaborativePixelArt: React.FC = () => {
       const detailedStats = await collaborativeArtService.getDetailedStats();
       if (detailedStats) {
         setStats(detailedStats);
-        
-        // 🎉 VÉRIFICATION DE L'ACHÈVEMENT À CHAQUE MISE À JOUR
-        if (detailedStats.completedPixels >= detailedStats.totalPixels && !isArtworkCompleted) {
-          console.log('🎉 ŒUVRE TERMINÉE ! Déclenchement de la célébration');
-          setIsArtworkCompleted(true);
-          setShowCompletionModal(true);
-        }
       }
     } catch (error) {
       console.error('Erreur lors du rechargement des stats:', error);
-    }
-  };
-
-  // 🆕 Fonction pour recharger les contributeurs récents
-  const loadRecentContributors = async () => {
-    try {
-      const contributors = await collaborativeArtService.getRecentContributors(5);
-      setRecentContributors(contributors);
-    } catch (error) {
-      console.error('Erreur lors du rechargement des contributeurs:', error);
     }
   };
 
@@ -368,6 +282,44 @@ export const CollaborativePixelArt: React.FC = () => {
     } finally {
       setIsRefreshing(false);
     }
+  };
+
+  // 🧪 FONCTION DE SIMULATION POUR TESTER LA MODAL
+  const simulateCompletion = () => {
+    console.log('🧪 SIMULATION : Déclenchement de la célébration d\'achèvement');
+    setIsSimulationMode(true);
+    
+    // Simuler des stats d'achèvement
+    const simulatedStats: DetailedStats = {
+      totalPixels: 1500000,
+      completedPixels: 1500000, // 100% terminé
+      percentage: 100,
+      sessionsToday: 1247,
+      pixelsThisWeek: 8934,
+      averagePixelsPerDay: 1276,
+      estimatedDaysRemaining: 0
+    };
+    
+    setStats(simulatedStats);
+    setIsCompleted(true);
+    setShowCompletionModal(true);
+    setCelebrationPhase(1);
+    
+    // Animation en phases
+    setTimeout(() => setCelebrationPhase(2), 2000);
+    setTimeout(() => setCelebrationPhase(3), 4000);
+  };
+
+  // 🧪 FONCTION POUR RÉINITIALISER LA SIMULATION
+  const resetSimulation = () => {
+    console.log('🔄 SIMULATION : Réinitialisation');
+    setIsSimulationMode(false);
+    setIsCompleted(false);
+    setShowCompletionModal(false);
+    setCelebrationPhase(0);
+    
+    // Recharger les vraies données
+    loadInitialData();
   };
 
   // 🎯 FONCTION DE RENDU CORRIGÉE avec taille de pixel COHÉRENTE
@@ -403,6 +355,17 @@ export const CollaborativePixelArt: React.FC = () => {
       // Fond gris pour les pixels non remplis
       ctx.fillStyle = '#F3F4F6';
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+      // 🎉 EFFET SPÉCIAL SI L'ŒUVRE EST TERMINÉE
+      if (isCompleted) {
+        // Ajouter un effet de brillance dorée
+        const gradient = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        gradient.addColorStop(0, 'rgba(255, 215, 0, 0.1)');
+        gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.2)');
+        gradient.addColorStop(1, 'rgba(255, 215, 0, 0.1)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      }
 
       // Dessiner les pixels existants avec TAILLE FIXE
       if (pixels.length > 0) {
@@ -493,16 +456,15 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   };
 
-  // 🔒 FONCTION CORRIGÉE : Générer un pixel avec vérification IP stricte ET vérification d'achèvement
+  // 🔒 FONCTION CORRIGÉE : Générer un pixel avec vérification IP stricte
   const generateUserPixel = async () => {
     if (isCreatingPixel) {
       console.log('🚫 Création déjà en cours, ignoré');
       return;
     }
 
-    // 🎉 VÉRIFICATION CRITIQUE : L'œuvre est-elle terminée ?
-    if (isArtworkCompleted) {
-      console.log('🎉 Œuvre terminée, création de pixels désactivée');
+    // 🎉 VÉRIFICATION : Si l'œuvre est terminée, empêcher l'ajout
+    if (isCompleted) {
       setError(t('pixel.art.completed.no.more.pixels'));
       return;
     }
@@ -521,36 +483,31 @@ export const CollaborativePixelArt: React.FC = () => {
       console.log('🎨 Tentative de création d\'un pixel...');
       console.log('🔒 IP Hash actuel:', collaborativeArtService.getCurrentIpHash()?.substring(0, 8) + '...');
 
-      // 🆕 Utiliser le nom du contributeur ou un nom par défaut
-      const finalContributorName = contributorName.trim() || t('pixel.art.contributor.name');
-      console.log('👤 Nom du contributeur:', finalContributorName);
-
       const result = await collaborativeArtService.createPixelForCurrentSession(
         selectedColor,
-        finalContributorName
+        t('pixel.art.contributor.name') || 'Contributeur MedRecap+'
       );
 
       if (result) {
         if (result.is_new_session) {
-          // ✅ NOUVEAU PIXEL CRÉÉ - Afficher le message de succès
+          // Nouveau pixel créé avec succès
           const newPixel: PixelData = {
             id: result.pixel_id,
             x: result.x,
             y: result.y,
             color: result.color,
             session_id: collaborativeArtService.getCurrentSessionId(),
-            contributor_name: finalContributorName, // 🆕 Utiliser le nom saisi
+            contributor_name: t('pixel.art.contributor.you') || 'Vous',
             created_at: result.created_at
           };
 
           setCurrentUserPixel(newPixel);
           setPixels(prev => [...prev, newPixel]);
-          setIpLimitReached(true); // Marquer la limite comme atteinte
+          setIpLimitReached(true);
           
           console.log('✅ Nouveau pixel créé avec succès:', newPixel);
-          // ✅ Pas d'erreur pour un nouveau pixel
         } else {
-          // 🔒 PIXEL EXISTANT RETOURNÉ - Protection anti-spam activée
+          // Pixel existant retourné (cette IP a déjà un pixel)
           const existingPixel: PixelData = {
             id: result.pixel_id,
             x: result.x,
@@ -565,13 +522,14 @@ export const CollaborativePixelArt: React.FC = () => {
           setIpLimitReached(true);
           
           console.log('🔒 Pixel existant retourné (limite IP):', existingPixel);
-          // 🔒 AFFICHER MESSAGE ANTI-SPAM au lieu du message de succès
           setError(t('pixel.art.existing.pixel.alert'));
         }
 
         // Recharger les statistiques et contributeurs
         await loadStats();
-        await loadRecentContributors(); // 🆕 Recharger les contributeurs pour voir le nouveau nom
+        const contributors = await collaborativeArtService.getRecentContributors(5);
+        setRecentContributors(contributors);
+
       } else {
         console.error('❌ Aucun résultat retourné par le service');
         setError(t('pixel.art.error.create') || 'Impossible de créer le pixel. Vous avez peut-être déjà contribué.');
@@ -594,99 +552,28 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   };
 
-  // 🔧 FONCTION DE RETOUR CORRIGÉE - Retour vers l'application principale
   const handleGoBack = () => {
-    // Vérifier d'où vient l'utilisateur pour un retour approprié
-    const referrer = document.referrer;
-    const currentOrigin = window.location.origin;
-    
-    console.log('🔙 Retour demandé depuis:', window.location.href);
-    console.log('🔗 Referrer:', referrer);
-    
-    // Si l'utilisateur vient de la même origine (notre app), utiliser history.back()
-    if (referrer && referrer.startsWith(currentOrigin)) {
-      console.log('↩️ Retour via history.back() vers l\'application');
-      window.history.back();
-    } else {
-      // Sinon, rediriger vers la page d'accueil de l'application
-      console.log('🏠 Redirection vers la page d\'accueil de l\'application');
-      window.location.href = '/';
-    }
+    window.history.back();
   };
 
-  // 🔧 FONCTION DE PARTAGE CORRIGÉE
-  const shareProject = async () => {
-    const title = t('pixel.art.share.title');
-    const text = t('pixel.art.share.text');
-    const url = window.location.href;
+  const shareProject = () => {
+    const title = isCompleted 
+      ? `🎉 ${t('pixel.art.completed.title')} - MedRecap+`
+      : t('pixel.art.share.title') || 'Art Collaboratif MedRecap+ - 1,5 Million de Pixels';
     
-    try {
-      // Vérifier si l'API Web Share est disponible
-      if (navigator.share && navigator.canShare && navigator.canShare({ title, text, url })) {
-        console.log('📱 Utilisation de l\'API Web Share native');
-        await navigator.share({
-          title,
-          text,
-          url
-        });
-        console.log('✅ Partage réussi via API native');
-      } else {
-        // Fallback : copier dans le presse-papiers
-        console.log('📋 Fallback vers le presse-papiers');
-        
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(url);
-          console.log('✅ URL copiée dans le presse-papiers');
-          
-          // Afficher une notification temporaire
-          const originalError = error;
-          setError(null);
-          
-          // Créer un message de succès temporaire
-          const successMessage = t('pixel.art.share.copied');
-          setError(successMessage);
-          
-          // Retirer le message après 3 secondes
-          setTimeout(() => {
-            setError(originalError);
-          }, 3000);
-        } else {
-          // Fallback ultime : sélection manuelle
-          console.log('📝 Fallback vers sélection manuelle');
-          
-          // Créer un élément temporaire pour la sélection
-          const textArea = document.createElement('textarea');
-          textArea.value = url;
-          textArea.style.position = 'fixed';
-          textArea.style.left = '-999999px';
-          textArea.style.top = '-999999px';
-          document.body.appendChild(textArea);
-          textArea.focus();
-          textArea.select();
-          
-          try {
-            const successful = document.execCommand('copy');
-            if (successful) {
-              console.log('✅ URL copiée via execCommand');
-              setError(t('pixel.art.share.copied'));
-              setTimeout(() => setError(null), 3000);
-            } else {
-              throw new Error('execCommand failed');
-            }
-          } catch (err) {
-            console.error('❌ Échec de la copie:', err);
-            setError('Impossible de copier le lien. URL: ' + url);
-          } finally {
-            document.body.removeChild(textArea);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors du partage:', error);
-      
-      // En cas d'erreur, afficher l'URL pour copie manuelle
-      setError(`Lien à partager: ${url}`);
-      setTimeout(() => setError(null), 5000);
+    const text = isCompleted
+      ? `🎊 L'œuvre d'art collaborative de 1,5 million de pixels est maintenant terminée ! Merci à tous les contributeurs !`
+      : t('pixel.art.share.text') || 'Participez à la création d\'une œuvre d\'art collaborative ! Chaque session génère un pixel unique.';
+    
+    if (navigator.share) {
+      navigator.share({
+        title,
+        text,
+        url: window.location.href
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert(t('pixel.art.share.copied') || 'Lien copié dans le presse-papiers !');
     }
   };
 
@@ -694,7 +581,11 @@ export const CollaborativePixelArt: React.FC = () => {
     if (!canvasRef.current) return;
     
     const link = document.createElement('a');
-    link.download = `medrecap-collaborative-art-${new Date().toISOString().split('T')[0]}.png`;
+    const filename = isCompleted 
+      ? `medrecap-collaborative-art-COMPLETED-${new Date().toISOString().split('T')[0]}.png`
+      : `medrecap-collaborative-art-${new Date().toISOString().split('T')[0]}.png`;
+    
+    link.download = filename;
     link.href = canvasRef.current.toDataURL();
     link.click();
   };
@@ -714,7 +605,7 @@ export const CollaborativePixelArt: React.FC = () => {
           )}
           <div className="mt-4 bg-white rounded-lg p-4 shadow-sm max-w-md mx-auto">
             <p className="text-xs text-gray-500">
-              🔄 {t('pixel.art.loading.supabase')}
+              🔄 Chargement des données depuis Supabase...
             </p>
             <div className="mt-2 bg-gray-200 rounded-full h-2">
               <div className="bg-purple-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
@@ -740,21 +631,57 @@ export const CollaborativePixelArt: React.FC = () => {
             </button>
             
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg">
-                <Palette className="w-6 h-6 text-white" />
+              <div className={`flex items-center justify-center w-10 h-10 rounded-lg shadow-lg transition-all ${
+                isCompleted 
+                  ? 'bg-gradient-to-br from-yellow-400 to-orange-500 animate-pulse' 
+                  : 'bg-gradient-to-br from-purple-600 to-blue-600'
+              }`}>
+                {isCompleted ? (
+                  <Trophy className="w-6 h-6 text-white" />
+                ) : (
+                  <Palette className="w-6 h-6 text-white" />
+                )}
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  {t('pixel.art.title')}
+                <h1 className={`text-xl font-bold transition-colors ${
+                  isCompleted ? 'text-yellow-600' : 'text-gray-900'
+                }`}>
+                  {isCompleted ? t('pixel.art.completed.title') : t('pixel.art.title')}
                 </h1>
-                <p className="text-sm text-gray-600">
-                  {t('pixel.art.subtitle')}
+                <p className={`text-sm transition-colors ${
+                  isCompleted ? 'text-yellow-700' : 'text-gray-600'
+                }`}>
+                  {isCompleted ? t('pixel.art.completed.subtitle') : t('pixel.art.subtitle')}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               <LanguageSelector className="mr-2" showLabel={false} />
+              
+              {/* 🧪 BOUTONS DE SIMULATION (en mode développement) */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="flex items-center gap-2 mr-2">
+                  {!isSimulationMode ? (
+                    <button
+                      onClick={simulateCompletion}
+                      className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded-lg transition-colors"
+                      title="🧪 Simuler l'achèvement (dev only)"
+                    >
+                      🧪 Simuler
+                    </button>
+                  ) : (
+                    <button
+                      onClick={resetSimulation}
+                      className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded-lg transition-colors"
+                      title="🔄 Réinitialiser la simulation"
+                    >
+                      🔄 Reset
+                    </button>
+                  )}
+                </div>
+              )}
+              
               <button
                 onClick={shareProject}
                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -774,54 +701,34 @@ export const CollaborativePixelArt: React.FC = () => {
         </div>
       </header>
 
+      {/* 🎉 BANNIÈRE DE CÉLÉBRATION SI TERMINÉ */}
+      {isCompleted && (
+        <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white py-4 animate-pulse">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-center gap-3">
+              <Trophy className="w-8 h-8 animate-bounce" />
+              <div className="text-center">
+                <h2 className="text-2xl font-bold">🎉 {t('pixel.art.completed.title')} 🎉</h2>
+                <p className="text-yellow-100">{t('pixel.art.completed.thanks')}</p>
+              </div>
+              <Trophy className="w-8 h-8 animate-bounce" />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Error Banner */}
         {error && (
-          <div className={`mb-6 border rounded-lg p-4 ${
-            error.includes('copié') || error.includes('copied') 
-              ? 'bg-green-50 border-green-200' 
-              : 'bg-red-50 border-red-200'
-          }`}>
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="flex items-center gap-2">
-              {error.includes('copié') || error.includes('copied') ? (
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              ) : (
-                <AlertCircle className="w-5 h-5 text-red-600" />
-              )}
-              <p className={error.includes('copié') || error.includes('copied') ? 'text-green-700' : 'text-red-700'}>
-                {error}
-              </p>
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              <p className="text-red-700">{error}</p>
               <button
                 onClick={() => setError(null)}
-                className={`ml-auto ${
-                  error.includes('copié') || error.includes('copied') 
-                    ? 'text-green-600 hover:text-green-800' 
-                    : 'text-red-600 hover:text-red-800'
-                }`}
+                className="ml-auto text-red-600 hover:text-red-800"
               >
                 <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* 🎉 BANNIÈRE DE CÉLÉBRATION pour œuvre terminée */}
-        {isArtworkCompleted && (
-          <div className="mb-6 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 text-white rounded-xl p-6 shadow-lg animate-pulse">
-            <div className="flex items-center justify-center gap-3 mb-2">
-              <Trophy className="w-8 h-8 text-yellow-300" />
-              <h2 className="text-2xl font-bold">🎉 {t('pixel.art.completed.title')} 🎉</h2>
-              <Trophy className="w-8 h-8 text-yellow-300" />
-            </div>
-            <p className="text-center text-lg">
-              {t('pixel.art.completed.subtitle')}
-            </p>
-            <div className="flex justify-center mt-4">
-              <button
-                onClick={() => setShowCompletionModal(true)}
-                className="px-6 py-3 bg-white text-purple-600 rounded-lg font-bold hover:bg-gray-100 transition-colors"
-              >
-                🏆 {t('pixel.art.completed.view.celebration')}
               </button>
             </div>
           </div>
@@ -830,64 +737,112 @@ export const CollaborativePixelArt: React.FC = () => {
         {/* Hero Section */}
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
-            <div className="flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl shadow-lg">
-              <ImageIcon className="w-10 h-10 text-white" />
+            <div className={`flex items-center justify-center w-20 h-20 rounded-2xl shadow-lg transition-all ${
+              isCompleted 
+                ? 'bg-gradient-to-br from-yellow-400 to-orange-500 animate-pulse' 
+                : 'bg-gradient-to-br from-purple-600 to-blue-600'
+            }`}>
+              {isCompleted ? (
+                <Trophy className="w-10 h-10 text-white" />
+              ) : (
+                <ImageIcon className="w-10 h-10 text-white" />
+              )}
             </div>
           </div>
           
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            🎨 {t('pixel.art.hero.title')}
+          <h1 className={`text-4xl md:text-5xl font-bold mb-4 transition-colors ${
+            isCompleted ? 'text-yellow-600' : 'text-gray-900'
+          }`}>
+            {isCompleted ? (
+              <>🏆 {t('pixel.art.completed.title')}</>
+            ) : (
+              <>🎨 {t('pixel.art.hero.title')}</>
+            )}
           </h1>
-          <p className="text-xl text-gray-600 mb-6 max-w-3xl mx-auto">
-            {t('pixel.art.hero.description')}
+          <p className={`text-xl mb-6 max-w-3xl mx-auto transition-colors ${
+            isCompleted ? 'text-yellow-700' : 'text-gray-600'
+          }`}>
+            {isCompleted ? t('pixel.art.completed.thanks.description') : t('pixel.art.hero.description')}
           </p>
 
           {/* Progress Stats */}
           {stats && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-8">
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-                  <div className="text-2xl font-bold text-purple-600">{stats.completedPixels.toLocaleString()}</div>
+                <div className={`rounded-xl p-4 shadow-sm border transition-all ${
+                  isCompleted 
+                    ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200' 
+                    : 'bg-white border-gray-200'
+                }`}>
+                  <div className={`text-2xl font-bold transition-colors ${
+                    isCompleted ? 'text-yellow-600' : 'text-purple-600'
+                  }`}>
+                    {stats.completedPixels.toLocaleString()}
+                  </div>
                   <div className="text-sm text-gray-600">
                     {t('pixel.art.stats.generated')}
                   </div>
                 </div>
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-                  <div className="text-2xl font-bold text-blue-600">{stats.percentage.toFixed(2)}%</div>
+                <div className={`rounded-xl p-4 shadow-sm border transition-all ${
+                  isCompleted 
+                    ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' 
+                    : 'bg-white border-gray-200'
+                }`}>
+                  <div className={`text-2xl font-bold transition-colors ${
+                    isCompleted ? 'text-green-600' : 'text-blue-600'
+                  }`}>
+                    {stats.percentage.toFixed(2)}%
+                  </div>
                   <div className="text-sm text-gray-600">
                     {t('pixel.art.stats.progress')}
                   </div>
                 </div>
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-                  <div className="text-2xl font-bold text-green-600">{stats.sessionsToday}</div>
+                <div className={`rounded-xl p-4 shadow-sm border transition-all ${
+                  isCompleted 
+                    ? 'bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200' 
+                    : 'bg-white border-gray-200'
+                }`}>
+                  <div className={`text-2xl font-bold transition-colors ${
+                    isCompleted ? 'text-blue-600' : 'text-green-600'
+                  }`}>
+                    {stats.sessionsToday}
+                  </div>
                   <div className="text-sm text-gray-600">
                     {t('pixel.art.stats.sessions.today')}
                   </div>
                 </div>
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-                  <div className="text-2xl font-bold text-orange-600">
-                    {(stats.totalPixels - stats.completedPixels).toLocaleString()}
+                <div className={`rounded-xl p-4 shadow-sm border transition-all ${
+                  isCompleted 
+                    ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200' 
+                    : 'bg-white border-gray-200'
+                }`}>
+                  <div className={`text-2xl font-bold transition-colors ${
+                    isCompleted ? 'text-purple-600' : 'text-orange-600'
+                  }`}>
+                    {isCompleted ? '🎉' : (stats.totalPixels - stats.completedPixels).toLocaleString()}
                   </div>
                   <div className="text-sm text-gray-600">
-                    {t('pixel.art.stats.remaining')}
+                    {isCompleted ? t('pixel.art.completed.days') : t('pixel.art.stats.remaining')}
                   </div>
                 </div>
               </div>
 
               {/* Progress Bar */}
               <div className="max-w-2xl mx-auto mb-8">
-                <div className="bg-gray-200 rounded-full h-4 overflow-hidden">
+                <div className={`rounded-full h-4 overflow-hidden transition-all ${
+                  isCompleted ? 'bg-yellow-200' : 'bg-gray-200'
+                }`}>
                   <div 
                     className={`h-full transition-all duration-1000 ease-out ${
-                      isArtworkCompleted 
-                        ? 'bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 animate-pulse' 
+                      isCompleted 
+                        ? 'bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 animate-pulse' 
                         : 'bg-gradient-to-r from-purple-600 to-blue-600'
                     }`}
                     style={{ width: `${Math.min(stats.percentage, 100)}%` }}
                   ></div>
                 </div>
                 <p className="text-sm text-gray-600 mt-2">
-                  {isArtworkCompleted 
+                  {isCompleted 
                     ? t('pixel.art.completed.progress.complete')
                     : t('pixel.art.progress.estimated').replace('{days}', stats.estimatedDaysRemaining.toString())
                   }
@@ -900,10 +855,16 @@ export const CollaborativePixelArt: React.FC = () => {
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Canvas Section - TAILLE AUGMENTÉE */}
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+            <div className={`rounded-2xl p-6 shadow-lg border transition-all ${
+              isCompleted 
+                ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200' 
+                : 'bg-white border-gray-200'
+            }`}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {t('pixel.art.realtime.title')}
+                <h2 className={`text-xl font-semibold transition-colors ${
+                  isCompleted ? 'text-yellow-900' : 'text-gray-900'
+                }`}>
+                  {isCompleted ? '🏆 ' + t('pixel.art.completed.title') : t('pixel.art.realtime.title')}
                 </h2>
                 <button
                   onClick={handleForceRefresh}
@@ -918,7 +879,11 @@ export const CollaborativePixelArt: React.FC = () => {
               <div className="relative">
                 <canvas
                   ref={canvasRef}
-                  className="w-full h-auto border border-gray-300 rounded-lg shadow-sm cursor-crosshair"
+                  className={`w-full h-auto border rounded-lg shadow-sm transition-all ${
+                    isCompleted 
+                      ? 'border-yellow-300 shadow-yellow-200' 
+                      : 'border-gray-300'
+                  }`}
                   style={{ imageRendering: 'pixelated' }}
                 />
                 {isRefreshing && (
@@ -932,42 +897,46 @@ export const CollaborativePixelArt: React.FC = () => {
               </div>
               
               <div className="mt-4 text-center">
-                <p className="text-sm text-gray-600">
-                  {t('pixel.art.realtime.final')}
+                <p className={`text-sm transition-colors ${
+                  isCompleted ? 'text-yellow-700' : 'text-gray-600'
+                }`}>
+                  {isCompleted 
+                    ? '🎉 ' + t('pixel.art.completed.subtitle')
+                    : t('pixel.art.realtime.final')
+                  }
                 </p>
                 <p className="text-xs text-green-600 mt-1">
                   ✅ {t('pixel.art.realtime.stored')} • {pixels.length} pixels chargés
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
-                  🖱️ <strong>{t('pixel.art.hover.instruction')}</strong>
+                  🔧 <strong>Pixels cohérents</strong> - Taille fixe 2px pour tous !
                 </p>
               </div>
             </div>
 
             {/* Contributeurs récents */}
             {recentContributors.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t('pixel.art.contributors.title')}
+              <div className={`rounded-2xl p-6 shadow-lg border transition-all ${
+                isCompleted 
+                  ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' 
+                  : 'bg-white border-gray-200'
+              }`}>
+                <h3 className={`text-lg font-semibold mb-4 transition-colors ${
+                  isCompleted ? 'text-green-900' : 'text-gray-900'
+                }`}>
+                  {isCompleted ? '🏅 ' : ''}{t('pixel.art.contributors.title')}
                 </h3>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {recentContributors.map((contributor, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div key={index} className="flex items-center gap-3">
                       <div 
-                        className="w-6 h-6 rounded-full border-2 border-gray-300 flex-shrink-0"
+                        className="w-4 h-4 rounded-full border border-gray-300"
                         style={{ backgroundColor: contributor.color }}
                       ></div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-gray-500" />
-                          <span className="text-sm font-medium text-gray-900 truncate">
-                            {contributor.contributor_name || t('pixel.art.contributor.name')}
-                          </span>
-                        </div>
-                        <span className="text-xs text-gray-500">
-                          {new Date(contributor.created_at).toLocaleTimeString()}
-                        </span>
-                      </div>
+                      <span className="text-sm text-gray-700">{contributor.contributor_name}</span>
+                      <span className="text-xs text-gray-500 ml-auto">
+                        {new Date(contributor.created_at).toLocaleTimeString()}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -977,41 +946,41 @@ export const CollaborativePixelArt: React.FC = () => {
 
           {/* Interaction Section */}
           <div className="space-y-6">
-            {/* 🔒 Votre Contribution - AVEC PROTECTION IP ET VÉRIFICATION D'ACHÈVEMENT */}
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                {t('pixel.art.contribution.title')}
+            {/* 🔒 Votre Contribution - AVEC PROTECTION IP */}
+            <div className={`rounded-2xl p-6 shadow-lg border transition-all ${
+              isCompleted 
+                ? 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-300' 
+                : 'bg-white border-gray-200'
+            }`}>
+              <h2 className={`text-xl font-semibold mb-4 transition-colors ${
+                isCompleted ? 'text-gray-700' : 'text-gray-900'
+              }`}>
+                {isCompleted ? '🏁 ' : ''}{t('pixel.art.contribution.title')}
               </h2>
               
-              {/* 🎉 AFFICHAGE SPÉCIAL SI L'ŒUVRE EST TERMINÉE */}
-              {isArtworkCompleted ? (
+              {isCompleted ? (
                 <div className="text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 border-4 border-yellow-400 rounded-lg flex items-center justify-center bg-gradient-to-br from-yellow-400 to-orange-500">
-                    <Trophy className="w-8 h-8 text-white" />
+                  <div className="w-16 h-16 mx-auto mb-4 border-4 border-yellow-300 rounded-lg flex items-center justify-center bg-yellow-100">
+                    <Trophy className="w-8 h-8 text-yellow-600" />
                   </div>
-                  <div className="flex items-center justify-center gap-2 mb-4">
-                    <Sparkles className="w-6 h-6 text-yellow-500" />
-                    <p className="text-xl font-bold text-yellow-600">
-                      {t('pixel.art.completed.title')}
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <CheckCircle className="w-5 h-5 text-yellow-600" />
+                    <p className="text-yellow-600 font-medium">
+                      {t('pixel.art.completed.no.more.pixels')}
                     </p>
-                    <Sparkles className="w-6 h-6 text-yellow-500" />
                   </div>
-                  <p className="text-gray-700 mb-4">
-                    {t('pixel.art.completed.no.more.pixels')}
+                  <p className="text-sm text-gray-600 mb-4">
+                    {t('pixel.art.completed.thanks.description')}
                   </p>
                   
-                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 border border-yellow-200">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <Award className="w-5 h-5 text-yellow-600" />
-                      <span className="font-medium text-yellow-800">{t('pixel.art.completed.thanks')}</span>
-                    </div>
-                    <p className="text-sm text-yellow-700">
-                      {t('pixel.art.completed.thanks.description')}
-                    </p>
-                  </div>
+                  <button
+                    onClick={() => setShowCompletionModal(true)}
+                    className="px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-lg font-semibold hover:from-yellow-500 hover:to-orange-600 transition-all transform hover:scale-105"
+                  >
+                    🎉 {t('pixel.art.completed.view.celebration')}
+                  </button>
                 </div>
               ) : (
-                // Affichage normal si l'œuvre n'est pas terminée
                 <>
                   {currentUserPixel || ipLimitReached ? (
                     <div className="text-center">
@@ -1027,8 +996,7 @@ export const CollaborativePixelArt: React.FC = () => {
                           {currentUserPixel ? t('pixel.art.contribution.success') : 'Contribution déjà effectuée'}
                         </p>
                       </div>
-                      {/* 🔒 AFFICHAGE CONDITIONNEL : Seulement pour les NOUVEAUX pixels */}
-                      {currentUserPixel && !error && (
+                      {currentUserPixel && (
                         <>
                           <p className="text-sm text-gray-600 mb-2">
                             {t('pixel.art.contribution.position').replace('{x}', currentUserPixel.x.toString()).replace('{y}', currentUserPixel.y.toString())}
@@ -1057,27 +1025,6 @@ export const CollaborativePixelArt: React.FC = () => {
                           {t('pixel.art.contribution.choose')}
                         </p>
                         
-                        {/* 🆕 Champ nom du contributeur */}
-                        <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4" />
-                              {t('pixel.art.contributor.name.label')}
-                            </div>
-                          </label>
-                          <input
-                            type="text"
-                            value={contributorName}
-                            onChange={(e) => setContributorName(e.target.value)}
-                            placeholder={t('pixel.art.contributor.name.placeholder')}
-                            maxLength={30}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-center"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            {t('pixel.art.contributor.name.help')}
-                          </p>
-                        </div>
-                        
                         {/* Color Picker */}
                         <div className="flex flex-wrap justify-center gap-2 mb-4">
                           {predefinedColors.map((color, index) => (
@@ -1102,7 +1049,7 @@ export const CollaborativePixelArt: React.FC = () => {
                       
                       <button
                         onClick={generateUserPixel}
-                        disabled={isCreatingPixel || ipLimitReached || isArtworkCompleted}
+                        disabled={isCreatingPixel || ipLimitReached}
                         className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                       >
                         {isCreatingPixel ? (
@@ -1135,9 +1082,15 @@ export const CollaborativePixelArt: React.FC = () => {
 
             {/* Statistiques Avancées */}
             {stats && (
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t('pixel.art.stats.advanced')}
+              <div className={`rounded-2xl p-6 shadow-lg border transition-all ${
+                isCompleted 
+                  ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200' 
+                  : 'bg-white border-gray-200'
+              }`}>
+                <h3 className={`text-lg font-semibold mb-4 transition-colors ${
+                  isCompleted ? 'text-purple-900' : 'text-gray-900'
+                }`}>
+                  {isCompleted ? '📊 ' : ''}{t('pixel.art.stats.advanced')}
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
@@ -1157,11 +1110,13 @@ export const CollaborativePixelArt: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <div className="text-lg font-bold text-purple-600">
-                      {isArtworkCompleted ? '🎉' : stats.estimatedDaysRemaining}
+                    <div className={`text-lg font-bold transition-colors ${
+                      isCompleted ? 'text-yellow-600' : 'text-purple-600'
+                    }`}>
+                      {isCompleted ? '🎉' : stats.estimatedDaysRemaining}
                     </div>
                     <div className="text-xs text-gray-600">
-                      {isArtworkCompleted ? t('pixel.art.completed.days') : t('pixel.art.stats.days.remaining')}
+                      {isCompleted ? t('pixel.art.completed.days') : t('pixel.art.stats.days.remaining')}
                     </div>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
@@ -1210,45 +1165,94 @@ export const CollaborativePixelArt: React.FC = () => {
             </div>
 
             {/* Call to Action */}
-            <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-6 text-white text-center">
+            <div className={`rounded-2xl p-6 text-white text-center transition-all ${
+              isCompleted 
+                ? 'bg-gradient-to-r from-yellow-400 to-orange-500' 
+                : 'bg-gradient-to-r from-purple-600 to-blue-600'
+            }`}>
               <h3 className="text-xl font-bold mb-2">
-                {t('pixel.art.cta.title')}
+                {isCompleted ? '🏆 ' + t('pixel.art.completed.thanks.title') : t('pixel.art.cta.title')}
               </h3>
-              <p className="text-purple-100 mb-4">
-                {t('pixel.art.cta.description')}
+              <p className={`mb-4 ${isCompleted ? 'text-yellow-100' : 'text-purple-100'}`}>
+                {isCompleted ? t('pixel.art.completed.thanks.description') : t('pixel.art.cta.description')}
               </p>
-              <button
-                onClick={handleGoBack}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+              <a
+                href="/"
+                className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                  isCompleted 
+                    ? 'bg-white text-orange-600 hover:bg-gray-100' 
+                    : 'bg-white text-purple-600 hover:bg-gray-100'
+                }`}
               >
                 <Zap className="w-5 h-5" />
                 {t('pixel.art.cta.back')}
-              </button>
+              </a>
             </div>
           </div>
         </div>
 
         {/* Footer Info */}
         <div className="mt-12 text-center">
-          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 max-w-4xl mx-auto">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              {t('pixel.art.storage.title')}
+          <div className={`rounded-2xl p-8 shadow-lg border max-w-4xl mx-auto transition-all ${
+            isCompleted 
+              ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200' 
+              : 'bg-white border-gray-200'
+          }`}>
+            <h3 className={`text-2xl font-bold mb-4 transition-colors ${
+              isCompleted ? 'text-yellow-900' : 'text-gray-900'
+            }`}>
+              {isCompleted ? '🏆 ' : ''}{t('pixel.art.storage.title')}
             </h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
-              {t('pixel.art.storage.description')}
+            <p className={`leading-relaxed mb-4 transition-colors ${
+              isCompleted ? 'text-yellow-700' : 'text-gray-600'
+            }`}>
+              {isCompleted 
+                ? t('pixel.art.completed.thanks.description')
+                : t('pixel.art.storage.description')
+              }
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="bg-green-50 rounded-lg p-4">
-                <div className="font-semibold text-green-800 mb-2">✅ {t('pixel.art.storage.persistent')}</div>
-                <div className="text-green-700">{t('pixel.art.storage.persistent.desc')}</div>
+              <div className={`rounded-lg p-4 transition-all ${
+                isCompleted ? 'bg-green-100' : 'bg-green-50'
+              }`}>
+                <div className={`font-semibold mb-2 transition-colors ${
+                  isCompleted ? 'text-green-900' : 'text-green-800'
+                }`}>
+                  ✅ {t('pixel.art.storage.persistent')}
+                </div>
+                <div className={`transition-colors ${
+                  isCompleted ? 'text-green-800' : 'text-green-700'
+                }`}>
+                  {t('pixel.art.storage.persistent.desc')}
+                </div>
               </div>
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="font-semibold text-blue-800 mb-2">🔄 {t('pixel.art.storage.realtime')}</div>
-                <div className="text-blue-700">{t('pixel.art.storage.realtime.desc')}</div>
+              <div className={`rounded-lg p-4 transition-all ${
+                isCompleted ? 'bg-blue-100' : 'bg-blue-50'
+              }`}>
+                <div className={`font-semibold mb-2 transition-colors ${
+                  isCompleted ? 'text-blue-900' : 'text-blue-800'
+                }`}>
+                  🔄 {t('pixel.art.storage.realtime')}
+                </div>
+                <div className={`transition-colors ${
+                  isCompleted ? 'text-blue-800' : 'text-blue-700'
+                }`}>
+                  {t('pixel.art.storage.realtime.desc')}
+                </div>
               </div>
-              <div className="bg-purple-50 rounded-lg p-4">
-                <div className="font-semibold text-purple-800 mb-2">🔒 {t('pixel.art.storage.secure')}</div>
-                <div className="text-purple-700">{t('pixel.art.storage.secure.desc')}</div>
+              <div className={`rounded-lg p-4 transition-all ${
+                isCompleted ? 'bg-purple-100' : 'bg-purple-50'
+              }`}>
+                <div className={`font-semibold mb-2 transition-colors ${
+                  isCompleted ? 'text-purple-900' : 'text-purple-800'
+                }`}>
+                  🔒 {t('pixel.art.storage.secure')}
+                </div>
+                <div className={`transition-colors ${
+                  isCompleted ? 'text-purple-800' : 'text-purple-700'
+                }`}>
+                  {t('pixel.art.storage.secure.desc')}
+                </div>
               </div>
             </div>
             <div className="flex items-center justify-center gap-6 mt-6 text-sm text-gray-500">
@@ -1269,175 +1273,130 @@ export const CollaborativePixelArt: React.FC = () => {
         </div>
       </div>
 
-      {/* 🆕 Tooltip flottant */}
-      {isTooltipVisible && tooltip && (
-        <div
-          className="fixed z-[9999] pointer-events-none"
-          style={{
-            left: `${tooltipPosition.x}px`,
-            top: `${tooltipPosition.y}px`,
-            transform: 'translate(-50%, -100%)'
-          }}
-        >
-          <div className="bg-gray-900 text-white px-3 py-2 rounded-lg shadow-lg text-sm max-w-xs">
-            <div className="flex items-center gap-2 mb-1">
-              <div
-                className="w-3 h-3 rounded-full border border-white/30"
-                style={{ backgroundColor: tooltip.color }}
-              ></div>
-              <span className="font-medium">{tooltip.contributorName}</span>
-            </div>
-            <div className="text-xs text-gray-300">
-              Position: ({tooltip.x}, {tooltip.y})
-            </div>
-            <div className="text-xs text-gray-300">
-              {new Date(tooltip.createdAt).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
-                day: 'numeric',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </div>
-            {/* Flèche du tooltip */}
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-          </div>
-        </div>
-      )}
-
       {/* 🎉 MODAL DE CÉLÉBRATION SPECTACULAIRE */}
       {showCompletionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[9999] overflow-hidden">
-          {/* Particules d'animation en arrière-plan */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {[...Array(50)].map((_, i) => (
-              <div
-                key={i}
-                className="absolute animate-bounce"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 2}s`,
-                  animationDuration: `${2 + Math.random() * 3}s`
-                }}
-              >
-                {Math.random() > 0.5 ? (
-                  <Star className="w-4 h-4 text-yellow-400" />
-                ) : (
-                  <Sparkles className="w-4 h-4 text-purple-400" />
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-gradient-to-br from-purple-600 via-pink-500 to-yellow-400 rounded-3xl p-8 max-w-2xl w-full text-center text-white shadow-2xl relative overflow-hidden">
-            {/* Animation de confettis */}
-            <div className="absolute inset-0 pointer-events-none">
-              {[...Array(30)].map((_, i) => (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[9999] overflow-y-auto">
+          <div className="relative max-w-4xl w-full">
+            {/* Particules animées en arrière-plan */}
+            <div className="absolute inset-0 overflow-hidden rounded-3xl">
+              {[...Array(20)].map((_, i) => (
                 <div
                   key={i}
-                  className="absolute animate-ping"
+                  className="absolute animate-bounce"
                   style={{
                     left: `${Math.random() * 100}%`,
                     top: `${Math.random() * 100}%`,
-                    animationDelay: `${Math.random() * 3}s`,
-                    animationDuration: `${1 + Math.random() * 2}s`
+                    animationDelay: `${Math.random() * 2}s`,
+                    animationDuration: `${2 + Math.random() * 2}s`
                   }}
                 >
-                  <div className="w-2 h-2 bg-white rounded-full opacity-70"></div>
+                  {Math.random() > 0.5 ? (
+                    <Star className="w-4 h-4 text-yellow-300 animate-pulse" />
+                  ) : (
+                    <Sparkles className="w-3 h-3 text-white animate-pulse" />
+                  )}
                 </div>
               ))}
             </div>
 
-            {/* Contenu principal */}
-            <div className="relative z-10">
-              {/* Phase 1 : Apparition */}
-              {completionAnimationPhase >= 1 && (
-                <div className="animate-bounce">
-                  <div className="text-8xl mb-6">🎊</div>
-                  <h1 className="text-4xl md:text-6xl font-bold mb-4 animate-pulse">
+            <div className="bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+              {/* Bouton fermer */}
+              <button
+                onClick={() => setShowCompletionModal(false)}
+                className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-lg transition-colors z-10"
+              >
+                <X className="w-6 h-6" />
+              </button>
+
+              {/* Phase 1: Titre et confettis */}
+              {celebrationPhase >= 1 && (
+                <div className="text-center mb-8 animate-fade-in">
+                  <div className="text-8xl mb-4 animate-bounce">🎊</div>
+                  <h1 className="text-5xl md:text-6xl font-bold mb-4 animate-pulse">
                     {t('pixel.art.completed.modal.title')}
                   </h1>
+                  <div className="flex items-center justify-center gap-4 mb-6">
+                    <Trophy className="w-12 h-12 text-yellow-300 animate-bounce" />
+                    <span className="text-2xl font-bold text-yellow-300">
+                      {t('pixel.art.completed.modal.achievement')}
+                    </span>
+                    <Trophy className="w-12 h-12 text-yellow-300 animate-bounce" />
+                  </div>
                 </div>
               )}
 
-              {/* Phase 2 : Statistiques */}
-              {completionAnimationPhase >= 2 && (
-                <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 mb-6 animate-fade-in">
-                  <h2 className="text-2xl font-bold mb-4">
-                    🏆 {t('pixel.art.completed.modal.achievement')}
-                  </h2>
-                  <div className="grid grid-cols-2 gap-4 text-lg">
-                    <div className="bg-white/10 rounded-lg p-4">
-                      <div className="text-3xl font-bold text-yellow-300">
-                        {stats?.totalPixels.toLocaleString()}
-                      </div>
-                      <div className="text-sm opacity-90">
-                        {t('pixel.art.completed.modal.total.pixels')}
-                      </div>
+              {/* Phase 2: Statistiques d'accomplissement */}
+              {celebrationPhase >= 2 && stats && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-slide-up">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 text-center">
+                    <div className="text-4xl font-bold text-yellow-300 mb-2">
+                      {stats.totalPixels.toLocaleString()}
                     </div>
-                    <div className="bg-white/10 rounded-lg p-4">
-                      <div className="text-3xl font-bold text-green-300">
-                        100%
-                      </div>
-                      <div className="text-sm opacity-90">
-                        {t('pixel.art.completed.modal.completion')}
-                      </div>
+                    <div className="text-white/90">
+                      {t('pixel.art.completed.modal.total.pixels')}
                     </div>
                   </div>
-                  <p className="text-lg mt-4 opacity-90">
-                    {t('pixel.art.completed.modal.description')}
-                  </p>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 text-center">
+                    <div className="text-4xl font-bold text-green-300 mb-2">
+                      100%
+                    </div>
+                    <div className="text-white/90">
+                      {t('pixel.art.completed.modal.completion')}
+                    </div>
+                  </div>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 text-center">
+                    <div className="text-4xl font-bold text-blue-300 mb-2">
+                      {stats.sessionsToday}
+                    </div>
+                    <div className="text-white/90">
+                      {t('pixel.art.stats.sessions.today')}
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* Phase 3 : Remerciements et actions */}
-              {completionAnimationPhase >= 3 && (
-                <div className="animate-slide-up">
-                  <div className="bg-gradient-to-r from-yellow-400/20 to-orange-500/20 rounded-2xl p-6 mb-6 border border-yellow-300/30">
-                    <div className="flex items-center justify-center gap-3 mb-4">
-                      <Heart className="w-8 h-8 text-red-400" />
-                      <h3 className="text-2xl font-bold">
-                        {t('pixel.art.completed.modal.thanks.title')}
-                      </h3>
-                      <Heart className="w-8 h-8 text-red-400" />
-                    </div>
-                    <p className="text-lg leading-relaxed opacity-90">
+              {/* Phase 3: Message de remerciement et actions */}
+              {celebrationPhase >= 3 && (
+                <div className="animate-fade-in">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-8">
+                    <p className="text-xl leading-relaxed text-center">
+                      {t('pixel.art.completed.modal.description')}
+                    </p>
+                  </div>
+
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mb-8">
+                    <h3 className="text-2xl font-bold text-center mb-4">
+                      {t('pixel.art.completed.modal.thanks.title')}
+                    </h3>
+                    <p className="text-lg leading-relaxed text-center text-white/90">
                       {t('pixel.art.completed.modal.thanks.message')}
                     </p>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <div className="flex flex-col md:flex-row gap-4 justify-center">
                     <button
                       onClick={downloadProgress}
-                      className="flex items-center gap-2 px-8 py-4 bg-white hover:bg-gray-100 text-purple-600 rounded-xl font-bold transition-colors shadow-lg"
+                      className="flex items-center justify-center gap-2 px-8 py-4 bg-white hover:bg-gray-100 text-purple-600 rounded-xl font-bold transition-colors shadow-lg"
                     >
                       <Download className="w-5 h-5" />
                       {t('pixel.art.completed.modal.download')}
                     </button>
                     <button
                       onClick={shareProject}
-                      className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl font-bold transition-colors shadow-lg"
+                      className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white rounded-xl font-bold transition-colors shadow-lg"
                     >
                       <Share2 className="w-5 h-5" />
                       {t('pixel.art.completed.modal.share')}
                     </button>
                     <button
                       onClick={() => setShowCompletionModal(false)}
-                      className="flex items-center gap-2 px-8 py-4 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-bold transition-colors shadow-lg"
+                      className="flex items-center justify-center gap-2 px-8 py-4 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-bold transition-colors shadow-lg"
                     >
                       <Eye className="w-5 h-5" />
                       {t('pixel.art.completed.modal.continue')}
                     </button>
                   </div>
-
-                  {/* Bouton de fermeture */}
-                  <button
-                    onClick={() => setShowCompletionModal(false)}
-                    className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-lg transition-colors"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
                 </div>
               )}
             </div>
