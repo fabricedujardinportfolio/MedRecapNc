@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mic, MicOff, Send, Bot, Video, MessageCircle, Volume2, VolumeX, ExternalLink, Square } from 'lucide-react';
+import { X, Mic, MicOff, Send, Bot, Video, MessageCircle, Volume2, VolumeX, ExternalLink } from 'lucide-react';
 import { Patient } from '../types/Patient';
 import { tavusService, TavusVideoSession } from '../services/tavusService';
 
@@ -23,13 +23,7 @@ declare global {
     webkitSpeechRecognition: any;
     speechSynthesis: any;
     SpeechSynthesisUtterance: any;
-    _tavusSessionLock?: boolean;
   }
-}
-
-// Initialiser le verrou global dans window pour éviter les problèmes de hot reload
-if (typeof window !== 'undefined' && !window._tavusSessionLock) {
-  window._tavusSessionLock = false;
 }
 
 export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({ 
@@ -51,20 +45,13 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [conversationActive, setConversationActive] = useState(false);
-  const [autoListenEnabled, setAutoListenEnabled] = useState(false);
   
   const recognitionRef = useRef<any>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const speechSynthesisRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isProcessingRef = useRef(false);
-  const autoRestartTimerRef = useRef<NodeJS.Timeout | null>(null);
   const instanceIdRef = useRef<string>(`instance-${Date.now()}-${Math.random()}`);
-  
-  // Protection locale contre les initialisations multiples
-  const hasInitializedRef = useRef(false);
-  const isInitializingRef = useRef(false);
 
   // Vérifier le support de la reconnaissance vocale et synthèse vocale
   useEffect(() => {
@@ -77,22 +64,10 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     }
   }, []);
 
-  // Initialiser la session Tavus avec protection renforcée contre les instances multiples
+  // Initialiser la session Tavus
   useEffect(() => {
-    if (isVisible && !session && !hasInitializedRef.current && !isInitializingRef.current) {
-      // Vérification du verrou global
-      if (window._tavusSessionLock) {
-        console.log('⚠️ Une session IA est déjà active globalement, fermeture de cette instance');
-        setError('Une session IA est déjà active. Veuillez fermer l\'autre session avant d\'en ouvrir une nouvelle.');
-        return;
-      }
-      
-      // Marquer cette instance comme ayant initialisé
-      hasInitializedRef.current = true;
-      isInitializingRef.current = true;
-      
-      console.log(`🔒 [${instanceIdRef.current}] Début d'initialisation - Verrouillage local et global`);
-      
+    if (isVisible && !session) {
+      console.log(`🚀 [${instanceIdRef.current}] Initialisation de la session`);
       initializeSession();
     }
   }, [isVisible]);
@@ -126,19 +101,6 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
     }
-    if (autoRestartTimerRef.current) {
-      clearTimeout(autoRestartTimerRef.current);
-    }
-    
-    // Libérer le verrou global seulement si c'est notre instance qui l'a pris
-    if (window._tavusSessionLock && session) {
-      window._tavusSessionLock = false;
-      console.log(`🔓 [${instanceIdRef.current}] Session globale libérée`);
-    }
-    
-    // Réinitialiser les flags locaux
-    hasInitializedRef.current = false;
-    isInitializingRef.current = false;
   };
 
   // Fonction de synthèse vocale avec callback pour relancer l'écoute
@@ -186,14 +148,6 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
         setSession(prev => prev ? { ...prev, status: 'ready' } : null);
       }
       
-      // Relancer automatiquement l'écoute si la conversation est active et l'auto-écoute activée
-      if (conversationActive && autoListenEnabled && !isListening) {
-        console.log('🔄 Relance automatique de l\'écoute après synthèse vocale');
-        autoRestartTimerRef.current = setTimeout(() => {
-          startListening();
-        }, 1000); // Délai de 1 seconde après la fin de la synthèse
-      }
-      
       if (onSpeechEnd) onSpeechEnd();
     };
 
@@ -216,19 +170,6 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   };
 
   const initializeSession = async () => {
-    // Double vérification du verrou global
-    if (window._tavusSessionLock) {
-      console.log(`⚠️ [${instanceIdRef.current}] Verrou global déjà pris, abandon`);
-      setError('Une session IA est déjà active. Veuillez fermer l\'autre session avant d\'en ouvrir une nouvelle.');
-      hasInitializedRef.current = false;
-      isInitializingRef.current = false;
-      return;
-    }
-
-    // Prendre le verrou global
-    window._tavusSessionLock = true;
-    console.log(`🔒 [${instanceIdRef.current}] Verrou global pris`);
-
     setIsLoading(true);
     setError(null);
     
@@ -276,13 +217,8 @@ Que souhaitez-vous savoir ?`,
     } catch (err) {
       console.error(`❌ [${instanceIdRef.current}] Erreur lors de l'initialisation:`, err);
       setError(err instanceof Error ? err.message : 'Erreur d\'initialisation');
-      // Libérer le verrou en cas d'erreur
-      window._tavusSessionLock = false;
-      hasInitializedRef.current = false;
-      console.log(`🔓 [${instanceIdRef.current}] Verrou global libéré suite à erreur`);
     } finally {
       setIsLoading(false);
-      isInitializingRef.current = false;
     }
   };
 
@@ -319,7 +255,7 @@ Que souhaitez-vous savoir ?`,
         };
         setChatMessages(prev => [...prev, aiMessage]);
         
-        // Synthèse vocale automatique de la réponse IA avec callback pour relancer l'écoute
+        // Synthèse vocale automatique de la réponse IA
         setTimeout(() => {
           speakText(aiResponse);
         }, 500);
@@ -355,11 +291,6 @@ Que souhaitez-vous savoir ?`,
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
-    }
-
-    if (autoRestartTimerRef.current) {
-      clearTimeout(autoRestartTimerRef.current);
-      autoRestartTimerRef.current = null;
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -486,55 +417,6 @@ Que souhaitez-vous savoir ?`,
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
     }
-    if (autoRestartTimerRef.current) {
-      clearTimeout(autoRestartTimerRef.current);
-      autoRestartTimerRef.current = null;
-    }
-  };
-
-  const startConversation = () => {
-    console.log('🎙️ Démarrage de la conversation vocale continue');
-    setConversationActive(true);
-    setAutoListenEnabled(true);
-    startListening();
-  };
-
-  const stopConversation = () => {
-    console.log('⏹️ Arrêt de la conversation vocale continue');
-    setConversationActive(false);
-    setAutoListenEnabled(false);
-    
-    // Arrêter la reconnaissance vocale
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-    
-    // Arrêter la synthèse vocale
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-    }
-    
-    // Nettoyer les timers
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
-    if (autoRestartTimerRef.current) {
-      clearTimeout(autoRestartTimerRef.current);
-      autoRestartTimerRef.current = null;
-    }
-    
-    // Réinitialiser les états
-    setIsListening(false);
-    setIsSpeaking(false);
-    setFinalTranscript('');
-    setInterimTranscript('');
-    isProcessingRef.current = false;
-    
-    if (session) {
-      setSession(prev => prev ? { ...prev, status: 'ready' } : null);
-    }
   };
 
   const handleSendMessage = async (messageContent?: string) => {
@@ -613,9 +495,9 @@ Que souhaitez-vous savoir ?`,
   const handleClose = async () => {
     console.log(`🚪 [${instanceIdRef.current}] Fermeture de la session`);
     
-    // Arrêter la conversation si elle est active
-    if (conversationActive) {
-      stopConversation();
+    // Arrêter l'écoute si active
+    if (isListening) {
+      stopListening();
     }
     
     if (session) {
@@ -631,8 +513,6 @@ Que souhaitez-vous savoir ?`,
     setFinalTranscript('');
     setInterimTranscript('');
     setIsSpeaking(false);
-    setConversationActive(false);
-    setAutoListenEnabled(false);
     isProcessingRef.current = false;
     
     onClose();
@@ -665,11 +545,6 @@ Que souhaitez-vous savoir ?`,
               {session?.isDemoMode && (
                 <span className="px-3 py-1 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">
                   Mode Démo
-                </span>
-              )}
-              {conversationActive && (
-                <span className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
-                  Conversation Active
                 </span>
               )}
               {externalWindow && !externalWindow.closed && (
@@ -707,10 +582,7 @@ Que souhaitez-vous savoir ?`,
                 <p className="text-red-600 mb-4">{error}</p>
                 <button
                   onClick={() => {
-                    // Réinitialiser les flags avant de réessayer
-                    hasInitializedRef.current = false;
-                    isInitializingRef.current = false;
-                    window._tavusSessionLock = false;
+                    setError(null);
                     initializeSession();
                   }}
                   className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
@@ -734,21 +606,18 @@ Que souhaitez-vous savoir ?`,
                 {/* Status */}
                 <div className="mb-4">
                   <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
-                    session.status === 'ready' && !conversationActive ? 'bg-green-100 text-green-800' :
-                    conversationActive ? 'bg-blue-100 text-blue-800' :
+                    session.status === 'ready' ? 'bg-green-100 text-green-800' :
                     session.status === 'speaking' || isSpeaking ? 'bg-blue-100 text-blue-800' :
                     session.status === 'listening' ? 'bg-orange-100 text-orange-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
                     <div className={`w-2 h-2 rounded-full ${
-                      session.status === 'ready' && !conversationActive ? 'bg-green-500' :
-                      conversationActive ? 'bg-blue-500 animate-pulse' :
+                      session.status === 'ready' ? 'bg-green-500' :
                       session.status === 'speaking' || isSpeaking ? 'bg-blue-500 animate-pulse' :
                       session.status === 'listening' ? 'bg-orange-500 animate-pulse' :
                       'bg-gray-500'
                     }`}></div>
-                    {conversationActive && 'Conversation en cours'}
-                    {!conversationActive && session.status === 'ready' && !isSpeaking && 'Prêt'}
+                    {session.status === 'ready' && !isSpeaking && 'Prêt'}
                     {(session.status === 'speaking' || isSpeaking) && 'En train de parler'}
                     {session.status === 'listening' && 'À l\'écoute'}
                     {session.status === 'initializing' && 'Initialisation'}
@@ -786,53 +655,30 @@ Que souhaitez-vous savoir ?`,
                   </div>
                 )}
 
-                {/* Controls */}
+                {/* Controls - UN SEUL BOUTON */}
                 <div className="flex justify-center gap-3 flex-wrap">
                   {speechSupported ? (
-                    <>
-                      {!conversationActive ? (
-                        <button
-                          onClick={startConversation}
-                          disabled={session.status === 'ended'}
-                          className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Mic className="w-5 h-5" />
-                          Démarrer Conversation
-                        </button>
+                    <button
+                      onClick={isListening ? stopListening : startListening}
+                      disabled={session.status === 'ended' || isSpeaking}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+                        isListening
+                          ? 'bg-red-600 hover:bg-red-700 text-white'
+                          : 'bg-purple-600 hover:bg-purple-700 text-white'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {isListening ? (
+                        <>
+                          <MicOff className="w-5 h-5" />
+                          Arrêter l'écoute
+                        </>
                       ) : (
-                        <button
-                          onClick={stopConversation}
-                          className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-                        >
-                          <Square className="w-5 h-5" />
-                          Arrêter Conversation
-                        </button>
+                        <>
+                          <Mic className="w-5 h-5" />
+                          Parler
+                        </>
                       )}
-                      
-                      {!conversationActive && (
-                        <button
-                          onClick={isListening ? stopListening : startListening}
-                          disabled={session.status === 'ended' || isSpeaking}
-                          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
-                            isListening
-                              ? 'bg-orange-600 hover:bg-orange-700 text-white'
-                              : 'bg-purple-600 hover:bg-purple-700 text-white'
-                          } disabled:opacity-50 disabled:cursor-not-allowed`}
-                        >
-                          {isListening ? (
-                            <>
-                              <MicOff className="w-5 h-5" />
-                              Arrêter
-                            </>
-                          ) : (
-                            <>
-                              <Mic className="w-5 h-5" />
-                              Parler Une Fois
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </>
+                    </button>
                   ) : (
                     <div className="text-center">
                       <p className="text-red-600 text-sm mb-2">
@@ -857,11 +703,8 @@ Que souhaitez-vous savoir ?`,
 
                 {/* Instructions */}
                 <div className="mt-4 text-xs text-gray-600 max-w-md mx-auto">
-                  <p className="mb-2">
-                    <strong>Conversation:</strong> Démarre une conversation continue avec relance automatique de l'écoute
-                  </p>
                   <p>
-                    <strong>Parler Une Fois:</strong> Active l'écoute pour un seul message
+                    Cliquez sur "Parler" pour activer l'écoute vocale. L'IA vous répondra automatiquement.
                   </p>
                 </div>
               </div>
