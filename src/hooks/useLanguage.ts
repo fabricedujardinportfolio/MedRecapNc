@@ -18,11 +18,12 @@ export const useLanguage = () => {
   return context;
 };
 
-// Hook pour la gestion de la langue
+// Hook pour la gestion de la langue - ANGLAIS PAR DÉFAUT
 export const useLanguageState = () => {
   const [language, setLanguageState] = useState<Language>(() => {
     const saved = localStorage.getItem('medrecap_language');
-    return (saved as Language) || 'fr';
+    // 🇬🇧 CHANGEMENT : Anglais par défaut au lieu du français
+    return (saved as Language) || 'en';
   });
 
   const setLanguage = (lang: Language) => {
