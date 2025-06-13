@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mic, MicOff, Send, Bot, Video, MessageCircle, Volume2, VolumeX, ExternalLink, AlertTriangle, Users } from 'lucide-react';
+import { X, Mic, MicOff, Send, Bot, Video, MessageCircle, Volume2, VolumeX, ExternalLink } from 'lucide-react';
 import { Patient } from '../types/Patient';
 import { tavusService, TavusVideoSession } from '../services/tavusService';
 
@@ -33,6 +33,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
 }) => {
   const [session, setSession] = useState<TavusVideoSession | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -50,9 +51,6 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const speechSynthesisRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isProcessingRef = useRef(false);
-  const instanceIdRef = useRef<string>(`instance-${Date.now()}-${Math.random()}`);
-  const hasInitializedRef = useRef(false);
-  const hasSpokenWelcomeRef = useRef(false);
 
   // Vérifier le support de la reconnaissance vocale et synthèse vocale
   useEffect(() => {
@@ -65,11 +63,9 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     }
   }, []);
 
-  // Initialiser la session Tavus avec système de queue
+  // Initialiser la session Tavus
   useEffect(() => {
-    if (isVisible && !session && !hasInitializedRef.current) {
-      hasInitializedRef.current = true;
-      console.log(`🚀 [${instanceIdRef.current}] Initialisation de la session avec queue`);
+    if (isVisible && !session) {
       initializeSession();
     }
   }, [isVisible]);
@@ -77,7 +73,18 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   // Nettoyer les ressources
   useEffect(() => {
     return () => {
-      cleanupSession();
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      if (speechSynthesisRef.current) {
+        window.speechSynthesis.cancel();
+      }
+      if (externalWindow && !externalWindow.closed) {
+        externalWindow.close();
+      }
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
     };
   }, [externalWindow]);
 
@@ -88,31 +95,10 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     }
   }, [chatMessages]);
 
-  const cleanupSession = () => {
-    console.log(`🧹 [${instanceIdRef.current}] Nettoyage de la session`);
-    
-    hasInitializedRef.current = false;
-    hasSpokenWelcomeRef.current = false;
-    
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-    if (speechSynthesisRef.current) {
-      window.speechSynthesis.cancel();
-    }
-    if (externalWindow && !externalWindow.closed) {
-      externalWindow.close();
-    }
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-    }
-  };
-
-  // Fonction de synthèse vocale avec callback pour relancer l'écoute
-  const speakText = (text: string, onSpeechEnd?: () => void) => {
+  // Fonction de synthèse vocale
+  const speakText = (text: string) => {
     if (!voiceEnabled || !window.speechSynthesis) {
       console.log('🔇 Synthèse vocale désactivée ou non supportée');
-      if (onSpeechEnd) onSpeechEnd();
       return;
     }
 
@@ -152,22 +138,14 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       if (session) {
         setSession(prev => prev ? { ...prev, status: 'ready' } : null);
       }
-      
-      if (onSpeechEnd) onSpeechEnd();
     };
 
     utterance.onerror = (event) => {
-      // Handle interrupted speech synthesis gracefully
-      if (event.error === 'interrupted') {
-        console.log('🔇 Synthèse vocale interrompue (comportement normal)');
-      } else {
-        console.error('❌ Erreur synthèse vocale:', event.error);
-      }
+      console.error('❌ Erreur synthèse vocale:', event.error);
       setIsSpeaking(false);
       if (session) {
         setSession(prev => prev ? { ...prev, status: 'ready' } : null);
       }
-      if (onSpeechEnd) onSpeechEnd();
     };
 
     speechSynthesisRef.current = utterance;
@@ -176,9 +154,10 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
 
   const initializeSession = async () => {
     setIsLoading(true);
+    setError(null);
     
     try {
-      console.log(`🚀 [${instanceIdRef.current}] Initialisation de la session avec données complètes du patient:`, {
+      console.log('🚀 Initialisation de la session avec données complètes du patient:', {
         nom: patient.nom,
         prenom: patient.prenom,
         consultations: patient.consultations?.length || 0,
@@ -191,7 +170,10 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       setSession(newSession);
       
       // Message de bienvenue enrichi avec informations sur les capacités
-      let welcomeContent = `Bonjour ! Je suis Dr. IA Assistant, votre assistant médical virtuel spécialisé. J'ai accès à l'ensemble du dossier de ${patient.prenom} ${patient.nom}, incluant :
+      const welcomeMessage: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        type: 'ai',
+        content: `Bonjour ! Je suis Dr. IA Assistant, votre assistant médical virtuel spécialisé. J'ai accès à l'ensemble du dossier de ${patient.prenom} ${patient.nom}, incluant :
 
 📋 Historique médical complet
 🩺 ${patient.consultations?.length || 0} consultation(s) enregistrée(s)
@@ -205,51 +187,19 @@ Je peux répondre à vos questions sur tous ces aspects. Vous pouvez me demander
 - Les rendez-vous passés et à venir
 - Les traitements et recommandations
 
-Que souhaitez-vous savoir ?`;
-
-      // Ajouter le message d'information si nécessaire
-      if (newSession.errorMessage) {
-        welcomeContent = `ℹ️ ${newSession.errorMessage}\n\n${welcomeContent}`;
-      }
-
-      const welcomeMessage: ChatMessage = {
-        id: `msg-${Date.now()}`,
-        type: 'ai',
-        content: welcomeContent,
+Que souhaitez-vous savoir ?`,
         timestamp: new Date()
       };
       setChatMessages([welcomeMessage]);
       
-      // Présentation vocale automatique - UNE SEULE FOIS
-      if (!hasSpokenWelcomeRef.current) {
-        hasSpokenWelcomeRef.current = true;
-        setTimeout(() => {
-          let spokenText = `Bonjour ! Je suis Dr. IA Assistant. J'ai accès au dossier complet de ${patient.prenom} ${patient.nom}, incluant ses consultations, factures et rendez-vous. Que souhaitez-vous savoir ?`;
-          
-          if (newSession.errorMessage) {
-            spokenText = `${newSession.errorMessage} ${spokenText}`;
-          }
-          
-          speakText(spokenText);
-        }, 1000);
-      }
+      // Présentation vocale automatique
+      setTimeout(() => {
+        speakText(`Bonjour ! Je suis Dr. IA Assistant. J'ai accès au dossier complet de ${patient.prenom} ${patient.nom}, incluant ses consultations, factures et rendez-vous. Que souhaitez-vous savoir ?`);
+      }, 1000);
       
     } catch (err) {
-      console.error(`❌ [${instanceIdRef.current}] Erreur lors de l'initialisation:`, err);
-      
-      // Cette erreur ne devrait plus se produire car le service retourne toujours une session
-      // Mais on garde une sécurité au cas où
-      const fallbackSession: TavusVideoSession = {
-        sessionId: `fallback-${Date.now()}`,
-        videoUrl: '#demo-mode',
-        status: 'ready',
-        isDemoMode: true,
-        patientData: patient,
-        errorMessage: 'Erreur d\'initialisation. Fonctionnement en mode démonstration.'
-      };
-      setSession(fallbackSession);
-      
-      hasInitializedRef.current = false;
+      console.error('Erreur lors de l\'initialisation:', err);
+      setError(err instanceof Error ? err.message : 'Erreur d\'initialisation');
     } finally {
       setIsLoading(false);
     }
@@ -265,7 +215,7 @@ Que souhaitez-vous savoir ?`;
     console.log('🎯 Traitement du transcript avec contexte patient:', transcript);
 
     try {
-      // Ajouter le message utilisateur au chat IMMÉDIATEMENT
+      // Ajouter le message utilisateur au chat
       const userMessage: ChatMessage = {
         id: `msg-${Date.now()}-user`,
         type: 'user',
@@ -526,28 +476,27 @@ Que souhaitez-vous savoir ?`;
   };
 
   const handleClose = async () => {
-    console.log(`🚪 [${instanceIdRef.current}] Fermeture de la session`);
-    
-    // Arrêter l'écoute si active
-    if (isListening) {
-      stopListening();
-    }
-    
     if (session) {
       await tavusService.endSession();
     }
-    
-    // Nettoyer toutes les ressources
-    cleanupSession();
-    
-    // Réinitialiser les états
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
+    if (externalWindow && !externalWindow.closed) {
+      externalWindow.close();
+    }
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+    }
     setSession(null);
     setChatMessages([]);
     setFinalTranscript('');
     setInterimTranscript('');
     setIsSpeaking(false);
     isProcessingRef.current = false;
-    
     onClose();
   };
 
@@ -607,37 +556,24 @@ Que souhaitez-vous savoir ?`;
                 <p className="text-gray-600">Initialisation de l'assistant IA...</p>
                 <p className="text-sm text-purple-600 mt-2">Chargement des données patient complètes</p>
               </div>
+            ) : error ? (
+              <div className="text-center max-w-md">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Bot className="w-8 h-8 text-red-600" />
+                </div>
+                <p className="text-red-600 mb-4">{error}</p>
+                <button
+                  onClick={initializeSession}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  Réessayer
+                </button>
+              </div>
             ) : session ? (
               <div className="text-center w-full">
-                {/* Error message display */}
-                {session.errorMessage && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-5 h-5 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-800">Information</span>
-                    </div>
-                    <p className="text-sm text-blue-700">{session.errorMessage}</p>
-                  </div>
-                )}
-
-                {/* Session sharing indicator */}
-                {session.errorMessage?.includes('Session partagée') && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Users className="w-5 h-5 text-yellow-600" />
-                      <span className="text-sm font-medium text-yellow-800">Session Partagée</span>
-                    </div>
-                    <p className="text-sm text-yellow-700">
-                      Vous consultez maintenant le dossier de {patient.prenom} {patient.nom} dans une session partagée.
-                    </p>
-                  </div>
-                )}
-
                 {/* Avatar simulé */}
                 <div className={`w-48 h-48 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl transition-all duration-300 ${
                   isSpeaking ? 'scale-110 shadow-purple-300' : ''
-                } ${
-                  isListening ? 'ring-4 ring-orange-300 ring-opacity-75' : ''
                 }`}>
                   <Bot className={`w-24 h-24 text-white transition-all duration-300 ${
                     isSpeaking ? 'animate-pulse' : ''
@@ -696,8 +632,8 @@ Que souhaitez-vous savoir ?`;
                   </div>
                 )}
 
-                {/* Controls - UN SEUL BOUTON */}
-                <div className="flex justify-center gap-3 flex-wrap">
+                {/* Controls */}
+                <div className="flex justify-center gap-3">
                   {speechSupported ? (
                     <button
                       onClick={isListening ? stopListening : startListening}
@@ -711,7 +647,7 @@ Que souhaitez-vous savoir ?`;
                       {isListening ? (
                         <>
                           <MicOff className="w-5 h-5" />
-                          Arrêter l'écoute
+                          Arrêter
                         </>
                       ) : (
                         <>
@@ -740,13 +676,6 @@ Que souhaitez-vous savoir ?`;
                       Ouvrir Avatar
                     </button>
                   )}
-                </div>
-
-                {/* Instructions */}
-                <div className="mt-4 text-xs text-gray-600 max-w-md mx-auto">
-                  <p>
-                    Cliquez sur "Parler" pour activer l'écoute vocale. L'IA vous répondra automatiquement.
-                  </p>
                 </div>
               </div>
             ) : null}
