@@ -1,32 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  ArrowLeft, 
-  Users, 
-  Image as ImageIcon, 
-  Palette, 
-  Target, 
-  TrendingUp,
-  Share2,
-  Download,
-  RefreshCw,
-  Eye,
-  Heart,
-  Zap,
-  Globe,
-  Award,
-  Clock,
-  MapPin,
-  Loader,
-  CheckCircle,
-  AlertCircle,
-  X,
-  Shield,
-  User,
-  Sparkles,
-  Trophy,
-  Star,
-  Confetti
-} from 'lucide-react';
+import { ArrowLeft, Users, Image as ImageIcon, Palette, Target, TrendingUp, Share2, Download, RefreshCw, Eye, Heart, Zap, Globe, Award, Clock, MapPin, Loader, CheckCircle, AlertCircle, X, Shield, User, Sparkles, Trophy, Star, SettingsIcon as Confetti } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { LanguageSelector } from './LanguageSelector';
 import { 
