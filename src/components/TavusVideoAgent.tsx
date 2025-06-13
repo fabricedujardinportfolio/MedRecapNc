@@ -169,11 +169,6 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       const newSession = await tavusService.initializePatientSession(patient);
       setSession(newSession);
       
-      // Check if session is in demo mode and display reason
-      if (newSession.isDemoMode && newSession.reasonForDemo) {
-        setError(newSession.reasonForDemo);
-      }
-      
       // Message de bienvenue enrichi avec informations sur les capacités
       const welcomeMessage: ChatMessage = {
         id: `msg-${Date.now()}`,
@@ -567,14 +562,12 @@ Que souhaitez-vous savoir ?`,
                   <Bot className="w-8 h-8 text-red-600" />
                 </div>
                 <p className="text-red-600 mb-4">{error}</p>
-                {!session && (
-                  <button
-                    onClick={initializeSession}
-                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-                  >
-                    Réessayer
-                  </button>
-                )}
+                <button
+                  onClick={initializeSession}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  Réessayer
+                </button>
               </div>
             ) : session ? (
               <div className="text-center w-full">
