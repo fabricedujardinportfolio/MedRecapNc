@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Stethoscope, User, Calendar, Clock, FileText, Pill } from 'lucide-react';
+import { ConsultationData, patientService } from '../services/patientService';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface ConsultationModalProps {
   onClose: () => void;
@@ -7,52 +9,102 @@ interface ConsultationModalProps {
 }
 
 export const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, patientId }) => {
-  const [formData, setFormData] = useState({
-    patientId: patientId || '',
-    date: new Date().toISOString().split('T')[0],
-    heure: new Date().toTimeString().slice(0, 5),
+  const { t } = useLanguage();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [patients, setPatients] = useState<Array<{id: string, nom: string, prenom: string}>>([]);
+  const [isLoadingPatients, setIsLoadingPatients] = useState(false);
+  
+  const [formData, setFormData] = useState<Omit<ConsultationData, 'id'>>({
+    patient_id: patientId || '',
+    date: new Date().toISOString().split('T')[0] + 'T' + new Date().toTimeString().slice(0, 5),
     motif: '',
     diagnostic: '',
     traitement: '',
     observations: '',
+    medecin_nom: 'Dr. Martin Dubois',
     duree: 30,
     type: 'consultation',
+    statut: 'terminee',
     tarif: 25,
-    signesVitaux: {
-      tension: '',
-      pouls: '',
-      temperature: '',
-      poids: '',
-      taille: ''
-    },
-    medicaments: [{ nom: '', dosage: '', duree: '', instructions: '' }],
-    examens: [''],
-    arretTravail: {
-      active: false,
-      duree: 0,
-      motif: ''
-    }
+    tension: '',
+    pouls: undefined,
+    temperature: undefined,
+    poids: undefined,
+    taille: undefined
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [medicaments, setMedicaments] = useState([
+    { nom: '', dosage: '', duree: '', instructions: '' }
+  ]);
+
+  const [arretTravail, setArretTravail] = useState({
+    active: false,
+    duree: 0,
+    motif: ''
+  });
+
+  // Charger la liste des patients
+  useEffect(() => {
+    const loadPatients = async () => {
+      setIsLoadingPatients(true);
+      try {
+        const allPatients = await patientService.getAllPatients();
+        setPatients(allPatients.map(p => ({
+          id: p.id || '',
+          nom: p.nom,
+          prenom: p.prenom
+        })));
+      } catch (error) {
+        console.error('Erreur lors du chargement des patients:', error);
+      } finally {
+        setIsLoadingPatients(false);
+      }
+    };
+    
+    loadPatients();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Ici on sauvegarderait la consultation
-    console.log('Nouvelle consultation:', formData);
-    onClose();
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Validation basique
+      if (!formData.patient_id || !formData.motif || !formData.diagnostic) {
+        throw new Error('Veuillez remplir tous les champs obligatoires');
+      }
+      
+      // Créer la consultation
+      const consultationData = {
+        ...formData,
+        // Convertir les valeurs numériques
+        duree: typeof formData.duree === 'string' ? parseInt(formData.duree) : formData.duree,
+        pouls: formData.pouls ? Number(formData.pouls) : undefined,
+        temperature: formData.temperature ? Number(formData.temperature) : undefined,
+        poids: formData.poids ? Number(formData.poids) : undefined,
+        taille: formData.taille ? Number(formData.taille) : undefined,
+        tarif: typeof formData.tarif === 'string' ? parseFloat(formData.tarif) : formData.tarif
+      };
+      
+      const newConsultation = await patientService.createConsultation(consultationData);
+      
+      console.log('✅ Nouvelle consultation créée:', newConsultation);
+      
+      // Fermer le modal
+      onClose();
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la création de la consultation:', error);
+      setError(error instanceof Error ? error.message : 'Erreur lors de la création de la consultation');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const addMedicament = () => {
-    setFormData(prev => ({
-      ...prev,
-      medicaments: [...prev.medicaments, { nom: '', dosage: '', duree: '', instructions: '' }]
-    }));
-  };
-
-  const addExamen = () => {
-    setFormData(prev => ({
-      ...prev,
-      examens: [...prev.examens, '']
-    }));
+    setMedicaments(prev => [...prev, { nom: '', dosage: '', duree: '', instructions: '' }]);
   };
 
   return (
@@ -79,7 +131,7 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, p
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Informations générales */}
             <div className="space-y-6">
               <div className="bg-gray-50 rounded-xl p-6">
@@ -93,61 +145,37 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, p
                       Patient
                     </label>
                     <select
-                      value={formData.patientId}
-                      onChange={(e) => setFormData(prev => ({ ...prev, patientId: e.target.value }))}
+                      value={formData.patient_id}
+                      onChange={(e) => setFormData(prev => ({ ...prev, patient_id: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
+                      disabled={!!patientId}
                     >
                       <option value="">Sélectionner un patient</option>
-                      <option value="PAT-001">Marie Dubois</option>
-                      <option value="PAT-002">Pierre Kanak</option>
-                      <option value="PAT-003">Sarah Johnson</option>
-                      <option value="PAT-004">Jean Tamate</option>
+                      {isLoadingPatients ? (
+                        <option value="" disabled>Chargement des patients...</option>
+                      ) : (
+                        patients.map(patient => (
+                          <option key={patient.id} value={patient.id}>
+                            {patient.prenom} {patient.nom}
+                          </option>
+                        ))
+                      )}
                     </select>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Date
+                        Date et heure
                       </label>
                       <input
-                        type="date"
+                        type="datetime-local"
                         value={formData.date}
                         onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Heure
-                      </label>
-                      <input
-                        type="time"
-                        value={formData.heure}
-                        onChange={(e) => setFormData(prev => ({ ...prev, heure: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Type
-                      </label>
-                      <select
-                        value={formData.type}
-                        onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="consultation">Consultation</option>
-                        <option value="suivi">Suivi</option>
-                        <option value="urgence">Urgence</option>
-                        <option value="visite">Visite</option>
-                      </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -161,6 +189,39 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, p
                         min="15"
                         max="120"
                       />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Type
+                      </label>
+                      <select
+                        value={formData.type}
+                        onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="consultation">Consultation</option>
+                        <option value="suivi">Suivi</option>
+                        <option value="urgence">Urgence</option>
+                        <option value="visite">Visite</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Statut
+                      </label>
+                      <select
+                        value={formData.statut}
+                        onChange={(e) => setFormData(prev => ({ ...prev, statut: e.target.value as any }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="terminee">Terminée</option>
+                        <option value="en_cours">En cours</option>
+                        <option value="programmee">Programmée</option>
+                        <option value="annulee">Annulée</option>
+                      </select>
                     </div>
                   </div>
 
@@ -192,10 +253,10 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, p
                     </label>
                     <input
                       type="text"
-                      value={formData.signesVitaux.tension}
+                      value={formData.tension || ''}
                       onChange={(e) => setFormData(prev => ({
                         ...prev,
-                        signesVitaux: { ...prev.signesVitaux, tension: e.target.value }
+                        tension: e.target.value
                       }))}
                       placeholder="120/80"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -207,10 +268,10 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, p
                     </label>
                     <input
                       type="number"
-                      value={formData.signesVitaux.pouls}
+                      value={formData.pouls || ''}
                       onChange={(e) => setFormData(prev => ({
                         ...prev,
-                        signesVitaux: { ...prev.signesVitaux, pouls: e.target.value }
+                        pouls: e.target.value ? parseInt(e.target.value) : undefined
                       }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
@@ -222,10 +283,10 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, p
                     <input
                       type="number"
                       step="0.1"
-                      value={formData.signesVitaux.temperature}
+                      value={formData.temperature || ''}
                       onChange={(e) => setFormData(prev => ({
                         ...prev,
-                        signesVitaux: { ...prev.signesVitaux, temperature: e.target.value }
+                        temperature: e.target.value ? parseFloat(e.target.value) : undefined
                       }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
@@ -237,10 +298,10 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, p
                     <input
                       type="number"
                       step="0.1"
-                      value={formData.signesVitaux.poids}
+                      value={formData.poids || ''}
                       onChange={(e) => setFormData(prev => ({
                         ...prev,
-                        signesVitaux: { ...prev.signesVitaux, poids: e.target.value }
+                        poids: e.target.value ? parseFloat(e.target.value) : undefined
                       }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
@@ -330,16 +391,16 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, p
                         + Ajouter
                       </button>
                     </div>
-                    {formData.medicaments.map((med, index) => (
+                    {medicaments.map((med, index) => (
                       <div key={index} className="grid grid-cols-2 gap-2 mb-2">
                         <input
                           type="text"
                           placeholder="Nom du médicament"
                           value={med.nom}
                           onChange={(e) => {
-                            const newMeds = [...formData.medicaments];
+                            const newMeds = [...medicaments];
                             newMeds[index].nom = e.target.value;
-                            setFormData(prev => ({ ...prev, medicaments: newMeds }));
+                            setMedicaments(newMeds);
                           }}
                           className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                         />
@@ -348,9 +409,9 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, p
                           placeholder="Dosage"
                           value={med.dosage}
                           onChange={(e) => {
-                            const newMeds = [...formData.medicaments];
+                            const newMeds = [...medicaments];
                             newMeds[index].dosage = e.target.value;
-                            setFormData(prev => ({ ...prev, medicaments: newMeds }));
+                            setMedicaments(newMeds);
                           }}
                           className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                         />
@@ -363,34 +424,34 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, p
                     <label className="flex items-center gap-2 mb-2">
                       <input
                         type="checkbox"
-                        checked={formData.arretTravail.active}
-                        onChange={(e) => setFormData(prev => ({
+                        checked={arretTravail.active}
+                        onChange={(e) => setArretTravail(prev => ({
                           ...prev,
-                          arretTravail: { ...prev.arretTravail, active: e.target.checked }
+                          active: e.target.checked
                         }))}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                       <span className="text-sm font-medium text-gray-700">Arrêt de travail</span>
                     </label>
-                    {formData.arretTravail.active && (
+                    {arretTravail.active && (
                       <div className="grid grid-cols-2 gap-2">
                         <input
                           type="number"
                           placeholder="Durée (jours)"
-                          value={formData.arretTravail.duree}
-                          onChange={(e) => setFormData(prev => ({
+                          value={arretTravail.duree}
+                          onChange={(e) => setArretTravail(prev => ({
                             ...prev,
-                            arretTravail: { ...prev.arretTravail, duree: parseInt(e.target.value) }
+                            duree: parseInt(e.target.value)
                           }))}
                           className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                         />
                         <input
                           type="text"
                           placeholder="Motif"
-                          value={formData.arretTravail.motif}
-                          onChange={(e) => setFormData(prev => ({
+                          value={arretTravail.motif}
+                          onChange={(e) => setArretTravail(prev => ({
                             ...prev,
-                            arretTravail: { ...prev.arretTravail, motif: e.target.value }
+                            motif: e.target.value
                           }))}
                           className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                         />
@@ -402,20 +463,36 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ onClose, p
             </div>
           </div>
 
+          {/* Error Display */}
+          {error && (
+            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
               className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              disabled={isLoading}
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              disabled={isLoading}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors flex items-center gap-2"
             >
-              Enregistrer la consultation
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Enregistrement...
+                </>
+              ) : (
+                'Enregistrer la consultation'
+              )}
             </button>
           </div>
         </form>

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, FileText, Euro, Calendar, User } from 'lucide-react';
+import { FactureData, patientService } from '../services/patientService';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface FactureModalProps {
   onClose: () => void;
@@ -8,33 +10,94 @@ interface FactureModalProps {
 }
 
 export const FactureModal: React.FC<FactureModalProps> = ({ onClose, patientId, consultationId }) => {
-  const [formData, setFormData] = useState({
-    patientId: patientId || '',
-    consultationId: consultationId || '',
+  const { t } = useLanguage();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [patients, setPatients] = useState<Array<{id: string, nom: string, prenom: string}>>([]);
+  const [isLoadingPatients, setIsLoadingPatients] = useState(false);
+  
+  const [formData, setFormData] = useState<Omit<FactureData, 'id'>>({
+    patient_id: patientId || '',
+    consultation_id: consultationId || '',
     numero: `F${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`,
     date: new Date().toISOString().split('T')[0],
-    dateEcheance: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    date_echeance: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    montant_total: 25,
+    montant_paye: 0,
+    montant_restant: 25,
+    statut: 'en_attente',
     details: [
-      { description: 'Consultation médicale', quantite: 1, prixUnitaire: 25, total: 25 }
+      { description: 'Consultation médicale', quantite: 1, prix_unitaire: 25, total: 25 }
     ],
-    remboursement: {
-      securiteSociale: 17.50,
-      mutuelle: 7.50,
-      restACharge: 0
-    },
+    remboursement_securite_sociale: 17.50,
+    remboursement_mutuelle: 7.50,
+    remboursement_reste_a_charge: 0,
     notes: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Charger la liste des patients
+  useEffect(() => {
+    const loadPatients = async () => {
+      setIsLoadingPatients(true);
+      try {
+        const allPatients = await patientService.getAllPatients();
+        setPatients(allPatients.map(p => ({
+          id: p.id || '',
+          nom: p.nom,
+          prenom: p.prenom
+        })));
+      } catch (error) {
+        console.error('Erreur lors du chargement des patients:', error);
+      } finally {
+        setIsLoadingPatients(false);
+      }
+    };
+    
+    loadPatients();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Nouvelle facture:', formData);
-    onClose();
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Validation basique
+      if (!formData.patient_id || !formData.numero || !formData.date) {
+        throw new Error('Veuillez remplir tous les champs obligatoires');
+      }
+      
+      // Créer la facture
+      const factureData = {
+        ...formData,
+        // Convertir les valeurs numériques
+        montant_total: typeof formData.montant_total === 'string' ? parseFloat(formData.montant_total) : formData.montant_total,
+        montant_paye: typeof formData.montant_paye === 'string' ? parseFloat(formData.montant_paye) : formData.montant_paye,
+        montant_restant: typeof formData.montant_restant === 'string' ? parseFloat(formData.montant_restant) : formData.montant_restant,
+        remboursement_securite_sociale: typeof formData.remboursement_securite_sociale === 'string' ? parseFloat(formData.remboursement_securite_sociale) : formData.remboursement_securite_sociale,
+        remboursement_mutuelle: typeof formData.remboursement_mutuelle === 'string' ? parseFloat(formData.remboursement_mutuelle) : formData.remboursement_mutuelle,
+        remboursement_reste_a_charge: typeof formData.remboursement_reste_a_charge === 'string' ? parseFloat(formData.remboursement_reste_a_charge) : formData.remboursement_reste_a_charge
+      };
+      
+      const newFacture = await patientService.createFacture(factureData);
+      
+      console.log('✅ Nouvelle facture créée:', newFacture);
+      
+      // Fermer le modal
+      onClose();
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la création de la facture:', error);
+      setError(error instanceof Error ? error.message : 'Erreur lors de la création de la facture');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const addDetail = () => {
     setFormData(prev => ({
       ...prev,
-      details: [...prev.details, { description: '', quantite: 1, prixUnitaire: 0, total: 0 }]
+      details: [...prev.details, { description: '', quantite: 1, prix_unitaire: 0, total: 0 }]
     }));
   };
 
@@ -42,14 +105,32 @@ export const FactureModal: React.FC<FactureModalProps> = ({ onClose, patientId, 
     const newDetails = [...formData.details];
     newDetails[index] = { ...newDetails[index], [field]: value };
     
-    if (field === 'quantite' || field === 'prixUnitaire') {
-      newDetails[index].total = newDetails[index].quantite * newDetails[index].prixUnitaire;
+    if (field === 'quantite' || field === 'prix_unitaire') {
+      newDetails[index].total = newDetails[index].quantite * newDetails[index].prix_unitaire;
     }
     
     setFormData(prev => ({ ...prev, details: newDetails }));
+    
+    // Recalculer le montant total
+    const montantTotal = newDetails.reduce((sum, detail) => sum + detail.total, 0);
+    setFormData(prev => ({ 
+      ...prev, 
+      montant_total: montantTotal,
+      montant_restant: montantTotal - prev.montant_paye
+    }));
   };
 
-  const montantTotal = formData.details.reduce((sum, detail) => sum + detail.total, 0);
+  // Mettre à jour le montant restant quand le montant payé change
+  const updateMontantPaye = (value: number) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      montant_paye: value,
+      montant_restant: prev.montant_total - value,
+      statut: value === 0 ? 'en_attente' : 
+              value === prev.montant_total ? 'payee' : 
+              'partiellement_payee'
+    }));
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -101,16 +182,22 @@ export const FactureModal: React.FC<FactureModalProps> = ({ onClose, patientId, 
                     Patient
                   </label>
                   <select
-                    value={formData.patientId}
-                    onChange={(e) => setFormData(prev => ({ ...prev, patientId: e.target.value }))}
+                    value={formData.patient_id}
+                    onChange={(e) => setFormData(prev => ({ ...prev, patient_id: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     required
+                    disabled={!!patientId}
                   >
                     <option value="">Sélectionner un patient</option>
-                    <option value="PAT-001">Marie Dubois</option>
-                    <option value="PAT-002">Pierre Kanak</option>
-                    <option value="PAT-003">Sarah Johnson</option>
-                    <option value="PAT-004">Jean Tamate</option>
+                    {isLoadingPatients ? (
+                      <option value="" disabled>Chargement des patients...</option>
+                    ) : (
+                      patients.map(patient => (
+                        <option key={patient.id} value={patient.id}>
+                          {patient.prenom} {patient.nom}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -133,8 +220,8 @@ export const FactureModal: React.FC<FactureModalProps> = ({ onClose, patientId, 
                   </label>
                   <input
                     type="date"
-                    value={formData.dateEcheance}
-                    onChange={(e) => setFormData(prev => ({ ...prev, dateEcheance: e.target.value }))}
+                    value={formData.date_echeance}
+                    onChange={(e) => setFormData(prev => ({ ...prev, date_echeance: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     required
                   />
@@ -184,8 +271,8 @@ export const FactureModal: React.FC<FactureModalProps> = ({ onClose, patientId, 
                       <input
                         type="number"
                         placeholder="Prix"
-                        value={detail.prixUnitaire}
-                        onChange={(e) => updateDetail(index, 'prixUnitaire', parseFloat(e.target.value) || 0)}
+                        value={detail.prix_unitaire}
+                        onChange={(e) => updateDetail(index, 'prix_unitaire', parseFloat(e.target.value) || 0)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                         step="0.01"
                         min="0"
@@ -205,6 +292,14 @@ export const FactureModal: React.FC<FactureModalProps> = ({ onClose, patientId, 
                         onClick={() => {
                           const newDetails = formData.details.filter((_, i) => i !== index);
                           setFormData(prev => ({ ...prev, details: newDetails }));
+                          
+                          // Recalculer le montant total
+                          const montantTotal = newDetails.reduce((sum, d) => sum + d.total, 0);
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            montant_total: montantTotal,
+                            montant_restant: montantTotal - prev.montant_paye
+                          }));
                         }}
                         className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
                       >
@@ -219,30 +314,95 @@ export const FactureModal: React.FC<FactureModalProps> = ({ onClose, patientId, 
                 <div className="flex justify-end">
                   <div className="text-right">
                     <p className="text-lg font-semibold text-gray-900">
-                      Total: {montantTotal.toFixed(2)} €
+                      Total: {formData.montant_total.toFixed(2)} €
                     </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Remboursement */}
+            {/* Paiement et remboursement */}
             <div className="bg-green-50 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-green-600" />
-                Remboursement
+                Paiement et remboursement
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Montant payé (€)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.montant_paye}
+                    onChange={(e) => updateMontantPaye(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    step="0.01"
+                    min="0"
+                    max={formData.montant_total}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reste à payer (€)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.montant_restant.toFixed(2)}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Statut
+                  </label>
+                  <select
+                    value={formData.statut}
+                    onChange={(e) => setFormData(prev => ({ ...prev, statut: e.target.value as any }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="en_attente">En attente</option>
+                    <option value="partiellement_payee">Partiellement payée</option>
+                    <option value="payee">Payée</option>
+                    <option value="en_retard">En retard</option>
+                    <option value="annulee">Annulée</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Méthode de paiement
+                  </label>
+                  <select
+                    value={formData.methode_paiement || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, methode_paiement: e.target.value || undefined }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="">Sélectionner</option>
+                    <option value="especes">Espèces</option>
+                    <option value="carte">Carte bancaire</option>
+                    <option value="cheque">Chèque</option>
+                    <option value="virement">Virement</option>
+                    <option value="securite_sociale">Sécurité sociale</option>
+                  </select>
+                </div>
+              </div>
+              
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Remboursement</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">
                     Sécurité Sociale (€)
                   </label>
                   <input
                     type="number"
-                    value={formData.remboursement.securiteSociale}
+                    value={formData.remboursement_securite_sociale}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      remboursement: { ...prev.remboursement, securiteSociale: parseFloat(e.target.value) || 0 }
+                      remboursement_securite_sociale: parseFloat(e.target.value) || 0
                     }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     step="0.01"
@@ -251,15 +411,15 @@ export const FactureModal: React.FC<FactureModalProps> = ({ onClose, patientId, 
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs text-gray-500 mb-1">
                     Mutuelle (€)
                   </label>
                   <input
                     type="number"
-                    value={formData.remboursement.mutuelle}
+                    value={formData.remboursement_mutuelle}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      remboursement: { ...prev.remboursement, mutuelle: parseFloat(e.target.value) || 0 }
+                      remboursement_mutuelle: parseFloat(e.target.value) || 0
                     }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     step="0.01"
@@ -268,15 +428,15 @@ export const FactureModal: React.FC<FactureModalProps> = ({ onClose, patientId, 
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs text-gray-500 mb-1">
                     Reste à charge (€)
                   </label>
                   <input
                     type="number"
-                    value={formData.remboursement.restACharge}
+                    value={formData.remboursement_reste_a_charge}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      remboursement: { ...prev.remboursement, restACharge: parseFloat(e.target.value) || 0 }
+                      remboursement_reste_a_charge: parseFloat(e.target.value) || 0
                     }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     step="0.01"
@@ -292,13 +452,20 @@ export const FactureModal: React.FC<FactureModalProps> = ({ onClose, patientId, 
                 Notes (optionnel)
               </label>
               <textarea
-                value={formData.notes}
+                value={formData.notes || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 rows={3}
                 placeholder="Notes additionnelles..."
               />
             </div>
+            
+            {/* Error Display */}
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+            )}
           </div>
 
           {/* Actions */}
@@ -307,14 +474,23 @@ export const FactureModal: React.FC<FactureModalProps> = ({ onClose, patientId, 
               type="button"
               onClick={onClose}
               className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              disabled={isLoading}
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              disabled={isLoading}
+              className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors flex items-center gap-2"
             >
-              Créer la facture
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Création...
+                </>
+              ) : (
+                'Créer la facture'
+              )}
             </button>
           </div>
         </form>

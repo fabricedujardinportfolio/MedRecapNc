@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, User, MapPin } from 'lucide-react';
+import { RendezVousData, patientService } from '../services/patientService';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface RendezVousModalProps {
   onClose: () => void;
@@ -7,22 +9,89 @@ interface RendezVousModalProps {
 }
 
 export const RendezVousModal: React.FC<RendezVousModalProps> = ({ onClose, patientId }) => {
-  const [formData, setFormData] = useState({
-    patientId: patientId || '',
+  const { t } = useLanguage();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [patients, setPatients] = useState<Array<{id: string, nom: string, prenom: string}>>([]);
+  const [isLoadingPatients, setIsLoadingPatients] = useState(false);
+  
+  const [formData, setFormData] = useState<Omit<RendezVousData, 'id'>>({
+    patient_id: patientId || '',
+    patient_nom: '',
     date: new Date().toISOString().split('T')[0],
-    heureDebut: '09:00',
-    heureFin: '09:30',
+    heure_debut: '09:00',
+    heure_fin: '09:30',
     motif: '',
     type: 'consultation',
+    statut: 'programme',
+    medecin_id: 'MED-001',
+    medecin_nom: 'Dr. Martin Dubois',
     salle: 'Cabinet 1',
     notes: '',
-    rappelEnvoye: false
+    rappel_envoye: false
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Charger la liste des patients
+  useEffect(() => {
+    const loadPatients = async () => {
+      setIsLoadingPatients(true);
+      try {
+        const allPatients = await patientService.getAllPatients();
+        setPatients(allPatients.map(p => ({
+          id: p.id || '',
+          nom: p.nom,
+          prenom: p.prenom
+        })));
+        
+        // Si un patientId est fourni, trouver le nom du patient
+        if (patientId) {
+          const selectedPatient = allPatients.find(p => p.id === patientId);
+          if (selectedPatient) {
+            setFormData(prev => ({ 
+              ...prev, 
+              patient_nom: `${selectedPatient.prenom} ${selectedPatient.nom}`
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des patients:', error);
+      } finally {
+        setIsLoadingPatients(false);
+      }
+    };
+    
+    loadPatients();
+  }, [patientId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Nouveau rendez-vous:', formData);
-    onClose();
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Validation basique
+      if (!formData.patient_id || !formData.patient_nom || !formData.date || !formData.motif) {
+        throw new Error('Veuillez remplir tous les champs obligatoires');
+      }
+      
+      // Créer le rendez-vous
+      const rdvData = {
+        ...formData
+      };
+      
+      const newRdv = await patientService.createRendezVous(rdvData);
+      
+      console.log('✅ Nouveau rendez-vous créé:', newRdv);
+      
+      // Fermer le modal
+      onClose();
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la création du rendez-vous:', error);
+      setError(error instanceof Error ? error.message : 'Erreur lors de la création du rendez-vous');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateHeureFin = (heureDebut: string) => {
@@ -30,7 +99,25 @@ export const RendezVousModal: React.FC<RendezVousModalProps> = ({ onClose, patie
     const endTime = new Date();
     endTime.setHours(hours, minutes + 30, 0, 0);
     const heureFin = endTime.toTimeString().slice(0, 5);
-    setFormData(prev => ({ ...prev, heureDebut, heureFin }));
+    setFormData(prev => ({ ...prev, heure_debut: heureDebut, heure_fin: heureFin }));
+  };
+
+  // Mettre à jour le nom du patient quand l'ID change
+  const handlePatientChange = (patientId: string) => {
+    const selectedPatient = patients.find(p => p.id === patientId);
+    if (selectedPatient) {
+      setFormData(prev => ({ 
+        ...prev, 
+        patient_id: patientId,
+        patient_nom: `${selectedPatient.prenom} ${selectedPatient.nom}`
+      }));
+    } else {
+      setFormData(prev => ({ 
+        ...prev, 
+        patient_id: patientId,
+        patient_nom: ''
+      }));
+    }
   };
 
   return (
@@ -70,16 +157,22 @@ export const RendezVousModal: React.FC<RendezVousModalProps> = ({ onClose, patie
                     Patient
                   </label>
                   <select
-                    value={formData.patientId}
-                    onChange={(e) => setFormData(prev => ({ ...prev, patientId: e.target.value }))}
+                    value={formData.patient_id}
+                    onChange={(e) => handlePatientChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     required
+                    disabled={!!patientId}
                   >
                     <option value="">Sélectionner un patient</option>
-                    <option value="PAT-001">Marie Dubois</option>
-                    <option value="PAT-002">Pierre Kanak</option>
-                    <option value="PAT-003">Sarah Johnson</option>
-                    <option value="PAT-004">Jean Tamate</option>
+                    {isLoadingPatients ? (
+                      <option value="" disabled>Chargement des patients...</option>
+                    ) : (
+                      patients.map(patient => (
+                        <option key={patient.id} value={patient.id}>
+                          {patient.prenom} {patient.nom}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -89,7 +182,7 @@ export const RendezVousModal: React.FC<RendezVousModalProps> = ({ onClose, patie
                   </label>
                   <select
                     value={formData.type}
-                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   >
                     <option value="consultation">Consultation</option>
@@ -158,7 +251,7 @@ export const RendezVousModal: React.FC<RendezVousModalProps> = ({ onClose, patie
                   </label>
                   <input
                     type="time"
-                    value={formData.heureDebut}
+                    value={formData.heure_debut}
                     onChange={(e) => updateHeureFin(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
@@ -171,8 +264,8 @@ export const RendezVousModal: React.FC<RendezVousModalProps> = ({ onClose, patie
                   </label>
                   <input
                     type="time"
-                    value={formData.heureFin}
-                    onChange={(e) => setFormData(prev => ({ ...prev, heureFin: e.target.value }))}
+                    value={formData.heure_fin}
+                    onChange={(e) => setFormData(prev => ({ ...prev, heure_fin: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
@@ -191,8 +284,8 @@ export const RendezVousModal: React.FC<RendezVousModalProps> = ({ onClose, patie
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
-                      checked={formData.rappelEnvoye}
-                      onChange={(e) => setFormData(prev => ({ ...prev, rappelEnvoye: e.target.checked }))}
+                      checked={formData.rappel_envoye}
+                      onChange={(e) => setFormData(prev => ({ ...prev, rappel_envoye: e.target.checked }))}
                       className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                     />
                     <span className="text-sm font-medium text-gray-700">
@@ -209,7 +302,7 @@ export const RendezVousModal: React.FC<RendezVousModalProps> = ({ onClose, patie
                     Notes internes (optionnel)
                   </label>
                   <textarea
-                    value={formData.notes}
+                    value={formData.notes || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     rows={3}
@@ -218,6 +311,13 @@ export const RendezVousModal: React.FC<RendezVousModalProps> = ({ onClose, patie
                 </div>
               </div>
             </div>
+            
+            {/* Error Display */}
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+            )}
           </div>
 
           {/* Actions */}
@@ -226,14 +326,23 @@ export const RendezVousModal: React.FC<RendezVousModalProps> = ({ onClose, patie
               type="button"
               onClick={onClose}
               className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              disabled={isLoading}
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+              disabled={isLoading}
+              className="px-6 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-lg transition-colors flex items-center gap-2"
             >
-              Planifier le rendez-vous
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Planification...
+                </>
+              ) : (
+                'Planifier le rendez-vous'
+              )}
             </button>
           </div>
         </form>

@@ -109,7 +109,7 @@ export const CabinetDashboard: React.FC = () => {
       lieuNaissance: dbPatient.lieu_naissance,
       nationalite: dbPatient.nationalite,
       numeroSecuriteSociale: dbPatient.numero_securite_sociale || '',
-      situationFamiliale: dbPatient.situation_familiale,
+      situationFamiliale: dbPatient.situation_familiale || '',
       
       adresse: {
         rue: dbPatient.adresse_rue,
@@ -136,13 +136,13 @@ export const CabinetDashboard: React.FC = () => {
       medecinReferent: dbPatient.medecin_referent,
       statutSocial: dbPatient.statut_social || '',
       mutuelle: dbPatient.mutuelle,
-      prisEnCharge: dbPatient.pris_en_charge,
+      prisEnCharge: dbPatient.pris_en_charge || '',
       
       antecedents: {
-        personnels: dbPatient.antecedents_personnels,
-        familiaux: dbPatient.antecedents_familiaux
+        personnels: dbPatient.antecedents_personnels || [],
+        familiaux: dbPatient.antecedents_familiaux || []
       },
-      allergies: dbPatient.allergies,
+      allergies: dbPatient.allergies || [],
       traitements: [], // À charger séparément si nécessaire
       biometrie: {
         poids: dbPatient.biometrie_poids || 0,
@@ -150,16 +150,16 @@ export const CabinetDashboard: React.FC = () => {
         imc: dbPatient.biometrie_imc || 0
       },
       groupeSanguin: dbPatient.groupe_sanguin,
-      antecedenChirurgicaux: dbPatient.antecedents_chirurgicaux,
+      antecedenChirurgicaux: dbPatient.antecedents_chirurgicaux || [],
       habitudesVie: {
-        tabac: dbPatient.habitudes_vie_tabac,
-        alcool: dbPatient.habitudes_vie_alcool,
-        drogues: dbPatient.habitudes_vie_drogues,
-        details: dbPatient.habitudes_vie_details
+        tabac: dbPatient.habitudes_vie_tabac || false,
+        alcool: dbPatient.habitudes_vie_alcool || false,
+        drogues: dbPatient.habitudes_vie_drogues || false,
+        details: dbPatient.habitudes_vie_details || ''
       },
-      pathologiesConnues: dbPatient.pathologies_connues,
+      pathologiesConnues: dbPatient.pathologies_connues || [],
       motifHospitalisation: dbPatient.motif_hospitalisation,
-      diagnostics: dbPatient.diagnostics,
+      diagnostics: dbPatient.diagnostics || [],
       
       alerte: dbPatient.alerte_niveau ? {
         niveau: dbPatient.alerte_niveau,
@@ -172,8 +172,8 @@ export const CabinetDashboard: React.FC = () => {
       consultations: [], // À charger séparément
       factures: [], // À charger séparément
       rendezVous: [], // À charger séparément
-      typePatient: dbPatient.type_patient,
-      medecinCabinet: dbPatient.medecin_cabinet
+      typePatient: dbPatient.type_patient || 'cabinet',
+      medecinCabinet: dbPatient.medecin_cabinet || ''
     };
   };
 
@@ -247,6 +247,12 @@ export const CabinetDashboard: React.FC = () => {
   const handlePatientAdded = (newPatient: PatientData) => {
     console.log('✅ Nouveau patient ajouté:', newPatient);
     // Recharger les patients depuis la DB
+    loadPatientsFromDB();
+  };
+
+  // Gérer la mise à jour des données après ajout de consultation, facture ou RDV
+  const handleDataUpdated = () => {
+    console.log('🔄 Mise à jour des données après modification');
     loadPatientsFromDB();
   };
 
@@ -842,24 +848,34 @@ export const CabinetDashboard: React.FC = () => {
           patient={selectedPatient}
           onClose={() => setSelectedPatient(null)}
           showCabinetFeatures={true}
+          onPatientUpdated={handleDataUpdated}
         />
       )}
 
       {showConsultationModal && (
         <ConsultationModal
-          onClose={() => setShowConsultationModal(false)}
+          onClose={() => {
+            setShowConsultationModal(false);
+            handleDataUpdated();
+          }}
         />
       )}
 
       {showFactureModal && (
         <FactureModal
-          onClose={() => setShowFactureModal(false)}
+          onClose={() => {
+            setShowFactureModal(false);
+            handleDataUpdated();
+          }}
         />
       )}
 
       {showRendezVousModal && (
         <RendezVousModal
-          onClose={() => setShowRendezVousModal(false)}
+          onClose={() => {
+            setShowRendezVousModal(false);
+            handleDataUpdated();
+          }}
         />
       )}
 

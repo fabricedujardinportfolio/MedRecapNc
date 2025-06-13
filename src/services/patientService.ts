@@ -80,6 +80,7 @@ export interface ConsultationData {
   diagnostic: string;
   traitement?: string;
   observations?: string;
+  medecin_id?: string;
   medecin_nom: string;
   duree?: number;
   type: 'consultation' | 'visite' | 'urgence' | 'suivi';
@@ -109,6 +110,12 @@ export interface FactureData {
   remboursement_mutuelle?: number;
   remboursement_reste_a_charge?: number;
   notes?: string;
+  details: Array<{
+    description: string;
+    quantite: number;
+    prix_unitaire: number;
+    total: number;
+  }>;
 }
 
 export interface RendezVousData {
@@ -121,10 +128,12 @@ export interface RendezVousData {
   motif: string;
   type: 'consultation' | 'suivi' | 'urgence' | 'visite';
   statut: 'programme' | 'confirme' | 'en_cours' | 'termine' | 'annule' | 'reporte';
+  medecin_id?: string;
   medecin_nom: string;
   salle?: string;
   notes?: string;
   rappel_envoye: boolean;
+  consultation_id?: string;
 }
 
 class PatientService {
@@ -296,6 +305,7 @@ class PatientService {
         throw error;
       }
 
+      console.log('✅ Consultation créée avec succès:', data);
       return data;
     } catch (error) {
       console.error('Erreur service création consultation:', error);
@@ -306,18 +316,56 @@ class PatientService {
   // Créer une nouvelle facture
   async createFacture(factureData: Omit<FactureData, 'id'>): Promise<FactureData> {
     try {
-      const { data, error } = await supabase
+      // Créer la facture principale
+      const { data: factureData, error: factureError } = await supabase
         .from('factures')
-        .insert([factureData])
+        .insert([{
+          patient_id: factureData.patient_id,
+          consultation_id: factureData.consultation_id,
+          numero: factureData.numero,
+          date: factureData.date,
+          montant_total: factureData.montant_total,
+          montant_paye: factureData.montant_paye,
+          montant_restant: factureData.montant_restant,
+          statut: factureData.statut,
+          methode_paiement: factureData.methode_paiement,
+          date_echeance: factureData.date_echeance,
+          date_paiement: factureData.date_paiement,
+          remboursement_securite_sociale: factureData.remboursement_securite_sociale,
+          remboursement_mutuelle: factureData.remboursement_mutuelle,
+          remboursement_reste_a_charge: factureData.remboursement_reste_a_charge,
+          notes: factureData.notes
+        }])
         .select()
         .single();
 
-      if (error) {
-        console.error('Erreur lors de la création de la facture:', error);
-        throw error;
+      if (factureError) {
+        console.error('Erreur lors de la création de la facture:', factureError);
+        throw factureError;
       }
 
-      return data;
+      // Créer les détails de la facture
+      if (factureData.details && factureData.details.length > 0) {
+        const detailsWithFactureId = factureData.details.map(detail => ({
+          facture_id: factureData.id,
+          description: detail.description,
+          quantite: detail.quantite,
+          prix_unitaire: detail.prix_unitaire,
+          total: detail.total
+        }));
+
+        const { error: detailsError } = await supabase
+          .from('facture_details')
+          .insert(detailsWithFactureId);
+
+        if (detailsError) {
+          console.error('Erreur lors de la création des détails de facture:', detailsError);
+          // Ne pas échouer complètement si les détails ne sont pas créés
+        }
+      }
+
+      console.log('✅ Facture créée avec succès:', factureData);
+      return factureData;
     } catch (error) {
       console.error('Erreur service création facture:', error);
       throw error;
@@ -338,6 +386,7 @@ class PatientService {
         throw error;
       }
 
+      console.log('✅ Rendez-vous créé avec succès:', data);
       return data;
     } catch (error) {
       console.error('Erreur service création rendez-vous:', error);
