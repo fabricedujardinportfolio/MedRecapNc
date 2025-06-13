@@ -15,42 +15,44 @@ import {
   Globe,
   Award,
   Clock,
-  MapPin
+  MapPin,
+  Loader,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
+import { 
+  collaborativeArtService, 
+  PixelData, 
+  ArtProjectStats,
+  CreatePixelResponse 
+} from '../services/collaborativeArtService';
 
-interface PixelData {
-  x: number;
-  y: number;
-  color: string;
-  sessionId: string;
-  timestamp: string;
-  contributor?: string;
-}
-
-interface ProgressStats {
+interface DetailedStats {
   totalPixels: number;
   completedPixels: number;
   percentage: number;
   sessionsToday: number;
-  estimatedCompletion: string;
+  pixelsThisWeek: number;
+  averagePixelsPerDay: number;
+  estimatedDaysRemaining: number;
 }
 
 export const CollaborativePixelArt: React.FC = () => {
   const { t, language } = useLanguage();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pixels, setPixels] = useState<PixelData[]>([]);
-  const [stats, setStats] = useState<ProgressStats>({
-    totalPixels: 1500000, // 1200 x 1250
-    completedPixels: 47832,
-    percentage: 3.19,
-    sessionsToday: 156,
-    estimatedCompletion: '2027-08-15'
-  });
+  const [stats, setStats] = useState<DetailedStats | null>(null);
   const [currentUserPixel, setCurrentUserPixel] = useState<PixelData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreatingPixel, setIsCreatingPixel] = useState(false);
   const [selectedColor, setSelectedColor] = useState('#3B82F6');
-  const [showContributors, setShowContributors] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [recentContributors, setRecentContributors] = useState<Array<{
+    contributor_name: string;
+    created_at: string;
+    color: string;
+  }>>([]);
 
   // Couleurs prédéfinies pour l'art collaboratif
   const predefinedColors = [
@@ -59,35 +61,79 @@ export const CollaborativePixelArt: React.FC = () => {
     '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2'
   ];
 
-  // Simuler la génération de pixels existants
+  // Charger les données initiales
   useEffect(() => {
-    const generateMockPixels = () => {
-      const mockPixels: PixelData[] = [];
-      const imageWidth = 1200;
-      const imageHeight = 1250;
-      
-      // Générer des pixels aléatoirement pour simuler la progression
-      for (let i = 0; i < stats.completedPixels; i++) {
-        mockPixels.push({
-          x: Math.floor(Math.random() * imageWidth),
-          y: Math.floor(Math.random() * imageHeight),
-          color: predefinedColors[Math.floor(Math.random() * predefinedColors.length)],
-          sessionId: `session_${i}`,
-          timestamp: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-          contributor: `Contributeur ${i + 1}`
-        });
-      }
-      
-      setPixels(mockPixels);
-      setIsLoading(false);
-    };
+    loadInitialData();
+    setupRealtimeSubscriptions();
+  }, []);
 
-    generateMockPixels();
-  }, [stats.completedPixels]);
+  const loadInitialData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Charger les statistiques
+      const detailedStats = await collaborativeArtService.getDetailedStats();
+      if (detailedStats) {
+        setStats(detailedStats);
+      }
+
+      // Vérifier si l'utilisateur a déjà un pixel
+      const existingPixel = await collaborativeArtService.getCurrentSessionPixel();
+      if (existingPixel) {
+        setCurrentUserPixel(existingPixel);
+      }
+
+      // Charger tous les pixels (optimisation possible : charger par région)
+      const allPixels = await collaborativeArtService.getAllPixels();
+      setPixels(allPixels);
+
+      // Charger les contributeurs récents
+      const contributors = await collaborativeArtService.getRecentContributors(5);
+      setRecentContributors(contributors);
+
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+      setError('Erreur lors du chargement des données. Veuillez réessayer.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const setupRealtimeSubscriptions = () => {
+    // Écouter les nouveaux pixels
+    const pixelSubscription = collaborativeArtService.subscribeToPixelUpdates((payload) => {
+      console.log('🎨 Nouveau pixel reçu:', payload);
+      if (payload.new) {
+        setPixels(prev => [...prev, payload.new]);
+        // Recharger les stats
+        loadStats();
+      }
+    });
+
+    // Écouter les mises à jour de statistiques
+    const statsSubscription = collaborativeArtService.subscribeToStatsUpdates((payload) => {
+      console.log('📊 Statistiques mises à jour:', payload);
+      loadStats();
+    });
+
+    // Nettoyer les subscriptions au démontage
+    return () => {
+      pixelSubscription.unsubscribe();
+      statsSubscription.unsubscribe();
+    };
+  };
+
+  const loadStats = async () => {
+    const detailedStats = await collaborativeArtService.getDetailedStats();
+    if (detailedStats) {
+      setStats(detailedStats);
+    }
+  };
 
   // Dessiner l'image sur le canvas
   useEffect(() => {
-    if (!canvasRef.current || isLoading) return;
+    if (!canvasRef.current || isLoading || !stats) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -117,7 +163,7 @@ export const CollaborativePixelArt: React.FC = () => {
       );
     });
 
-    // Dessiner le pixel de l'utilisateur actuel s'il existe
+    // Dessiner le pixel de l'utilisateur actuel avec un contour
     if (currentUserPixel) {
       ctx.fillStyle = currentUserPixel.color;
       ctx.strokeStyle = '#000000';
@@ -127,26 +173,55 @@ export const CollaborativePixelArt: React.FC = () => {
       ctx.fillRect(x, y, Math.ceil(scaleX), Math.ceil(scaleY));
       ctx.strokeRect(x, y, Math.ceil(scaleX), Math.ceil(scaleY));
     }
-  }, [pixels, currentUserPixel, isLoading]);
+  }, [pixels, currentUserPixel, isLoading, stats]);
 
   // Générer un pixel pour l'utilisateur actuel
-  const generateUserPixel = () => {
-    const newPixel: PixelData = {
-      x: Math.floor(Math.random() * 1200),
-      y: Math.floor(Math.random() * 1250),
-      color: selectedColor,
-      sessionId: `session_${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      contributor: 'Vous'
-    };
+  const generateUserPixel = async () => {
+    if (isCreatingPixel || currentUserPixel) return;
 
-    setCurrentUserPixel(newPixel);
-    setPixels(prev => [...prev, newPixel]);
-    setStats(prev => ({
-      ...prev,
-      completedPixels: prev.completedPixels + 1,
-      percentage: ((prev.completedPixels + 1) / prev.totalPixels) * 100
-    }));
+    try {
+      setIsCreatingPixel(true);
+      setError(null);
+
+      const result = await collaborativeArtService.createPixelForCurrentSession(
+        selectedColor,
+        'Contributeur MedRecap+'
+      );
+
+      if (result) {
+        const newPixel: PixelData = {
+          id: result.pixel_id,
+          x: result.x,
+          y: result.y,
+          color: result.color,
+          session_id: collaborativeArtService.getCurrentSessionId(),
+          contributor_name: 'Vous',
+          created_at: result.created_at
+        };
+
+        setCurrentUserPixel(newPixel);
+        
+        if (result.is_new_session) {
+          // Nouveau pixel créé
+          setPixels(prev => [...prev, newPixel]);
+        }
+
+        // Recharger les statistiques
+        await loadStats();
+        
+        // Recharger les contributeurs récents
+        const contributors = await collaborativeArtService.getRecentContributors(5);
+        setRecentContributors(contributors);
+
+      } else {
+        setError('Impossible de créer le pixel. Veuillez réessayer.');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la création du pixel:', error);
+      setError('Erreur lors de la création du pixel. Veuillez réessayer.');
+    } finally {
+      setIsCreatingPixel(false);
+    }
   };
 
   const handleGoBack = () => {
@@ -174,6 +249,22 @@ export const CollaborativePixelArt: React.FC = () => {
     link.href = canvasRef.current.toDataURL();
     link.click();
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-teal-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">
+            {language === 'fr' ? 'Chargement de l\'art collaboratif...' : 'Loading collaborative art...'}
+          </p>
+          <p className="text-sm text-purple-600 mt-2">
+            {language === 'fr' ? 'Connexion à Supabase...' : 'Connecting to Supabase...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-teal-50">
@@ -224,6 +315,22 @@ export const CollaborativePixelArt: React.FC = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              <p className="text-red-700">{error}</p>
+              <button
+                onClick={() => setError(null)}
+                className="ml-auto text-red-600 hover:text-red-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Hero Section */}
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
@@ -237,56 +344,60 @@ export const CollaborativePixelArt: React.FC = () => {
           </h1>
           <p className="text-xl text-gray-600 mb-6 max-w-3xl mx-auto">
             {language === 'fr' 
-              ? 'Chaque session sur MedRecap+ génère un pixel unique. Ensemble, créons une œuvre d\'art de 1,5 million de pixels !'
-              : 'Each session on MedRecap+ generates a unique pixel. Together, let\'s create a 1.5 million pixel artwork!'
+              ? 'Chaque session sur MedRecap+ génère un pixel unique stocké dans Supabase. Ensemble, créons une œuvre d\'art de 1,5 million de pixels !'
+              : 'Each session on MedRecap+ generates a unique pixel stored in Supabase. Together, let\'s create a 1.5 million pixel artwork!'
             }
           </p>
 
           {/* Progress Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-8">
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-              <div className="text-2xl font-bold text-purple-600">{stats.completedPixels.toLocaleString()}</div>
-              <div className="text-sm text-gray-600">
-                {language === 'fr' ? 'Pixels générés' : 'Pixels generated'}
+          {stats && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-8">
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                  <div className="text-2xl font-bold text-purple-600">{stats.completedPixels.toLocaleString()}</div>
+                  <div className="text-sm text-gray-600">
+                    {language === 'fr' ? 'Pixels générés' : 'Pixels generated'}
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                  <div className="text-2xl font-bold text-blue-600">{stats.percentage.toFixed(2)}%</div>
+                  <div className="text-sm text-gray-600">
+                    {language === 'fr' ? 'Progression' : 'Progress'}
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                  <div className="text-2xl font-bold text-green-600">{stats.sessionsToday}</div>
+                  <div className="text-sm text-gray-600">
+                    {language === 'fr' ? 'Sessions aujourd\'hui' : 'Sessions today'}
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {(stats.totalPixels - stats.completedPixels).toLocaleString()}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {language === 'fr' ? 'Pixels restants' : 'Pixels remaining'}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-              <div className="text-2xl font-bold text-blue-600">{stats.percentage.toFixed(2)}%</div>
-              <div className="text-sm text-gray-600">
-                {language === 'fr' ? 'Progression' : 'Progress'}
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-              <div className="text-2xl font-bold text-green-600">{stats.sessionsToday}</div>
-              <div className="text-sm text-gray-600">
-                {language === 'fr' ? 'Sessions aujourd\'hui' : 'Sessions today'}
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-              <div className="text-2xl font-bold text-orange-600">
-                {(stats.totalPixels - stats.completedPixels).toLocaleString()}
-              </div>
-              <div className="text-sm text-gray-600">
-                {language === 'fr' ? 'Pixels restants' : 'Pixels remaining'}
-              </div>
-            </div>
-          </div>
 
-          {/* Progress Bar */}
-          <div className="max-w-2xl mx-auto mb-8">
-            <div className="bg-gray-200 rounded-full h-4 overflow-hidden">
-              <div 
-                className="bg-gradient-to-r from-purple-600 to-blue-600 h-full transition-all duration-1000 ease-out"
-                style={{ width: `${stats.percentage}%` }}
-              ></div>
-            </div>
-            <p className="text-sm text-gray-600 mt-2">
-              {language === 'fr' 
-                ? `Estimation de fin : ${new Date(stats.estimatedCompletion).toLocaleDateString('fr-FR')}`
-                : `Estimated completion: ${new Date(stats.estimatedCompletion).toLocaleDateString('en-US')}`
-              }
-            </p>
-          </div>
+              {/* Progress Bar */}
+              <div className="max-w-2xl mx-auto mb-8">
+                <div className="bg-gray-200 rounded-full h-4 overflow-hidden">
+                  <div 
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 h-full transition-all duration-1000 ease-out"
+                    style={{ width: `${Math.min(stats.percentage, 100)}%` }}
+                  ></div>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  {language === 'fr' 
+                    ? `Estimation : ${stats.estimatedDaysRemaining} jours restants`
+                    : `Estimated: ${stats.estimatedDaysRemaining} days remaining`
+                  }
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12">
@@ -298,7 +409,7 @@ export const CollaborativePixelArt: React.FC = () => {
                   {language === 'fr' ? 'Progression en Temps Réel' : 'Real-time Progress'}
                 </h2>
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={loadInitialData}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                   title={language === 'fr' ? 'Actualiser' : 'Refresh'}
                 >
@@ -307,22 +418,11 @@ export const CollaborativePixelArt: React.FC = () => {
               </div>
               
               <div className="relative">
-                {isLoading ? (
-                  <div className="w-full h-96 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                      <p className="text-gray-600">
-                        {language === 'fr' ? 'Chargement de l\'œuvre...' : 'Loading artwork...'}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <canvas
-                    ref={canvasRef}
-                    className="w-full h-auto border border-gray-300 rounded-lg shadow-sm"
-                    style={{ imageRendering: 'pixelated' }}
-                  />
-                )}
+                <canvas
+                  ref={canvasRef}
+                  className="w-full h-auto border border-gray-300 rounded-lg shadow-sm"
+                  style={{ imageRendering: 'pixelated' }}
+                />
               </div>
               
               <div className="mt-4 text-center">
@@ -332,8 +432,34 @@ export const CollaborativePixelArt: React.FC = () => {
                     : 'Final image: 1200 × 1250 pixels (1.5 million pixels)'
                   }
                 </p>
+                <p className="text-xs text-green-600 mt-1">
+                  ✅ {language === 'fr' ? 'Données stockées dans Supabase' : 'Data stored in Supabase'}
+                </p>
               </div>
             </div>
+
+            {/* Contributeurs récents */}
+            {recentContributors.length > 0 && (
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  {language === 'fr' ? 'Contributeurs Récents' : 'Recent Contributors'}
+                </h3>
+                <div className="space-y-2">
+                  {recentContributors.map((contributor, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <div 
+                        className="w-4 h-4 rounded-full border border-gray-300"
+                        style={{ backgroundColor: contributor.color }}
+                      ></div>
+                      <span className="text-sm text-gray-700">{contributor.contributor_name}</span>
+                      <span className="text-xs text-gray-500 ml-auto">
+                        {new Date(contributor.created_at).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Interaction Section */}
@@ -352,14 +478,20 @@ export const CollaborativePixelArt: React.FC = () => {
                       style={{ backgroundColor: currentUserPixel.color }}
                     ></div>
                   </div>
-                  <p className="text-green-600 font-medium mb-2">
-                    {language === 'fr' ? '✅ Pixel généré avec succès !' : '✅ Pixel generated successfully!'}
-                  </p>
-                  <p className="text-sm text-gray-600">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <p className="text-green-600 font-medium">
+                      {language === 'fr' ? 'Pixel généré avec succès !' : 'Pixel generated successfully!'}
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">
                     {language === 'fr' 
                       ? `Position: (${currentUserPixel.x}, ${currentUserPixel.y})`
                       : `Position: (${currentUserPixel.x}, ${currentUserPixel.y})`
                     }
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    {language === 'fr' ? 'Stocké dans Supabase' : 'Stored in Supabase'}
                   </p>
                 </div>
               ) : (
@@ -396,13 +528,66 @@ export const CollaborativePixelArt: React.FC = () => {
                   
                   <button
                     onClick={generateUserPixel}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105"
+                    disabled={isCreatingPixel}
+                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
-                    {language === 'fr' ? '🎨 Générer Mon Pixel' : '🎨 Generate My Pixel'}
+                    {isCreatingPixel ? (
+                      <div className="flex items-center gap-2">
+                        <Loader className="w-5 h-5 animate-spin" />
+                        {language === 'fr' ? 'Création...' : 'Creating...'}
+                      </div>
+                    ) : (
+                      <>
+                        {language === 'fr' ? '🎨 Générer Mon Pixel' : '🎨 Generate My Pixel'}
+                      </>
+                    )}
                   </button>
                 </div>
               )}
             </div>
+
+            {/* Statistiques Avancées */}
+            {stats && (
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  {language === 'fr' ? 'Statistiques Avancées' : 'Advanced Statistics'}
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-lg font-bold text-blue-600">
+                      {stats.pixelsThisWeek}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {language === 'fr' ? 'Cette semaine' : 'This week'}
+                    </div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-lg font-bold text-green-600">
+                      {stats.averagePixelsPerDay}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {language === 'fr' ? 'Moyenne/jour' : 'Average/day'}
+                    </div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-lg font-bold text-purple-600">
+                      {stats.estimatedDaysRemaining}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {language === 'fr' ? 'Jours restants' : 'Days remaining'}
+                    </div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-lg font-bold text-orange-600">
+                      {(stats.percentage * 10).toFixed(1)}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {language === 'fr' ? 'Score art' : 'Art score'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Comment ça marche */}
             <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-200">
@@ -414,8 +599,8 @@ export const CollaborativePixelArt: React.FC = () => {
                   <div className="flex items-center justify-center w-6 h-6 bg-blue-600 text-white rounded-full text-xs font-bold">1</div>
                   <p className="text-sm text-gray-700">
                     {language === 'fr' 
-                      ? 'Chaque session sur MedRecap+ génère automatiquement un pixel unique'
-                      : 'Each session on MedRecap+ automatically generates a unique pixel'
+                      ? 'Chaque session génère un pixel unique stocké dans Supabase'
+                      : 'Each session generates a unique pixel stored in Supabase'
                     }
                   </p>
                 </div>
@@ -432,8 +617,8 @@ export const CollaborativePixelArt: React.FC = () => {
                   <div className="flex items-center justify-center w-6 h-6 bg-green-600 text-white rounded-full text-xs font-bold">3</div>
                   <p className="text-sm text-gray-700">
                     {language === 'fr' 
-                      ? 'L\'image se complète progressivement avec chaque nouvelle session'
-                      : 'The image gradually completes with each new session'
+                      ? 'Les données sont persistantes et synchronisées en temps réel'
+                      : 'Data is persistent and synchronized in real-time'
                     }
                   </p>
                 </div>
@@ -449,47 +634,6 @@ export const CollaborativePixelArt: React.FC = () => {
               </div>
             </div>
 
-            {/* Statistiques Avancées */}
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {language === 'fr' ? 'Statistiques Avancées' : 'Advanced Statistics'}
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-lg font-bold text-blue-600">
-                    {Math.floor(stats.completedPixels / stats.sessionsToday)}
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    {language === 'fr' ? 'Pixels/jour' : 'Pixels/day'}
-                  </div>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-lg font-bold text-green-600">
-                    {Math.floor((stats.totalPixels - stats.completedPixels) / (stats.completedPixels / 30))}
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    {language === 'fr' ? 'Jours restants' : 'Days remaining'}
-                  </div>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-lg font-bold text-purple-600">
-                    {Math.floor(stats.completedPixels / 30)}
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    {language === 'fr' ? 'Pixels/mois' : 'Pixels/month'}
-                  </div>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-lg font-bold text-orange-600">
-                    {(stats.percentage * 10).toFixed(1)}
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    {language === 'fr' ? 'Score art' : 'Art score'}
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Call to Action */}
             <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-6 text-white text-center">
               <h3 className="text-xl font-bold mb-2">
@@ -497,8 +641,8 @@ export const CollaborativePixelArt: React.FC = () => {
               </h3>
               <p className="text-purple-100 mb-4">
                 {language === 'fr' 
-                  ? 'Chaque session compte. Votre pixel fait partie d\'une œuvre collective unique.'
-                  : 'Every session counts. Your pixel is part of a unique collective artwork.'
+                  ? 'Chaque session compte. Votre pixel fait partie d\'une œuvre collective unique stockée de façon permanente.'
+                  : 'Every session counts. Your pixel is part of a unique collective artwork stored permanently.'
                 }
               </p>
               <a
@@ -516,14 +660,28 @@ export const CollaborativePixelArt: React.FC = () => {
         <div className="mt-12 text-center">
           <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 max-w-4xl mx-auto">
             <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              {language === 'fr' ? 'Une Expérience Unique' : 'A Unique Experience'}
+              {language === 'fr' ? 'Stockage Persistant avec Supabase' : 'Persistent Storage with Supabase'}
             </h3>
-            <p className="text-gray-600 leading-relaxed">
+            <p className="text-gray-600 leading-relaxed mb-4">
               {language === 'fr' 
-                ? 'Ce projet artistique collaboratif transforme chaque visite sur MedRecap+ en une contribution créative. Ensemble, nous créons quelque chose de plus grand que la somme de ses parties - une œuvre d\'art numérique collective qui représente notre communauté médicale unie.'
-                : 'This collaborative art project transforms every visit to MedRecap+ into a creative contribution. Together, we create something greater than the sum of its parts - a collective digital artwork representing our united medical community.'
+                ? 'Ce projet artistique collaboratif utilise Supabase pour un stockage persistant et sécurisé. Chaque pixel est unique, chaque session est trackée, et les données sont synchronisées en temps réel entre tous les utilisateurs.'
+                : 'This collaborative art project uses Supabase for persistent and secure storage. Each pixel is unique, each session is tracked, and data is synchronized in real-time between all users.'
               }
             </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="bg-green-50 rounded-lg p-4">
+                <div className="font-semibold text-green-800 mb-2">✅ Stockage Persistant</div>
+                <div className="text-green-700">Les pixels ne disparaissent jamais</div>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-4">
+                <div className="font-semibold text-blue-800 mb-2">🔄 Temps Réel</div>
+                <div className="text-blue-700">Synchronisation instantanée</div>
+              </div>
+              <div className="bg-purple-50 rounded-lg p-4">
+                <div className="font-semibold text-purple-800 mb-2">🔒 Sécurisé</div>
+                <div className="text-purple-700">Protection des données</div>
+              </div>
+            </div>
             <div className="flex items-center justify-center gap-6 mt-6 text-sm text-gray-500">
               <div className="flex items-center gap-2">
                 <Globe className="w-4 h-4" />
