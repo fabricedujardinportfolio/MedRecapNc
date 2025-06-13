@@ -14,7 +14,7 @@ export const Footer: React.FC = () => {
     if (clickCount === 2) { // Au 3ème clic
       setShowSecretEasterEgg(true);
       setClickCount(0);
-      setTimeout(() => setShowSecretEasterEgg(false), 8000);
+      setTimeout(() => setShowSecretEasterEgg(false), 15000); // Augmenté à 15 secondes
     } else {
       // Reset après 2 secondes si pas de triple-clic
       setTimeout(() => setClickCount(0), 2000);
@@ -115,10 +115,10 @@ export const Footer: React.FC = () => {
         </div>
       </footer>
 
-      {/* Easter Egg Secret Modal */}
+      {/* Easter Egg Secret Modal - Animation réduite et durée augmentée */}
       {showSecretEasterEgg && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[9999]">
-          <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-8 max-w-lg w-full text-center text-white animate-pulse shadow-2xl">
+          <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-8 max-w-lg w-full text-center text-white shadow-2xl">
             <div className="text-8xl mb-6">🎊</div>
             <h3 className="text-3xl font-bold mb-4">
               BRAVO ! 🏆
@@ -135,7 +135,7 @@ export const Footer: React.FC = () => {
                   <Gift className="w-5 h-5 text-yellow-300" />
                   <span className="font-bold text-yellow-300">RÉCOMPENSE SPÉCIALE</span>
                 </div>
-                <p className="text-xs text-yellow-100">
+                <p className="text-xs text-yellow-100 leading-relaxed">
                   🎁 Vous êtes officiellement un "Détective d'Easter Eggs" certifié !<br/>
                   🔍 Votre curiosité et votre persévérance sont remarquables.<br/>
                   ⭐ Vous faites partie des 0.1% d'utilisateurs à avoir trouvé ceci !

@@ -77,7 +77,7 @@ export const PublicProjectPage: React.FC = () => {
       console.log('🎉 Séquence complète et correcte !');
       setShowEasterEgg(true);
       setSecretSequence([]);
-      setTimeout(() => setShowEasterEgg(false), 10000);
+      setTimeout(() => setShowEasterEgg(false), 20000); // Augmenté à 20 secondes
       return;
     }
     
@@ -817,10 +817,10 @@ export const PublicProjectPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Easter Egg Modal */}
+      {/* Easter Egg Modal - Animation réduite et durée augmentée */}
       {showEasterEgg && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
-          <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-8 max-w-lg w-full text-center text-white animate-pulse shadow-2xl">
+          <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-8 max-w-lg w-full text-center text-white shadow-2xl">
             <div className="text-8xl mb-6">🎊</div>
             <h3 className="text-3xl font-bold mb-4">
               INCROYABLE ! 🏆
@@ -837,7 +837,7 @@ export const PublicProjectPage: React.FC = () => {
                   <Gift className="w-5 h-5 text-yellow-300" />
                   <span className="font-bold text-yellow-300">RÉCOMPENSE EXCLUSIVE</span>
                 </div>
-                <p className="text-xs text-yellow-100">
+                <p className="text-xs text-yellow-100 leading-relaxed">
                   🎁 Vous êtes officiellement un "Maître Détective d'Easter Eggs" !<br/>
                   🔍 Votre persévérance et votre logique sont exceptionnelles.<br/>
                   ⭐ Vous faites partie des 0.01% d'utilisateurs à avoir trouvé ceci !
