@@ -806,7 +806,7 @@ export const PublicProjectPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Easter Egg Modal avec scroll */}
+      {/* Easter Egg Modal avec scroll - SANS LIEN VERS L'ART COLLABORATIF */}
       {showEasterEgg && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
           <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl max-w-lg w-full text-center text-white shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -856,7 +856,7 @@ export const PublicProjectPage: React.FC = () => {
                   </p>
                 </div>
 
-                {/* 🎨 NOUVELLE SECTION : Allusion à l'art collaboratif */}
+                {/* 🎨 SECTION MYSTÉRIEUSE : Allusion à l'art collaboratif SANS LIEN DIRECT */}
                 <div className="bg-gradient-to-r from-blue-400/30 to-purple-400/30 rounded-lg p-4 border border-blue-300/30">
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <Palette className="w-5 h-5 text-blue-200" />
@@ -866,8 +866,8 @@ export const PublicProjectPage: React.FC = () => {
                   </div>
                   <p className="text-xs text-blue-100 leading-relaxed">
                     🎨 {t(
-                      'Votre esprit d\'exploration vous donne accès à une expérience artistique collaborative unique... Cherchez les liens cachés vers la création collective !',
-                      'Your spirit of exploration gives you access to a unique collaborative artistic experience... Look for hidden links to collective creation!'
+                      'Votre esprit d\'exploration vous donne accès à des expériences artistiques collaboratives... Mais pour les découvrir, vous devrez d\'abord accéder à l\'application principale !',
+                      'Your spirit of exploration gives you access to collaborative artistic experiences... But to discover them, you\'ll first need to access the main application!'
                     )}
                   </p>
                 </div>
@@ -875,8 +875,8 @@ export const PublicProjectPage: React.FC = () => {
 
               <div className="text-xs opacity-75 mb-4">
                 💡 {t(
-                  'Un autre easter egg est caché quelque part sur le site principal. Saurez-vous le retrouver ?',
-                  'Another easter egg is hidden somewhere on the main site. Can you find it?'
+                  'D\'autres secrets vous attendent dans l\'application principale. Connectez-vous pour les découvrir !',
+                  'More secrets await you in the main application. Log in to discover them!'
                 )}
               </div>
 
@@ -888,10 +888,10 @@ export const PublicProjectPage: React.FC = () => {
                   {t('Mission accomplie ! 🎯', 'Mission accomplished! 🎯')}
                 </button>
                 <a
-                  href="/collaborative-pixel-art"
+                  href="/"
                   className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white rounded-lg font-bold transition-colors shadow-lg"
                 >
-                  🎨 {t('Découvrir l\'Art Collaboratif', 'Discover Collaborative Art')}
+                  🚀 {t('Accéder à l\'Application', 'Access the Application')}
                 </a>
               </div>
             </div>
