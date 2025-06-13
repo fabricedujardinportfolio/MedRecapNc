@@ -3,6 +3,7 @@ import { LoginForm } from './components/LoginForm';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { CabinetDashboard } from './components/CabinetDashboard';
+import { PublicProjectPage } from './components/PublicProjectPage';
 import { Footer } from './components/Footer';
 import { LanguageProvider } from './components/LanguageProvider';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -10,6 +11,17 @@ import { useAuth } from './hooks/useAuth';
 
 function App() {
   const { user, login, logout, isLoading, isAuthenticated } = useAuth();
+
+  // Check if we should show the public page
+  const showPublicPage = window.location.pathname === '/public' || window.location.hash === '#public';
+
+  if (showPublicPage) {
+    return (
+      <LanguageProvider>
+        <PublicProjectPage />
+      </LanguageProvider>
+    );
+  }
 
   if (isLoading) {
     return (
