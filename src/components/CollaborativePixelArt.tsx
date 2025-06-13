@@ -18,7 +18,8 @@ import {
   MapPin,
   Loader,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { 
