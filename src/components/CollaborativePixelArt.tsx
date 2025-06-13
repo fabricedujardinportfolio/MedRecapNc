@@ -42,6 +42,14 @@ interface DetailedStats {
   estimatedDaysRemaining: number;
 }
 
+interface TooltipData {
+  x: number;
+  y: number;
+  contributorName: string;
+  color: string;
+  createdAt: string;
+}
+
 export const CollaborativePixelArt: React.FC = () => {
   const { t, language } = useLanguage();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -62,6 +70,11 @@ export const CollaborativePixelArt: React.FC = () => {
   const [loadingStep, setLoadingStep] = useState<string>('');
   const [canvasReady, setCanvasReady] = useState(false);
   const [ipLimitReached, setIpLimitReached] = useState(false);
+  
+  // 🆕 États pour le tooltip
+  const [tooltip, setTooltip] = useState<TooltipData | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
 
   // Couleurs prédéfinies pour l'art collaboratif
   const predefinedColors = [
@@ -110,6 +123,64 @@ export const CollaborativePixelArt: React.FC = () => {
     console.log('✅ Canvas prêt, déclenchement du rendu avec', pixels.length, 'pixels');
     renderCanvas();
   }, [pixels, currentUserPixel, canvasReady, isLoading, language]);
+
+  // 🆕 Gestionnaire de mouvement de souris pour le tooltip
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !canvasReady || pixels.length === 0) return;
+
+    const handleMouseMove = (event: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;
+      
+      // Convertir les coordonnées de la souris en coordonnées du canvas
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const canvasX = mouseX * scaleX;
+      const canvasY = mouseY * scaleY;
+      
+      // Convertir en coordonnées de pixel
+      const CANVAS_WIDTH = 800;
+      const CANVAS_HEIGHT = 833;
+      const pixelX = Math.floor((canvasX / CANVAS_WIDTH) * 1200);
+      const pixelY = Math.floor((canvasY / CANVAS_HEIGHT) * 1250);
+      
+      // Chercher un pixel à cette position
+      const hoveredPixel = pixels.find(p => p.x === pixelX && p.y === pixelY);
+      
+      if (hoveredPixel) {
+        setTooltip({
+          x: pixelX,
+          y: pixelY,
+          contributorName: hoveredPixel.contributor_name || 'Contributeur Anonyme',
+          color: hoveredPixel.color,
+          createdAt: hoveredPixel.created_at
+        });
+        setTooltipPosition({ 
+          x: event.clientX + 10, 
+          y: event.clientY - 10 
+        });
+        setIsTooltipVisible(true);
+      } else {
+        setIsTooltipVisible(false);
+        setTooltip(null);
+      }
+    };
+
+    const handleMouseLeave = () => {
+      setIsTooltipVisible(false);
+      setTooltip(null);
+    };
+
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, [pixels, canvasReady]);
 
   const loadInitialData = async () => {
     try {
@@ -689,7 +760,7 @@ export const CollaborativePixelArt: React.FC = () => {
               <div className="relative">
                 <canvas
                   ref={canvasRef}
-                  className="w-full h-auto border border-gray-300 rounded-lg shadow-sm"
+                  className="w-full h-auto border border-gray-300 rounded-lg shadow-sm cursor-crosshair"
                   style={{ imageRendering: 'pixelated' }}
                 />
                 {isRefreshing && (
@@ -710,7 +781,7 @@ export const CollaborativePixelArt: React.FC = () => {
                   ✅ {t('pixel.art.realtime.stored')} • {pixels.length} pixels chargés
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
-                  🔧 <strong>Pixels cohérents</strong> - Taille fixe 2px pour tous !
+                  🖱️ <strong>Survolez les pixels</strong> pour voir les contributeurs !
                 </p>
               </div>
             </div>
@@ -1007,6 +1078,41 @@ export const CollaborativePixelArt: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* 🆕 Tooltip flottant */}
+      {isTooltipVisible && tooltip && (
+        <div
+          className="fixed z-[9999] pointer-events-none"
+          style={{
+            left: `${tooltipPosition.x}px`,
+            top: `${tooltipPosition.y}px`,
+            transform: 'translate(-50%, -100%)'
+          }}
+        >
+          <div className="bg-gray-900 text-white px-3 py-2 rounded-lg shadow-lg text-sm max-w-xs">
+            <div className="flex items-center gap-2 mb-1">
+              <div
+                className="w-3 h-3 rounded-full border border-white/30"
+                style={{ backgroundColor: tooltip.color }}
+              ></div>
+              <span className="font-medium">{tooltip.contributorName}</span>
+            </div>
+            <div className="text-xs text-gray-300">
+              Position: ({tooltip.x}, {tooltip.y})
+            </div>
+            <div className="text-xs text-gray-300">
+              {new Date(tooltip.createdAt).toLocaleDateString('fr-FR', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+            {/* Flèche du tooltip */}
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
