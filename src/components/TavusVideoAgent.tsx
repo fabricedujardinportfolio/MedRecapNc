@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Mic, MicOff, Send, Bot, Video, MessageCircle, Volume2, VolumeX, ExternalLink } from 'lucide-react';
 import { Patient } from '../types/Patient';
 import { tavusService, TavusVideoSession } from '../services/tavusService';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface TavusVideoAgentProps {
   patient: Patient;
@@ -46,6 +47,8 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   
+  const { language } = useLanguage();
+  
   const recognitionRef = useRef<any>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const speechSynthesisRef = useRef<any>(null);
@@ -68,7 +71,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     if (isVisible && !session) {
       initializeSession();
     }
-  }, [isVisible]);
+  }, [isVisible, language]);
 
   // Nettoyer les ressources
   useEffect(() => {
@@ -95,7 +98,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     }
   }, [chatMessages]);
 
-  // Fonction de synthèse vocale
+  // Fonction de synthèse vocale avec langue appropriée
   const speakText = (text: string) => {
     if (!voiceEnabled || !window.speechSynthesis) {
       console.log('🔇 Synthèse vocale désactivée ou non supportée');
@@ -107,25 +110,26 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
 
     const utterance = new window.SpeechSynthesisUtterance(text);
     
-    // Configuration de la voix
-    utterance.lang = 'fr-FR';
+    // Configuration de la voix selon la langue
+    utterance.lang = language === 'fr' ? 'fr-FR' : 'en-US';
     utterance.rate = 0.9;
     utterance.pitch = 1.0;
     utterance.volume = 0.8;
 
-    // Sélectionner une voix française si disponible
+    // Sélectionner une voix appropriée selon la langue
     const voices = window.speechSynthesis.getVoices();
-    const frenchVoice = voices.find(voice => 
-      voice.lang.startsWith('fr') && voice.name.includes('Female')
-    ) || voices.find(voice => voice.lang.startsWith('fr'));
+    const targetLang = language === 'fr' ? 'fr' : 'en';
+    const preferredVoice = voices.find(voice => 
+      voice.lang.startsWith(targetLang) && voice.name.includes('Female')
+    ) || voices.find(voice => voice.lang.startsWith(targetLang));
     
-    if (frenchVoice) {
-      utterance.voice = frenchVoice;
-      console.log('🎙️ Voix sélectionnée:', frenchVoice.name);
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+      console.log('🎙️ Voix Dr. Léa Martin sélectionnée:', preferredVoice.name, 'Langue:', preferredVoice.lang);
     }
 
     utterance.onstart = () => {
-      console.log('🔊 Début de la synthèse vocale');
+      console.log('🔊 Dr. Léa Martin commence à parler');
       setIsSpeaking(true);
       if (session) {
         setSession(prev => prev ? { ...prev, status: 'speaking' } : null);
@@ -133,7 +137,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     };
 
     utterance.onend = () => {
-      console.log('🔇 Fin de la synthèse vocale');
+      console.log('🔇 Dr. Léa Martin a fini de parler');
       setIsSpeaking(false);
       if (session) {
         setSession(prev => prev ? { ...prev, status: 'ready' } : null);
@@ -141,7 +145,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     };
 
     utterance.onerror = (event) => {
-      console.error('❌ Erreur synthèse vocale:', event.error);
+      console.error('❌ Erreur synthèse vocale Dr. Léa Martin:', event.error);
       setIsSpeaking(false);
       if (session) {
         setSession(prev => prev ? { ...prev, status: 'ready' } : null);
@@ -157,23 +161,25 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     setError(null);
     
     try {
-      console.log('🚀 Initialisation de la session avec données complètes du patient:', {
+      console.log('🚀 Initialisation de Dr. Léa Martin avec données complètes du patient:', {
         nom: patient.nom,
         prenom: patient.prenom,
         consultations: patient.consultations?.length || 0,
         factures: patient.factures?.length || 0,
         rendezVous: patient.rendezVous?.length || 0,
-        typePatient: patient.typePatient
+        typePatient: patient.typePatient,
+        language: language
       });
 
-      const newSession = await tavusService.initializePatientSession(patient);
+      const newSession = await tavusService.initializePatientSession(patient, language);
       setSession(newSession);
       
-      // Message de bienvenue enrichi avec informations sur les capacités
+      // Message de bienvenue de Dr. Léa Martin selon la langue
       const welcomeMessage: ChatMessage = {
         id: `msg-${Date.now()}`,
         type: 'ai',
-        content: `Bonjour ! Je suis Dr. IA Assistant, votre assistant médical virtuel spécialisé. J'ai accès à l'ensemble du dossier de ${patient.prenom} ${patient.nom}, incluant :
+        content: language === 'fr' 
+          ? `Bonjour ! Je suis Dr. Léa Martin, votre assistante médicale IA. J'ai accès au dossier complet de ${patient.prenom} ${patient.nom}, incluant :
 
 📋 Historique médical complet
 🩺 ${patient.consultations?.length || 0} consultation(s) enregistrée(s)
@@ -187,18 +193,36 @@ Je peux répondre à vos questions sur tous ces aspects. Vous pouvez me demander
 - Les rendez-vous passés et à venir
 - Les traitements et recommandations
 
-Que souhaitez-vous savoir ?`,
+Que souhaitez-vous savoir ?`
+          : `Hello! I'm Dr. Léa Martin, your AI medical assistant. I have access to ${patient.prenom} ${patient.nom}'s complete file, including:
+
+📋 Complete medical history
+🩺 ${patient.consultations?.length || 0} recorded consultation(s)
+💰 ${patient.factures?.length || 0} invoice(s) and financial situation
+📅 ${patient.rendezVous?.length || 0} scheduled appointment(s)
+
+I can answer your questions about all these aspects. You can ask me:
+- A complete file summary
+- Details about recent consultations
+- Financial situation and invoices
+- Past and upcoming appointments
+- Treatments and recommendations
+
+What would you like to know?`,
         timestamp: new Date()
       };
       setChatMessages([welcomeMessage]);
       
-      // Présentation vocale automatique
+      // Présentation vocale automatique de Dr. Léa Martin
       setTimeout(() => {
-        speakText(`Bonjour ! Je suis Dr. IA Assistant. J'ai accès au dossier complet de ${patient.prenom} ${patient.nom}, incluant ses consultations, factures et rendez-vous. Que souhaitez-vous savoir ?`);
+        const spokenIntro = language === 'fr'
+          ? `Bonjour ! Je suis Dr. Léa Martin, votre assistante médicale IA. J'ai accès au dossier complet de ${patient.prenom} ${patient.nom}, incluant ses consultations, factures et rendez-vous. Que souhaitez-vous savoir ?`
+          : `Hello! I'm Dr. Léa Martin, your AI medical assistant. I have access to ${patient.prenom} ${patient.nom}'s complete file, including consultations, invoices and appointments. What would you like to know?`;
+        speakText(spokenIntro);
       }, 1000);
       
     } catch (err) {
-      console.error('Erreur lors de l\'initialisation:', err);
+      console.error('Erreur lors de l\'initialisation de Dr. Léa Martin:', err);
       setError(err instanceof Error ? err.message : 'Erreur d\'initialisation');
     } finally {
       setIsLoading(false);
@@ -212,7 +236,7 @@ Que souhaitez-vous savoir ?`,
     }
 
     isProcessingRef.current = true;
-    console.log('🎯 Traitement du transcript avec contexte patient:', transcript);
+    console.log('🎯 Dr. Léa Martin traite le transcript avec contexte patient:', transcript);
 
     try {
       // Ajouter le message utilisateur au chat
@@ -227,9 +251,9 @@ Que souhaitez-vous savoir ?`,
       // Envoyer le message au service Tavus
       await tavusService.sendMessage(transcript.trim());
       
-      // Générer une réponse contextuelle avec les données patient
+      // Générer une réponse contextuelle avec les données patient dans la bonne langue
       setTimeout(() => {
-        const aiResponse = tavusService.generateContextualResponse(transcript.trim(), patient);
+        const aiResponse = tavusService.generateContextualResponse(transcript.trim(), patient, language);
         const aiMessage: ChatMessage = {
           id: `msg-${Date.now()}-ai`,
           type: 'ai',
@@ -238,18 +262,20 @@ Que souhaitez-vous savoir ?`,
         };
         setChatMessages(prev => [...prev, aiMessage]);
         
-        // Synthèse vocale automatique de la réponse IA
+        // Synthèse vocale automatique de la réponse Dr. Léa Martin
         setTimeout(() => {
           speakText(aiResponse);
         }, 500);
       }, 1500);
 
     } catch (error) {
-      console.error('❌ Erreur lors du traitement vocal:', error);
+      console.error('❌ Erreur lors du traitement vocal par Dr. Léa Martin:', error);
       const errorMessage: ChatMessage = {
         id: `msg-${Date.now()}-error`,
         type: 'ai',
-        content: 'Désolé, je rencontre une difficulté technique. Pouvez-vous reformuler votre question ?',
+        content: language === 'fr'
+          ? 'Désolée, je rencontre une difficulté technique. Pouvez-vous reformuler votre question ?'
+          : 'Sorry, I\'m experiencing a technical difficulty. Could you rephrase your question?',
         timestamp: new Date()
       };
       setChatMessages(prev => [...prev, errorMessage]);
@@ -260,7 +286,10 @@ Que souhaitez-vous savoir ?`,
 
   const startListening = () => {
     if (!speechSupported) {
-      setSpeechError('La reconnaissance vocale n\'est pas supportée par votre navigateur');
+      const errorMsg = language === 'fr'
+        ? 'La reconnaissance vocale n\'est pas supportée par votre navigateur'
+        : 'Voice recognition is not supported by your browser';
+      setSpeechError(errorMsg);
       return;
     }
 
@@ -281,14 +310,14 @@ Que souhaitez-vous savoir ?`,
     
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'fr-FR';
+    recognition.lang = language === 'fr' ? 'fr-FR' : 'en-US';
     recognition.maxAlternatives = 1;
 
     let lastResultTime = Date.now();
     let currentFinalTranscript = '';
 
     recognition.onstart = () => {
-      console.log('🎤 Reconnaissance vocale démarrée');
+      console.log('🎤 Dr. Léa Martin écoute en', language);
       setIsListening(true);
       setSpeechError(null);
       setFinalTranscript('');
@@ -315,7 +344,7 @@ Que souhaitez-vous savoir ?`,
       if (finalText) {
         currentFinalTranscript += finalText;
         setFinalTranscript(currentFinalTranscript);
-        console.log('📝 Transcript final mis à jour:', currentFinalTranscript);
+        console.log('📝 Dr. Léa Martin - Transcript final mis à jour:', currentFinalTranscript);
       }
 
       setInterimTranscript(interimText);
@@ -329,31 +358,38 @@ Que souhaitez-vous savoir ?`,
       // Détecter la fin de parole (2 secondes de silence)
       silenceTimerRef.current = setTimeout(() => {
         if (currentFinalTranscript.trim() && !isProcessingRef.current) {
-          console.log('🔇 Silence détecté, arrêt automatique et envoi');
+          console.log('🔇 Silence détecté, Dr. Léa Martin traite la demande');
           recognition.stop();
         }
       }, 2000);
     };
 
     recognition.onerror = (event: any) => {
-      console.error('❌ Erreur reconnaissance vocale:', event.error);
-      let errorMessage = 'Erreur de reconnaissance vocale';
+      console.error('❌ Erreur reconnaissance vocale Dr. Léa Martin:', event.error);
+      let errorMessage = language === 'fr' 
+        ? 'Erreur de reconnaissance vocale'
+        : 'Voice recognition error';
       
       switch (event.error) {
         case 'no-speech':
-          errorMessage = 'Aucune parole détectée. Veuillez parler plus fort.';
+          errorMessage = language === 'fr'
+            ? 'Aucune parole détectée. Veuillez parler plus fort.'
+            : 'No speech detected. Please speak louder.';
           break;
         case 'audio-capture':
-          errorMessage = 'Impossible d\'accéder au microphone. Vérifiez les permissions.';
+          errorMessage = language === 'fr'
+            ? 'Impossible d\'accéder au microphone. Vérifiez les permissions.'
+            : 'Cannot access microphone. Check permissions.';
           break;
         case 'not-allowed':
-          errorMessage = 'Permission microphone refusée. Autorisez l\'accès au microphone.';
+          errorMessage = language === 'fr'
+            ? 'Permission microphone refusée. Autorisez l\'accès au microphone.'
+            : 'Microphone permission denied. Allow microphone access.';
           break;
         case 'network':
-          errorMessage = 'Erreur réseau. Vérifiez votre connexion internet.';
-          break;
-        case 'service-not-allowed':
-          errorMessage = 'Service de reconnaissance vocale non autorisé.';
+          errorMessage = language === 'fr'
+            ? 'Erreur réseau. Vérifiez votre connexion internet.'
+            : 'Network error. Check your internet connection.';
           break;
       }
       
@@ -365,7 +401,7 @@ Que souhaitez-vous savoir ?`,
     };
 
     recognition.onend = () => {
-      console.log('🔇 Reconnaissance vocale terminée');
+      console.log('🔇 Reconnaissance vocale Dr. Léa Martin terminée');
       setIsListening(false);
       setInterimTranscript('');
       
@@ -381,7 +417,7 @@ Que souhaitez-vous savoir ?`,
       
       // Traitement automatique du transcript final
       if (currentFinalTranscript.trim() && !isProcessingRef.current) {
-        console.log('📤 Envoi automatique du transcript final:', currentFinalTranscript.trim());
+        console.log('📤 Dr. Léa Martin traite automatiquement:', currentFinalTranscript.trim());
         processVoiceInput(currentFinalTranscript.trim());
         setFinalTranscript(''); // Réinitialiser après traitement
       }
@@ -393,7 +429,7 @@ Que souhaitez-vous savoir ?`,
 
   const stopListening = () => {
     if (recognitionRef.current) {
-      console.log('⏹️ Arrêt manuel de la reconnaissance vocale');
+      console.log('⏹️ Arrêt manuel de l\'écoute Dr. Léa Martin');
       recognitionRef.current.stop();
     }
     if (silenceTimerRef.current) {
@@ -406,7 +442,7 @@ Que souhaitez-vous savoir ?`,
     const content = messageContent || inputMessage.trim();
     if (!content || !session) return;
 
-    console.log('💬 Envoi du message à l\'IA avec contexte patient:', content);
+    console.log('💬 Message envoyé à Dr. Léa Martin avec contexte patient:', content);
 
     // Ajouter le message utilisateur au chat
     const userMessage: ChatMessage = {
@@ -426,9 +462,9 @@ Que souhaitez-vous savoir ?`,
       // Envoyer le message au service Tavus
       await tavusService.sendMessage(content);
       
-      // Générer une réponse contextuelle avec toutes les données patient
+      // Générer une réponse contextuelle avec toutes les données patient dans la bonne langue
       setTimeout(() => {
-        const aiResponse = tavusService.generateContextualResponse(content, patient);
+        const aiResponse = tavusService.generateContextualResponse(content, patient, language);
         const aiMessage: ChatMessage = {
           id: `msg-${Date.now()}-ai`,
           type: 'ai',
@@ -437,18 +473,20 @@ Que souhaitez-vous savoir ?`,
         };
         setChatMessages(prev => [...prev, aiMessage]);
         
-        // **SYNTHÈSE VOCALE AUTOMATIQUE** de la réponse IA
+        // **SYNTHÈSE VOCALE AUTOMATIQUE** de la réponse Dr. Léa Martin
         setTimeout(() => {
           speakText(aiResponse);
         }, 500);
       }, 1500);
 
     } catch (error) {
-      console.error('❌ Erreur lors de l\'envoi du message:', error);
+      console.error('❌ Erreur lors de l\'envoi du message à Dr. Léa Martin:', error);
       const errorMessage: ChatMessage = {
         id: `msg-${Date.now()}-error`,
         type: 'ai',
-        content: 'Désolé, je rencontre une difficulté technique. Pouvez-vous reformuler votre question ?',
+        content: language === 'fr'
+          ? 'Désolée, je rencontre une difficulté technique. Pouvez-vous reformuler votre question ?'
+          : 'Sorry, I\'m experiencing a technical difficulty. Could you rephrase your question?',
         timestamp: new Date()
       };
       setChatMessages(prev => [...prev, errorMessage]);
@@ -514,24 +552,30 @@ Que souhaitez-vous savoir ?`,
                 <Bot className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Dr. IA Assistant</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Dr. Léa Martin</h3>
                 <p className="text-sm text-gray-600">
-                  Patient: {patient.prenom} {patient.nom}
+                  {language === 'fr' ? 'Assistante Médicale IA' : 'AI Medical Assistant'}
                 </p>
                 <p className="text-xs text-purple-600">
-                  Accès complet: {patient.consultations?.length || 0} consultations • {patient.factures?.length || 0} factures • {patient.rendezVous?.length || 0} RDV
+                  {language === 'fr' ? 'Patient' : 'Patient'}: {patient.prenom} {patient.nom}
+                </p>
+                <p className="text-xs text-purple-600">
+                  {language === 'fr' 
+                    ? `Accès complet: ${patient.consultations?.length || 0} consultations • ${patient.factures?.length || 0} factures • ${patient.rendezVous?.length || 0} RDV`
+                    : `Full access: ${patient.consultations?.length || 0} consultations • ${patient.factures?.length || 0} invoices • ${patient.rendezVous?.length || 0} appointments`
+                  }
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {session?.isDemoMode && (
                 <span className="px-3 py-1 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">
-                  Mode Démo
+                  {language === 'fr' ? 'Mode Démo' : 'Demo Mode'}
                 </span>
               )}
               {externalWindow && !externalWindow.closed && (
                 <span className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
-                  Fenêtre externe active
+                  {language === 'fr' ? 'Fenêtre externe active' : 'External window active'}
                 </span>
               )}
               <button
@@ -541,7 +585,10 @@ Que souhaitez-vous savoir ?`,
                     ? 'bg-green-100 text-green-600 hover:bg-green-200' 
                     : 'bg-red-100 text-red-600 hover:bg-red-200'
                 }`}
-                title={voiceEnabled ? 'Désactiver la voix' : 'Activer la voix'}
+                title={voiceEnabled 
+                  ? (language === 'fr' ? 'Désactiver la voix' : 'Disable voice')
+                  : (language === 'fr' ? 'Activer la voix' : 'Enable voice')
+                }
               >
                 {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
               </button>
@@ -553,8 +600,18 @@ Que souhaitez-vous savoir ?`,
             {isLoading ? (
               <div className="text-center">
                 <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-gray-600">Initialisation de l'assistant IA...</p>
-                <p className="text-sm text-purple-600 mt-2">Chargement des données patient complètes</p>
+                <p className="text-gray-600">
+                  {language === 'fr' 
+                    ? 'Initialisation de Dr. Léa Martin...'
+                    : 'Initializing Dr. Léa Martin...'
+                  }
+                </p>
+                <p className="text-sm text-purple-600 mt-2">
+                  {language === 'fr'
+                    ? 'Chargement des données patient complètes'
+                    : 'Loading complete patient data'
+                  }
+                </p>
               </div>
             ) : error ? (
               <div className="text-center max-w-md">
@@ -566,7 +623,7 @@ Que souhaitez-vous savoir ?`,
                   onClick={initializeSession}
                   className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
                 >
-                  Réessayer
+                  {language === 'fr' ? 'Réessayer' : 'Retry'}
                 </button>
               </div>
             ) : session ? (
@@ -594,11 +651,11 @@ Que souhaitez-vous savoir ?`,
                       session.status === 'listening' ? 'bg-orange-500 animate-pulse' :
                       'bg-gray-500'
                     }`}></div>
-                    {session.status === 'ready' && !isSpeaking && 'Prêt'}
-                    {(session.status === 'speaking' || isSpeaking) && 'En train de parler'}
-                    {session.status === 'listening' && 'À l\'écoute'}
-                    {session.status === 'initializing' && 'Initialisation'}
-                    {session.status === 'ended' && 'Session terminée'}
+                    {session.status === 'ready' && !isSpeaking && (language === 'fr' ? 'Prête' : 'Ready')}
+                    {(session.status === 'speaking' || isSpeaking) && (language === 'fr' ? 'En train de parler' : 'Speaking')}
+                    {session.status === 'listening' && (language === 'fr' ? 'À l\'écoute' : 'Listening')}
+                    {session.status === 'initializing' && (language === 'fr' ? 'Initialisation' : 'Initializing')}
+                    {session.status === 'ended' && (language === 'fr' ? 'Session terminée' : 'Session ended')}
                   </div>
                 </div>
 
@@ -608,7 +665,10 @@ Que souhaitez-vous savoir ?`,
                     <div className="flex items-center gap-2 mb-2">
                       <Mic className="w-4 h-4 text-purple-600" />
                       <span className="text-sm font-medium text-purple-800">
-                        {isListening ? 'Écoute en cours...' : 'Transcription terminée'}
+                        {isListening 
+                          ? (language === 'fr' ? 'Écoute en cours...' : 'Listening...')
+                          : (language === 'fr' ? 'Transcription terminée' : 'Transcription completed')
+                        }
                       </span>
                     </div>
                     <div className="text-left">
@@ -619,7 +679,9 @@ Que souhaitez-vous savoir ?`,
                         <p className="text-gray-500 italic">{interimTranscript}</p>
                       )}
                       {!finalTranscript && !interimTranscript && isListening && (
-                        <p className="text-gray-400 italic">Parlez maintenant...</p>
+                        <p className="text-gray-400 italic">
+                          {language === 'fr' ? 'Parlez maintenant...' : 'Speak now...'}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -647,22 +709,28 @@ Que souhaitez-vous savoir ?`,
                       {isListening ? (
                         <>
                           <MicOff className="w-5 h-5" />
-                          Arrêter
+                          {language === 'fr' ? 'Arrêter' : 'Stop'}
                         </>
                       ) : (
                         <>
                           <Mic className="w-5 h-5" />
-                          Parler
+                          {language === 'fr' ? 'Parler' : 'Speak'}
                         </>
                       )}
                     </button>
                   ) : (
                     <div className="text-center">
                       <p className="text-red-600 text-sm mb-2">
-                        Reconnaissance vocale non supportée
+                        {language === 'fr'
+                          ? 'Reconnaissance vocale non supportée'
+                          : 'Voice recognition not supported'
+                        }
                       </p>
                       <p className="text-gray-500 text-xs">
-                        Utilisez Chrome, Edge ou Safari
+                        {language === 'fr'
+                          ? 'Utilisez Chrome, Edge ou Safari'
+                          : 'Use Chrome, Edge or Safari'
+                        }
                       </p>
                     </div>
                   )}
@@ -673,7 +741,7 @@ Que souhaitez-vous savoir ?`,
                       className="flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                     >
                       <ExternalLink className="w-5 h-5" />
-                      Ouvrir Avatar
+                      {language === 'fr' ? 'Ouvrir Avatar' : 'Open Avatar'}
                     </button>
                   )}
                 </div>
@@ -689,8 +757,15 @@ Que souhaitez-vous savoir ?`,
             <div className="flex items-center gap-3">
               <MessageCircle className="w-5 h-5 text-blue-600" />
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Chat Médical Avancé</h3>
-                <p className="text-sm text-gray-600">Accès complet aux données patient</p>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {language === 'fr' ? 'Chat Médical Avancé' : 'Advanced Medical Chat'}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {language === 'fr' 
+                    ? 'Accès complet aux données patient'
+                    : 'Full access to patient data'
+                  }
+                </p>
               </div>
             </div>
             <button
@@ -737,7 +812,10 @@ Que souhaitez-vous savoir ?`,
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Posez une question sur le patient (consultations, factures, RDV...)..."
+                placeholder={language === 'fr'
+                  ? 'Posez une question sur le patient (consultations, factures, RDV...)...'
+                  : 'Ask a question about the patient (consultations, invoices, appointments...)...'
+                }
                 className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={!session || session.status === 'ended'}
               />
@@ -750,7 +828,10 @@ Que souhaitez-vous savoir ?`,
               </button>
             </div>
             <div className="mt-2 text-xs text-gray-500">
-              💡 Exemples: "Résumé complet", "Dernière consultation", "Factures en attente", "Prochain rendez-vous"
+              💡 {language === 'fr'
+                ? 'Exemples: "Résumé complet", "Dernière consultation", "Factures en attente", "Prochain rendez-vous"'
+                : 'Examples: "Complete summary", "Last consultation", "Pending invoices", "Next appointment"'
+              }
             </div>
           </div>
         </div>

@@ -1,13 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { SearchFilters } from './SearchFilters';
 import { PatientCard } from './PatientCard';
 import { PatientModal } from './PatientModal';
 import { ConsultationModal } from './ConsultationModal';
 import { FactureModal } from './FactureModal';
 import { RendezVousModal } from './RendezVousModal';
+import { AddPatientModal } from './AddPatientModal';
 import { mockPatients } from '../data/mockPatients';
 import { mockCabinetStats, updatePatientsWithCabinetData, mockConsultations, mockFactures, mockRendezVous } from '../data/mockCabinetData';
 import { Patient, SearchFilters as SearchFiltersType, CabinetStats, Consultation, Facture, RendezVous } from '../types/Patient';
+import { PatientData, patientService } from '../services/patientService';
 import { useLanguage } from '../hooks/useLanguage';
 import { 
   Users, 
@@ -25,7 +27,9 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
@@ -36,18 +40,158 @@ export const CabinetDashboard: React.FC = () => {
   const [showConsultationModal, setShowConsultationModal] = useState(false);
   const [showFactureModal, setShowFactureModal] = useState(false);
   const [showRendezVousModal, setShowRendezVousModal] = useState(false);
+  const [showAddPatientModal, setShowAddPatientModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'patients' | 'consultations' | 'factures' | 'rendez-vous'>('patients');
+  const [patientsFromDB, setPatientsFromDB] = useState<PatientData[]>([]);
+  const [isLoadingPatients, setIsLoadingPatients] = useState(true);
+  const [stats, setStats] = useState<CabinetStats>(mockCabinetStats);
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
 
-  // Mise à jour des patients avec les données cabinet
-  const patientsWithCabinetData = useMemo(() => {
-    return updatePatientsWithCabinetData(mockPatients);
+  // Charger les patients depuis la base de données
+  useEffect(() => {
+    loadPatientsFromDB();
   }, []);
+
+  const loadPatientsFromDB = async () => {
+    try {
+      setIsLoadingPatients(true);
+      console.log('🔄 Chargement des patients depuis Supabase...');
+      
+      const patients = await patientService.getAllPatients();
+      console.log('✅ Patients chargés:', patients.length);
+      
+      setPatientsFromDB(patients);
+      
+      // Charger les statistiques
+      const cabinetStats = await patientService.getCabinetStats();
+      setStats({
+        patients: {
+          total: cabinetStats.totalPatients,
+          nouveaux: Math.floor(cabinetStats.totalPatients * 0.1), // 10% de nouveaux
+          actifs: cabinetStats.patientsActifs
+        },
+        consultations: {
+          aujourdhui: cabinetStats.consultationsAujourdhui,
+          semaine: cabinetStats.consultationsAujourdhui * 7,
+          mois: cabinetStats.consultationsAujourdhui * 30
+        },
+        rendezVous: {
+          aujourdhui: cabinetStats.rdvAujourdhui,
+          semaine: cabinetStats.rdvAujourdhui * 7,
+          enAttente: Math.floor(cabinetStats.rdvAujourdhui * 1.5)
+        },
+        finances: {
+          chiffreAffaireMois: cabinetStats.totalPatients * 25 * 2, // Estimation
+          facturenAttente: cabinetStats.facturesEnAttente * 25,
+          tauxRecouvrement: 94.2
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des patients:', error);
+      // En cas d'erreur, utiliser les données mock
+      setPatientsFromDB([]);
+    } finally {
+      setIsLoadingPatients(false);
+    }
+  };
+
+  // Convertir les patients de la DB au format attendu par l'interface
+  const convertDBPatientToPatient = (dbPatient: PatientData): Patient => {
+    return {
+      id: dbPatient.id || '',
+      nom: dbPatient.nom,
+      prenom: dbPatient.prenom,
+      sexe: dbPatient.sexe,
+      dateNaissance: dbPatient.date_naissance,
+      age: dbPatient.age,
+      lieuNaissance: dbPatient.lieu_naissance,
+      nationalite: dbPatient.nationalite,
+      numeroSecuriteSociale: dbPatient.numero_securite_sociale || '',
+      situationFamiliale: dbPatient.situation_familiale,
+      
+      adresse: {
+        rue: dbPatient.adresse_rue,
+        ville: dbPatient.adresse_ville,
+        codePostal: dbPatient.adresse_code_postal,
+        pays: dbPatient.adresse_pays
+      },
+      telephone: {
+        portable: dbPatient.telephone_portable,
+        fixe: dbPatient.telephone_fixe
+      },
+      email: dbPatient.email,
+      contactUrgence: {
+        nom: dbPatient.contact_urgence_nom,
+        lien: dbPatient.contact_urgence_lien,
+        telephone: dbPatient.contact_urgence_telephone
+      },
+      
+      numeroDossier: dbPatient.numero_dossier,
+      dateAdmission: dbPatient.date_admission,
+      service: dbPatient.service,
+      modeAdmission: dbPatient.mode_admission,
+      medecinTraitant: dbPatient.medecin_traitant,
+      medecinReferent: dbPatient.medecin_referent,
+      statutSocial: dbPatient.statut_social || '',
+      mutuelle: dbPatient.mutuelle,
+      prisEnCharge: dbPatient.pris_en_charge,
+      
+      antecedents: {
+        personnels: dbPatient.antecedents_personnels,
+        familiaux: dbPatient.antecedents_familiaux
+      },
+      allergies: dbPatient.allergies,
+      traitements: [], // À charger séparément si nécessaire
+      biometrie: {
+        poids: dbPatient.biometrie_poids || 0,
+        taille: dbPatient.biometrie_taille || 0,
+        imc: dbPatient.biometrie_imc || 0
+      },
+      groupeSanguin: dbPatient.groupe_sanguin,
+      antecedenChirurgicaux: dbPatient.antecedents_chirurgicaux,
+      habitudesVie: {
+        tabac: dbPatient.habitudes_vie_tabac,
+        alcool: dbPatient.habitudes_vie_alcool,
+        drogues: dbPatient.habitudes_vie_drogues,
+        details: dbPatient.habitudes_vie_details
+      },
+      pathologiesConnues: dbPatient.pathologies_connues,
+      motifHospitalisation: dbPatient.motif_hospitalisation,
+      diagnostics: dbPatient.diagnostics,
+      
+      alerte: dbPatient.alerte_niveau ? {
+        niveau: dbPatient.alerte_niveau,
+        message: dbPatient.alerte_message || ''
+      } : undefined,
+      statut: dbPatient.statut,
+      derniereMaj: new Date().toISOString(),
+      
+      // Données cabinet
+      consultations: [], // À charger séparément
+      factures: [], // À charger séparément
+      rendezVous: [], // À charger séparément
+      typePatient: dbPatient.type_patient,
+      medecinCabinet: dbPatient.medecin_cabinet
+    };
+  };
+
+  // Combiner les patients de la DB avec les données mock
+  const allPatients = useMemo(() => {
+    const dbPatients = patientsFromDB.map(convertDBPatientToPatient);
+    const mockPatientsWithCabinetData = updatePatientsWithCabinetData(mockPatients);
+    
+    // Éviter les doublons en utilisant les IDs
+    const existingIds = new Set(dbPatients.map(p => p.id));
+    const uniqueMockPatients = mockPatientsWithCabinetData.filter(p => !existingIds.has(p.id));
+    
+    return [...dbPatients, ...uniqueMockPatients];
+  }, [patientsFromDB]);
 
   // Filter patients based on search criteria
   const filteredPatients = useMemo(() => {
-    return patientsWithCabinetData.filter(patient => {
+    return allPatients.filter(patient => {
       // Name filter
       if (filters.nom) {
         const searchTerm = filters.nom.toLowerCase();
@@ -93,13 +237,18 @@ export const CabinetDashboard: React.FC = () => {
 
       return true;
     });
-  }, [filters, patientsWithCabinetData]);
+  }, [filters, allPatients]);
 
   const resetFilters = () => {
     setFilters({});
   };
 
-  const stats: CabinetStats = mockCabinetStats;
+  // Gérer l'ajout d'un nouveau patient
+  const handlePatientAdded = (newPatient: PatientData) => {
+    console.log('✅ Nouveau patient ajouté:', newPatient);
+    // Recharger les patients depuis la DB
+    loadPatientsFromDB();
+  };
 
   // Fonctions utilitaires pour les statuts
   const getConsultationStatusColor = (statut: string) => {
@@ -270,7 +419,14 @@ export const CabinetDashboard: React.FC = () => {
       {/* Quick Actions */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('cabinet.actions.title')}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <button
+            onClick={() => setShowAddPatientModal(true)}
+            className="flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+          >
+            <Plus className="w-5 h-5 text-green-600" />
+            <span className="font-medium text-green-900">{t('cabinet.actions.patient')}</span>
+          </button>
           <button
             onClick={() => setShowConsultationModal(true)}
             className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
@@ -280,10 +436,10 @@ export const CabinetDashboard: React.FC = () => {
           </button>
           <button
             onClick={() => setShowRendezVousModal(true)}
-            className="flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+            className="flex items-center gap-3 p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
           >
-            <Calendar className="w-5 h-5 text-green-600" />
-            <span className="font-medium text-green-900">{t('cabinet.actions.appointment')}</span>
+            <Calendar className="w-5 h-5 text-orange-600" />
+            <span className="font-medium text-orange-900">{t('cabinet.actions.appointment')}</span>
           </button>
           <button
             onClick={() => setShowFactureModal(true)}
@@ -292,9 +448,13 @@ export const CabinetDashboard: React.FC = () => {
             <FileText className="w-5 h-5 text-purple-600" />
             <span className="font-medium text-purple-900">{t('cabinet.actions.invoice')}</span>
           </button>
-          <button className="flex items-center gap-3 p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors">
-            <Users className="w-5 h-5 text-orange-600" />
-            <span className="font-medium text-orange-900">{t('cabinet.actions.patient')}</span>
+          <button
+            onClick={loadPatientsFromDB}
+            disabled={isLoadingPatients}
+            className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-5 h-5 text-gray-600 ${isLoadingPatients ? 'animate-spin' : ''}`} />
+            <span className="font-medium text-gray-900">Actualiser</span>
           </button>
         </div>
       </div>
@@ -318,6 +478,12 @@ export const CabinetDashboard: React.FC = () => {
               </h2>
               <p className="text-gray-600">
                 {filteredPatients.length} {filteredPatients.length === 1 ? t('dashboard.results.found') : t('dashboard.results.found.plural')}
+                {isLoadingPatients && (
+                  <span className="ml-2 text-blue-600">
+                    <RefreshCw className="w-4 h-4 inline animate-spin mr-1" />
+                    Chargement...
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -335,7 +501,7 @@ export const CabinetDashboard: React.FC = () => {
           </div>
 
           {/* Empty State */}
-          {filteredPatients.length === 0 && (
+          {filteredPatients.length === 0 && !isLoadingPatients && (
             <div className="text-center py-12">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -344,12 +510,20 @@ export const CabinetDashboard: React.FC = () => {
               <p className="text-gray-600 mb-4">
                 {t('dashboard.empty.subtitle')}
               </p>
-              <button
-                onClick={resetFilters}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-              >
-                {t('dashboard.empty.reset')}
-              </button>
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={resetFilters}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  {t('dashboard.empty.reset')}
+                </button>
+                <button
+                  onClick={() => setShowAddPatientModal(true)}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  Ajouter un patient
+                </button>
+              </div>
             </div>
           )}
         </>
@@ -383,7 +557,7 @@ export const CabinetDashboard: React.FC = () => {
                       <div>
                         <h3 className="font-semibold text-gray-900">{consultation.motif}</h3>
                         <p className="text-sm text-gray-600">
-                          {t('common.patient')}: {patientsWithCabinetData.find(p => p.id === consultation.patientId)?.prenom} {patientsWithCabinetData.find(p => p.id === consultation.patientId)?.nom}
+                          {t('common.patient')}: {allPatients.find(p => p.id === consultation.patientId)?.prenom} {allPatients.find(p => p.id === consultation.patientId)?.nom}
                         </p>
                       </div>
                       <span className={`px-3 py-1 text-xs rounded-full font-medium ${getConsultationStatusColor(consultation.statut)}`}>
@@ -478,7 +652,7 @@ export const CabinetDashboard: React.FC = () => {
                       <div>
                         <h3 className="font-semibold text-gray-900">Facture {facture.numero}</h3>
                         <p className="text-sm text-gray-600">
-                          {t('common.patient')}: {patientsWithCabinetData.find(p => p.id === facture.patientId)?.prenom} {patientsWithCabinetData.find(p => p.id === facture.patientId)?.nom}
+                          {t('common.patient')}: {allPatients.find(p => p.id === facture.patientId)?.prenom} {allPatients.find(p => p.id === facture.patientId)?.nom}
                         </p>
                       </div>
                       <span className={`px-3 py-1 text-xs rounded-full font-medium ${getFactureStatusColor(facture.statut)}`}>
@@ -650,7 +824,7 @@ export const CabinetDashboard: React.FC = () => {
                       <Edit className="w-4 h-4" />
                     </button>
                     {rdv.statut === 'programme' && (
-                      <button className="p-2 text-green-600 hover:bg-green-100 rounded-lg transition-colors">
+                      <button className="p-2 text-green-600 hover: bg-green-100 rounded-lg transition-colors">
                         <CheckCircle className="w-4 h-4" />
                       </button>
                     )}
@@ -686,6 +860,14 @@ export const CabinetDashboard: React.FC = () => {
       {showRendezVousModal && (
         <RendezVousModal
           onClose={() => setShowRendezVousModal(false)}
+        />
+      )}
+
+      {showAddPatientModal && (
+        <AddPatientModal
+          isOpen={showAddPatientModal}
+          onClose={() => setShowAddPatientModal(false)}
+          onPatientAdded={handlePatientAdded}
         />
       )}
     </div>
