@@ -433,27 +433,7 @@ export const CabinetDashboard: React.FC = () => {
             <Plus className="w-5 h-5 text-green-600" />
             <span className="font-medium text-green-900">{t('cabinet.actions.patient')}</span>
           </button>
-          <button
-            onClick={() => setShowConsultationModal(true)}
-            className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-          >
-            <Stethoscope className="w-5 h-5 text-blue-600" />
-            <span className="font-medium text-blue-900">{t('cabinet.actions.consultation')}</span>
-          </button>
-          <button
-            onClick={() => setShowRendezVousModal(true)}
-            className="flex items-center gap-3 p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
-          >
-            <Calendar className="w-5 h-5 text-orange-600" />
-            <span className="font-medium text-orange-900">{t('cabinet.actions.appointment')}</span>
-          </button>
-          <button
-            onClick={() => setShowFactureModal(true)}
-            className="flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
-          >
-            <FileText className="w-5 h-5 text-purple-600" />
-            <span className="font-medium text-purple-900">{t('cabinet.actions.invoice')}</span>
-          </button>
+          
           <button
             onClick={loadPatientsFromDB}
             disabled={isLoadingPatients}
