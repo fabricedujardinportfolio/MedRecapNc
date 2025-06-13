@@ -57,6 +57,7 @@ export const CollaborativePixelArt: React.FC = () => {
   }>>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadingStep, setLoadingStep] = useState<string>('');
+  const [canvasReady, setCanvasReady] = useState(false);
 
   // Couleurs prédéfinies pour l'art collaboratif
   const predefinedColors = [
@@ -67,6 +68,7 @@ export const CollaborativePixelArt: React.FC = () => {
 
   // Charger les données initiales
   useEffect(() => {
+    console.log('🚀 Initialisation du composant CollaborativePixelArt');
     loadInitialData();
     
     // Nettoyer les souscriptions au démontage du composant
@@ -79,15 +81,33 @@ export const CollaborativePixelArt: React.FC = () => {
   // Configurer les souscriptions temps réel après le chargement initial
   useEffect(() => {
     if (!isLoading && pixels.length >= 0) {
+      console.log('📡 Configuration des souscriptions temps réel');
       setupRealtimeSubscriptions();
     }
   }, [isLoading]);
+
+  // Effet pour le rendu du canvas - SÉPARÉ et OPTIMISÉ
+  useEffect(() => {
+    if (!canvasRef.current) {
+      console.log('⚠️ Canvas ref non disponible');
+      return;
+    }
+
+    if (isLoading) {
+      console.log('⏳ Chargement en cours, rendu différé');
+      return;
+    }
+
+    console.log('🖼️ Déclenchement du rendu canvas avec', pixels.length, 'pixels');
+    renderCanvas();
+  }, [pixels, currentUserPixel, isLoading, language]); // Ajout de language comme dépendance
 
   const loadInitialData = async () => {
     try {
       setIsLoading(true);
       setError(null);
       setLoadingStep('Initialisation...');
+      setCanvasReady(false);
 
       console.log('🚀 Chargement initial des données...');
 
@@ -95,7 +115,25 @@ export const CollaborativePixelArt: React.FC = () => {
       setLoadingStep('Chargement des pixels...');
       const allPixels = await collaborativeArtService.getAllPixels(true); // Force refresh
       console.log('🎨 Pixels chargés:', allPixels.length, 'pixels');
-      setPixels(allPixels);
+      
+      // Validation et filtrage des pixels
+      const validPixels = allPixels.filter(pixel => {
+        const isValid = pixel && 
+                       typeof pixel.x === 'number' && 
+                       typeof pixel.y === 'number' && 
+                       typeof pixel.color === 'string' &&
+                       pixel.color.match(/^#[0-9A-Fa-f]{6}$/) &&
+                       pixel.x >= 0 && pixel.x < 1200 &&
+                       pixel.y >= 0 && pixel.y < 1250;
+        
+        if (!isValid) {
+          console.warn('⚠️ Pixel invalide filtré:', pixel);
+        }
+        return isValid;
+      });
+
+      console.log('✅ Pixels valides:', validPixels.length, '/', allPixels.length);
+      setPixels(validPixels);
 
       // 2. Charger les statistiques
       setLoadingStep('Chargement des statistiques...');
@@ -120,6 +158,7 @@ export const CollaborativePixelArt: React.FC = () => {
       console.log('👥 Contributeurs récents chargés:', contributors.length);
 
       setLoadingStep('Finalisation...');
+      setCanvasReady(true);
       console.log('✅ Chargement initial terminé avec succès');
 
     } catch (error) {
@@ -199,107 +238,117 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   };
 
-  // Dessiner l'image sur le canvas - CORRIGÉ
-  useEffect(() => {
-    if (!canvasRef.current || isLoading) return;
+  // Fonction de rendu du canvas - SÉPARÉE et OPTIMISÉE
+  const renderCanvas = () => {
+    if (!canvasRef.current) {
+      console.log('⚠️ Canvas ref non disponible pour le rendu');
+      return;
+    }
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    console.log('🖼️ Rendu du canvas avec', pixels.length, 'pixels');
-
-    // Configurer le canvas
-    const displayWidth = 600;
-    const displayHeight = 625;
-    canvas.width = displayWidth;
-    canvas.height = displayHeight;
-
-    // Fond gris pour les pixels non remplis
-    ctx.fillStyle = '#F3F4F6';
-    ctx.fillRect(0, 0, displayWidth, displayHeight);
-
-    // Dessiner les pixels existants seulement s'il y en a
-    if (pixels.length > 0) {
-      const scaleX = displayWidth / 1200;
-      const scaleY = displayHeight / 1250;
-
-      console.log('🎨 Début du rendu des pixels...');
-      console.log('📏 Échelle:', { scaleX, scaleY });
-
-      let renderedCount = 0;
-      pixels.forEach((pixel, index) => {
-        try {
-          // Validation des données du pixel
-          if (!pixel || typeof pixel.x !== 'number' || typeof pixel.y !== 'number' || !pixel.color) {
-            console.warn(`⚠️ Pixel ${index} invalide:`, pixel);
-            return;
-          }
-
-          // Vérifier que les coordonnées sont dans les limites
-          if (pixel.x < 0 || pixel.x >= 1200 || pixel.y < 0 || pixel.y >= 1250) {
-            console.warn(`⚠️ Pixel ${index} hors limites:`, { x: pixel.x, y: pixel.y });
-            return;
-          }
-
-          // Vérifier le format de la couleur
-          if (!pixel.color.match(/^#[0-9A-Fa-f]{6}$/)) {
-            console.warn(`⚠️ Couleur invalide pour le pixel ${index}:`, pixel.color);
-            return;
-          }
-
-          ctx.fillStyle = pixel.color;
-          const pixelX = Math.floor(pixel.x * scaleX);
-          const pixelY = Math.floor(pixel.y * scaleY);
-          const pixelWidth = Math.ceil(scaleX);
-          const pixelHeight = Math.ceil(scaleY);
-
-          ctx.fillRect(pixelX, pixelY, pixelWidth, pixelHeight);
-          renderedCount++;
-
-          // Log pour les premiers pixels pour debug
-          if (index < 5) {
-            console.log(`🎨 Pixel ${index}:`, {
-              original: { x: pixel.x, y: pixel.y, color: pixel.color },
-              rendered: { x: pixelX, y: pixelY, width: pixelWidth, height: pixelHeight }
-            });
-          }
-        } catch (error) {
-          console.warn(`❌ Erreur lors du rendu du pixel ${index}:`, error);
-        }
-      });
-
-      console.log(`✅ ${renderedCount}/${pixels.length} pixels rendus avec succès`);
-
-      // Dessiner le pixel de l'utilisateur actuel avec un contour
-      if (currentUserPixel) {
-        try {
-          ctx.fillStyle = currentUserPixel.color;
-          ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 2;
-          const x = Math.floor(currentUserPixel.x * scaleX);
-          const y = Math.floor(currentUserPixel.y * scaleY);
-          const width = Math.ceil(scaleX);
-          const height = Math.ceil(scaleY);
-          
-          ctx.fillRect(x, y, width, height);
-          ctx.strokeRect(x, y, width, height);
-          
-          console.log('👤 Pixel utilisateur rendu avec contour:', {
-            x: currentUserPixel.x,
-            y: currentUserPixel.y,
-            color: currentUserPixel.color
-          });
-        } catch (error) {
-          console.warn('❌ Erreur lors du rendu du pixel utilisateur:', error);
-        }
-      }
-
-      console.log('✅ Canvas rendu avec succès -', renderedCount, 'pixels affichés');
-    } else {
-      console.log('⚠️ Aucun pixel à afficher');
+    if (!ctx) {
+      console.log('⚠️ Contexte 2D non disponible');
+      return;
     }
-  }, [pixels, currentUserPixel, isLoading]);
+
+    console.log('🖼️ Début du rendu canvas avec', pixels.length, 'pixels');
+
+    try {
+      // Configurer le canvas
+      const displayWidth = 600;
+      const displayHeight = 625;
+      canvas.width = displayWidth;
+      canvas.height = displayHeight;
+
+      // Fond gris pour les pixels non remplis
+      ctx.fillStyle = '#F3F4F6';
+      ctx.fillRect(0, 0, displayWidth, displayHeight);
+
+      // Dessiner les pixels existants seulement s'il y en a
+      if (pixels.length > 0) {
+        const scaleX = displayWidth / 1200;
+        const scaleY = displayHeight / 1250;
+
+        console.log('🎨 Début du rendu des pixels...');
+        console.log('📏 Échelle:', { scaleX, scaleY });
+
+        let renderedCount = 0;
+        pixels.forEach((pixel, index) => {
+          try {
+            // Validation des données du pixel
+            if (!pixel || typeof pixel.x !== 'number' || typeof pixel.y !== 'number' || !pixel.color) {
+              console.warn(`⚠️ Pixel ${index} invalide:`, pixel);
+              return;
+            }
+
+            // Vérifier que les coordonnées sont dans les limites
+            if (pixel.x < 0 || pixel.x >= 1200 || pixel.y < 0 || pixel.y >= 1250) {
+              console.warn(`⚠️ Pixel ${index} hors limites:`, { x: pixel.x, y: pixel.y });
+              return;
+            }
+
+            // Vérifier le format de la couleur
+            if (!pixel.color.match(/^#[0-9A-Fa-f]{6}$/)) {
+              console.warn(`⚠️ Couleur invalide pour le pixel ${index}:`, pixel.color);
+              return;
+            }
+
+            ctx.fillStyle = pixel.color;
+            const pixelX = Math.floor(pixel.x * scaleX);
+            const pixelY = Math.floor(pixel.y * scaleY);
+            const pixelWidth = Math.ceil(scaleX);
+            const pixelHeight = Math.ceil(scaleY);
+
+            ctx.fillRect(pixelX, pixelY, pixelWidth, pixelHeight);
+            renderedCount++;
+
+            // Log pour les premiers pixels pour debug
+            if (index < 3) {
+              console.log(`🎨 Pixel ${index}:`, {
+                original: { x: pixel.x, y: pixel.y, color: pixel.color },
+                rendered: { x: pixelX, y: pixelY, width: pixelWidth, height: pixelHeight }
+              });
+            }
+          } catch (error) {
+            console.warn(`❌ Erreur lors du rendu du pixel ${index}:`, error);
+          }
+        });
+
+        console.log(`✅ ${renderedCount}/${pixels.length} pixels rendus avec succès`);
+
+        // Dessiner le pixel de l'utilisateur actuel avec un contour
+        if (currentUserPixel) {
+          try {
+            ctx.fillStyle = currentUserPixel.color;
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            const x = Math.floor(currentUserPixel.x * scaleX);
+            const y = Math.floor(currentUserPixel.y * scaleY);
+            const width = Math.ceil(scaleX);
+            const height = Math.ceil(scaleY);
+            
+            ctx.fillRect(x, y, width, height);
+            ctx.strokeRect(x, y, width, height);
+            
+            console.log('👤 Pixel utilisateur rendu avec contour:', {
+              x: currentUserPixel.x,
+              y: currentUserPixel.y,
+              color: currentUserPixel.color
+            });
+          } catch (error) {
+            console.warn('❌ Erreur lors du rendu du pixel utilisateur:', error);
+          }
+        }
+
+        console.log('✅ Canvas rendu avec succès -', renderedCount, 'pixels affichés');
+      } else {
+        console.log('⚠️ Aucun pixel à afficher');
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors du rendu du canvas:', error);
+    }
+  };
 
   // Générer un pixel pour l'utilisateur actuel
   const generateUserPixel = async () => {

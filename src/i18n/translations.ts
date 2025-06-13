@@ -215,6 +215,9 @@ export const translations = {
     'pixel.art.contribution.choose': 'Choisissez une couleur et générez votre pixel unique !',
     'pixel.art.contribution.generate': 'Générer Mon Pixel',
     'pixel.art.contribution.creating': 'Création...',
+    'pixel.art.contributor.name': 'Contributeur MedRecap+',
+    'pixel.art.contributor.you': 'Vous',
+    'pixel.art.error.create': 'Erreur lors de la création du pixel',
     'pixel.art.stats.advanced': 'Statistiques Avancées',
     'pixel.art.stats.week': 'Cette semaine',
     'pixel.art.stats.average': 'Moyenne/jour',
@@ -239,6 +242,9 @@ export const translations = {
     'pixel.art.location': 'Nouvelle-Calédonie',
     'pixel.art.made.passion': 'Fait avec passion',
     'pixel.art.innovation': 'Innovation 2025',
+    'pixel.art.share.title': 'Art Collaboratif MedRecap+ - 1,5 Million de Pixels',
+    'pixel.art.share.text': 'Participez à la création d\'une œuvre d\'art collaborative ! Chaque session génère un pixel unique.',
+    'pixel.art.share.copied': 'Lien copié dans le presse-papiers !',
 
     // Common
     'common.loading': 'Chargement...',
@@ -398,7 +404,7 @@ export const translations = {
     'patient.modal.new.appointment': 'New appointment',
     'patient.modal.no.consultations': 'No consultations recorded',
     'patient.modal.no.invoices': 'No invoices recorded',
-    'pixel.art.no.appointments': 'No appointments scheduled',
+    'patient.modal.no.appointments': 'No appointments scheduled',
 
     // Services
     'service.cardiology': 'Cardiology',
@@ -484,6 +490,9 @@ export const translations = {
     'pixel.art.contribution.choose': 'Choose a color and generate your unique pixel!',
     'pixel.art.contribution.generate': 'Generate My Pixel',
     'pixel.art.contribution.creating': 'Creating...',
+    'pixel.art.contributor.name': 'MedRecap+ Contributor',
+    'pixel.art.contributor.you': 'You',
+    'pixel.art.error.create': 'Error creating pixel',
     'pixel.art.stats.advanced': 'Advanced Statistics',
     'pixel.art.stats.week': 'This week',
     'pixel.art.stats.average': 'Average/day',
@@ -508,6 +517,9 @@ export const translations = {
     'pixel.art.location': 'New Caledonia',
     'pixel.art.made.passion': 'Made with passion',
     'pixel.art.innovation': 'Innovation 2025',
+    'pixel.art.share.title': 'MedRecap+ Collaborative Art - 1.5 Million Pixels',
+    'pixel.art.share.text': 'Join the creation of a collaborative artwork! Each session generates a unique pixel.',
+    'pixel.art.share.copied': 'Link copied to clipboard!',
 
     // Common
     'common.loading': 'Loading...',
