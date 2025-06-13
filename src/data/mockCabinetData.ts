@@ -1,15 +1,15 @@
 import { Patient, Consultation, Facture, RendezVous, CabinetStats } from '../types/Patient';
 
-// Données de consultation pour médecins de quartier
+// Medical practice consultation data
 export const mockConsultations: Consultation[] = [
   {
     id: 'CONS-001',
     patientId: 'PAT-001',
     date: '2025-01-15T09:30:00',
-    motif: 'Contrôle tension artérielle',
-    diagnostic: 'Hypertension artérielle contrôlée',
-    traitement: 'Poursuite du traitement antihypertenseur',
-    observations: 'Tension stable, bon observance du traitement',
+    motif: 'Blood pressure check',
+    diagnostic: 'Controlled hypertension',
+    traitement: 'Continue antihypertensive treatment',
+    observations: 'Stable blood pressure, good treatment compliance',
     medecinId: 'MED-001',
     medecinNom: 'Dr. Martin Dubois',
     duree: 30,
@@ -29,21 +29,21 @@ export const mockConsultations: Consultation[] = [
         {
           nom: 'Amlodipine',
           dosage: '5mg',
-          duree: '30 jours',
-          instructions: '1 comprimé le matin'
+          duree: '30 days',
+          instructions: '1 tablet in the morning'
         }
       ],
-      examens: ['Bilan lipidique dans 3 mois']
+      examens: ['Lipid panel in 3 months']
     }
   },
   {
     id: 'CONS-002',
     patientId: 'PAT-002',
     date: '2025-01-15T14:00:00',
-    motif: 'Toux persistante',
-    diagnostic: 'Bronchite aiguë',
-    traitement: 'Antibiotique et antitussif',
-    observations: 'Toux grasse depuis 5 jours, pas de fièvre',
+    motif: 'Persistent cough',
+    diagnostic: 'Acute bronchitis',
+    traitement: 'Antibiotic and cough suppressant',
+    observations: 'Productive cough for 5 days, no fever',
     medecinId: 'MED-001',
     medecinNom: 'Dr. Martin Dubois',
     duree: 20,
@@ -61,22 +61,22 @@ export const mockConsultations: Consultation[] = [
     ordonnance: {
       medicaments: [
         {
-          nom: 'Amoxicilline',
+          nom: 'Amoxicillin',
           dosage: '1g',
-          duree: '7 jours',
-          instructions: '1 comprimé matin et soir'
+          duree: '7 days',
+          instructions: '1 tablet morning and evening'
         },
         {
-          nom: 'Sirop antitussif',
+          nom: 'Cough syrup',
           dosage: '15ml',
-          duree: '5 jours',
-          instructions: '3 fois par jour'
+          duree: '5 days',
+          instructions: '3 times daily'
         }
       ],
       examens: [],
       arretTravail: {
         duree: 3,
-        motif: 'Bronchite aiguë'
+        motif: 'Acute bronchitis'
       }
     }
   },
@@ -84,10 +84,10 @@ export const mockConsultations: Consultation[] = [
     id: 'CONS-003',
     patientId: 'PAT-003',
     date: '2025-01-16T10:15:00',
-    motif: 'Suivi de grossesse',
-    diagnostic: 'Grossesse normale - 20 SA',
-    traitement: 'Supplémentation en fer',
-    observations: 'Grossesse évoluant normalement, pas de complications',
+    motif: 'Pregnancy follow-up',
+    diagnostic: 'Normal pregnancy - 20 weeks gestation',
+    traitement: 'Iron supplementation',
+    observations: 'Pregnancy progressing normally, no complications',
     medecinId: 'MED-001',
     medecinNom: 'Dr. Martin Dubois',
     duree: 25,
@@ -105,13 +105,13 @@ export const mockConsultations: Consultation[] = [
     ordonnance: {
       medicaments: [
         {
-          nom: 'Fer + Acide folique',
-          dosage: '1 comprimé',
-          duree: '30 jours',
-          instructions: '1 comprimé par jour au repas'
+          nom: 'Iron + Folic acid',
+          dosage: '1 tablet',
+          duree: '30 days',
+          instructions: '1 tablet daily with meals'
         }
       ],
-      examens: ['Échographie morphologique dans 2 semaines']
+      examens: ['Morphology ultrasound in 2 weeks']
     }
   }
 ];
@@ -132,7 +132,7 @@ export const mockFactures: Facture[] = [
     datePaiement: '2025-01-15',
     details: [
       {
-        description: 'Consultation de suivi',
+        description: 'Follow-up consultation',
         quantite: 1,
         prixUnitaire: 25,
         total: 25
@@ -157,7 +157,7 @@ export const mockFactures: Facture[] = [
     dateEcheance: '2025-02-15',
     details: [
       {
-        description: 'Consultation',
+        description: 'Medical consultation',
         quantite: 1,
         prixUnitaire: 25,
         total: 25
@@ -184,7 +184,7 @@ export const mockFactures: Facture[] = [
     datePaiement: '2025-01-16',
     details: [
       {
-        description: 'Consultation de suivi grossesse',
+        description: 'Pregnancy follow-up consultation',
         quantite: 1,
         prixUnitaire: 25,
         total: 25
@@ -195,7 +195,7 @@ export const mockFactures: Facture[] = [
       mutuelle: 7.50,
       restACharge: 0
     },
-    notes: 'Remboursement mutuelle en attente'
+    notes: 'Mutual insurance reimbursement pending'
   }
 ];
 
@@ -207,12 +207,12 @@ export const mockRendezVous: RendezVous[] = [
     date: '2025-01-17',
     heureDebut: '09:00',
     heureFin: '09:30',
-    motif: 'Contrôle tension',
+    motif: 'Blood pressure check',
     type: 'suivi',
     statut: 'confirme',
     medecinId: 'MED-001',
     medecinNom: 'Dr. Martin Dubois',
-    salle: 'Cabinet 1',
+    salle: 'Office 1',
     rappelEnvoye: true
   },
   {
@@ -222,12 +222,12 @@ export const mockRendezVous: RendezVous[] = [
     date: '2025-01-17',
     heureDebut: '10:00',
     heureFin: '10:30',
-    motif: 'Consultation générale',
+    motif: 'General consultation',
     type: 'consultation',
     statut: 'programme',
     medecinId: 'MED-001',
     medecinNom: 'Dr. Martin Dubois',
-    salle: 'Cabinet 1',
+    salle: 'Office 1',
     rappelEnvoye: false
   },
   {
@@ -237,12 +237,12 @@ export const mockRendezVous: RendezVous[] = [
     date: '2025-01-17',
     heureDebut: '14:30',
     heureFin: '15:00',
-    motif: 'Suivi grossesse',
+    motif: 'Pregnancy follow-up',
     type: 'suivi',
     statut: 'confirme',
     medecinId: 'MED-001',
     medecinNom: 'Dr. Martin Dubois',
-    salle: 'Cabinet 1',
+    salle: 'Office 1',
     rappelEnvoye: true
   },
   {
@@ -252,12 +252,12 @@ export const mockRendezVous: RendezVous[] = [
     date: '2025-01-18',
     heureDebut: '11:00',
     heureFin: '11:30',
-    motif: 'Contrôle bronchite',
+    motif: 'Bronchitis follow-up',
     type: 'suivi',
     statut: 'programme',
     medecinId: 'MED-001',
     medecinNom: 'Dr. Martin Dubois',
-    salle: 'Cabinet 1',
+    salle: 'Office 1',
     rappelEnvoye: false
   }
 ];
@@ -285,7 +285,7 @@ export const mockCabinetStats: CabinetStats = {
   }
 };
 
-// Mise à jour des patients existants pour inclure les nouvelles données
+// Update existing patients to include new cabinet data
 export const updatePatientsWithCabinetData = (patients: Patient[]): Patient[] => {
   return patients.map(patient => ({
     ...patient,

@@ -4,13 +4,13 @@ export const mockNotifications: AppNotification[] = [
   {
     id: 'notif-001',
     type: 'urgent',
-    title: 'Alerte Critique - Patient en Détresse',
-    message: 'Jean Tamate (PAT-004) présente une dégradation de sa fonction rénale. Intervention immédiate requise.',
+    title: 'Critical Alert - Patient in Distress',
+    message: 'Jean Tamate (PAT-004) shows deteriorating kidney function. Immediate intervention required.',
     timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 minutes ago
     isRead: false,
     patientId: 'PAT-004',
     patientName: 'Jean Tamate',
-    service: 'Néphrologie',
+    service: 'Nephrology',
     priority: 'critical',
     category: 'medical',
     actionRequired: true
@@ -18,13 +18,13 @@ export const mockNotifications: AppNotification[] = [
   {
     id: 'notif-002',
     type: 'alert',
-    title: 'Surveillance Respiratoire',
-    message: 'Pierre Kanak (PAT-002) nécessite une surveillance respiratoire renforcée suite à sa crise d\'asthme.',
+    title: 'Respiratory Monitoring',
+    message: 'Pierre Kanak (PAT-002) requires enhanced respiratory monitoring following asthma attack.',
     timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15 minutes ago
     isRead: false,
     patientId: 'PAT-002',
     patientName: 'Pierre Kanak',
-    service: 'Urgences',
+    service: 'Emergency',
     priority: 'high',
     category: 'medical',
     actionRequired: true
@@ -32,13 +32,13 @@ export const mockNotifications: AppNotification[] = [
   {
     id: 'notif-003',
     type: 'warning',
-    title: 'Allergie Médicamenteuse',
-    message: 'Attention: Marie Dubois (PAT-001) est allergique à la Pénicilline. Vérifier les prescriptions.',
+    title: 'Drug Allergy Alert',
+    message: 'Warning: Marie Dubois (PAT-001) is allergic to Penicillin. Check prescriptions.',
     timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
     isRead: false,
     patientId: 'PAT-001',
     patientName: 'Marie Dubois',
-    service: 'Cardiologie',
+    service: 'Cardiology',
     priority: 'high',
     category: 'medical',
     actionRequired: false
@@ -46,13 +46,13 @@ export const mockNotifications: AppNotification[] = [
   {
     id: 'notif-004',
     type: 'info',
-    title: 'Nouveau Patient Admis',
-    message: 'Sarah Johnson (PAT-003) a été admise en Obstétrique pour suivi de grossesse.',
+    title: 'New Patient Admitted',
+    message: 'Sarah Johnson (PAT-003) has been admitted to Obstetrics for pregnancy monitoring.',
     timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
     isRead: true,
     patientId: 'PAT-003',
     patientName: 'Sarah Johnson',
-    service: 'Obstétrique',
+    service: 'Obstetrics',
     priority: 'medium',
     category: 'administrative',
     actionRequired: false
@@ -60,13 +60,13 @@ export const mockNotifications: AppNotification[] = [
   {
     id: 'notif-005',
     type: 'success',
-    title: 'Résultats d\'Analyses',
-    message: 'Les résultats de laboratoire de Marie Dubois sont disponibles et normaux.',
+    title: 'Lab Results Available',
+    message: 'Marie Dubois laboratory results are available and normal.',
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
     isRead: true,
     patientId: 'PAT-001',
     patientName: 'Marie Dubois',
-    service: 'Cardiologie',
+    service: 'Cardiology',
     priority: 'low',
     category: 'medical',
     actionRequired: false
@@ -74,11 +74,11 @@ export const mockNotifications: AppNotification[] = [
   {
     id: 'notif-006',
     type: 'warning',
-    title: 'Mise à Jour Système',
-    message: 'Maintenance programmée du système MedRecap+ prévue demain de 02h00 à 04h00.',
+    title: 'System Update',
+    message: 'Scheduled MedRecap+ system maintenance tomorrow from 02:00 to 04:00.',
     timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3 hours ago
     isRead: false,
-    service: 'Système',
+    service: 'System',
     priority: 'medium',
     category: 'system',
     actionRequired: false
@@ -86,8 +86,8 @@ export const mockNotifications: AppNotification[] = [
   {
     id: 'notif-007',
     type: 'alert',
-    title: 'Tentative de Connexion Suspecte',
-    message: 'Tentative de connexion échouée détectée depuis une adresse IP inconnue.',
+    title: 'Suspicious Login Attempt',
+    message: 'Failed login attempt detected from unknown IP address.',
     timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
     isRead: false,
     priority: 'high',
@@ -97,8 +97,8 @@ export const mockNotifications: AppNotification[] = [
   {
     id: 'notif-008',
     type: 'info',
-    title: 'Rapport Mensuel Disponible',
-    message: 'Le rapport mensuel des statistiques hospitalières de janvier 2025 est maintenant disponible.',
+    title: 'Monthly Report Available',
+    message: 'January 2025 hospital statistics monthly report is now available.',
     timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
     isRead: true,
     priority: 'low',
@@ -108,11 +108,11 @@ export const mockNotifications: AppNotification[] = [
   {
     id: 'notif-009',
     type: 'urgent',
-    title: 'Urgence Médicale',
-    message: 'Code Rouge activé en salle d\'urgence. Tous les médecins disponibles requis immédiatement.',
+    title: 'Medical Emergency',
+    message: 'Code Red activated in emergency room. All available doctors required immediately.',
     timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), // 8 hours ago
     isRead: true,
-    service: 'Urgences',
+    service: 'Emergency',
     priority: 'critical',
     category: 'medical',
     actionRequired: true
@@ -120,8 +120,8 @@ export const mockNotifications: AppNotification[] = [
   {
     id: 'notif-010',
     type: 'warning',
-    title: 'Stock Médicament Faible',
-    message: 'Le stock de Ventoline en pharmacie est critique. Réapprovisionnement urgent nécessaire.',
+    title: 'Low Medication Stock',
+    message: 'Ventolin stock in pharmacy is critical. Urgent restocking needed.',
     timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), // 12 hours ago
     isRead: false,
     priority: 'high',
@@ -131,8 +131,8 @@ export const mockNotifications: AppNotification[] = [
   {
     id: 'notif-011',
     type: 'info',
-    title: 'Formation Obligatoire',
-    message: 'Rappel: Formation sur les nouvelles procédures RGPD prévue vendredi 17 janvier à 14h00.',
+    title: 'Mandatory Training',
+    message: 'Reminder: GDPR procedures training scheduled Friday January 17 at 2:00 PM.',
     timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
     isRead: true,
     priority: 'medium',
@@ -142,8 +142,8 @@ export const mockNotifications: AppNotification[] = [
   {
     id: 'notif-012',
     type: 'success',
-    title: 'Sauvegarde Complétée',
-    message: 'La sauvegarde quotidienne des données patients a été effectuée avec succès.',
+    title: 'Backup Completed',
+    message: 'Daily patient data backup completed successfully.',
     timestamp: new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString(), // 1.5 days ago
     isRead: true,
     priority: 'low',
@@ -152,7 +152,7 @@ export const mockNotifications: AppNotification[] = [
   }
 ];
 
-// Fonction pour générer des notifications en temps réel
+// Function to generate real-time notifications
 export const generateRealtimeNotification = (): AppNotification => {
   const types: AppNotification['type'][] = ['alert', 'info', 'warning', 'success', 'urgent'];
   const priorities: AppNotification['priority'][] = ['low', 'medium', 'high', 'critical'];
@@ -161,22 +161,22 @@ export const generateRealtimeNotification = (): AppNotification => {
   const templates = [
     {
       type: 'alert' as const,
-      title: 'Nouvelle Alerte Patient',
-      message: 'Un patient nécessite une attention médicale immédiate.',
+      title: 'New Patient Alert',
+      message: 'A patient requires immediate medical attention.',
       priority: 'high' as const,
       category: 'medical' as const
     },
     {
       type: 'info' as const,
-      title: 'Nouveau Message',
-      message: 'Vous avez reçu un nouveau message du service médical.',
+      title: 'New Message',
+      message: 'You have received a new message from medical staff.',
       priority: 'medium' as const,
       category: 'administrative' as const
     },
     {
       type: 'warning' as const,
-      title: 'Attention Requise',
-      message: 'Une situation nécessite votre attention.',
+      title: 'Attention Required',
+      message: 'A situation requires your attention.',
       priority: 'medium' as const,
       category: 'medical' as const
     }
