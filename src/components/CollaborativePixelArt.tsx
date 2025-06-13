@@ -124,7 +124,7 @@ export const CollaborativePixelArt: React.FC = () => {
     renderCanvas();
   }, [pixels, currentUserPixel, canvasReady, isLoading, language]);
 
-  // 🆕 Gestionnaire de mouvement de souris pour le tooltip
+  // 🔧 GESTIONNAIRE DE SURVOL CORRIGÉ - Détection améliorée
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !canvasReady || pixels.length === 0) return;
@@ -140,25 +140,40 @@ export const CollaborativePixelArt: React.FC = () => {
       const canvasX = mouseX * scaleX;
       const canvasY = mouseY * scaleY;
       
-      // Convertir en coordonnées de pixel
+      // 🔧 CORRECTION CRITIQUE : Convertir en coordonnées de pixel avec la même logique que le rendu
       const CANVAS_WIDTH = 800;
       const CANVAS_HEIGHT = 833;
+      const PIXEL_SIZE = 2;
+      
+      // Calculer la position du pixel en utilisant la même logique que renderCanvas
       const pixelX = Math.floor((canvasX / CANVAS_WIDTH) * 1200);
       const pixelY = Math.floor((canvasY / CANVAS_HEIGHT) * 1250);
       
-      // Chercher un pixel à cette position
-      const hoveredPixel = pixels.find(p => p.x === pixelX && p.y === pixelY);
+      console.log('🖱️ Survol détecté:', {
+        mouse: { x: mouseX, y: mouseY },
+        canvas: { x: canvasX, y: canvasY },
+        pixel: { x: pixelX, y: pixelY },
+        totalPixels: pixels.length
+      });
+      
+      // 🔍 RECHERCHE AMÉLIORÉE : Chercher un pixel dans une zone de tolérance
+      const tolerance = 1; // Tolérance de 1 pixel
+      const hoveredPixel = pixels.find(p => 
+        Math.abs(p.x - pixelX) <= tolerance && 
+        Math.abs(p.y - pixelY) <= tolerance
+      );
       
       if (hoveredPixel) {
+        console.log('🎯 Pixel trouvé au survol:', hoveredPixel);
         setTooltip({
-          x: pixelX,
-          y: pixelY,
+          x: hoveredPixel.x,
+          y: hoveredPixel.y,
           contributorName: hoveredPixel.contributor_name || 'Contributeur Anonyme',
           color: hoveredPixel.color,
           createdAt: hoveredPixel.created_at
         });
         setTooltipPosition({ 
-          x: event.clientX + 10, 
+          x: event.clientX + 15, 
           y: event.clientY - 10 
         });
         setIsTooltipVisible(true);
@@ -173,12 +188,20 @@ export const CollaborativePixelArt: React.FC = () => {
       setTooltip(null);
     };
 
-    canvas.addEventListener('mousemove', handleMouseMove);
+    // 🔧 AJOUT D'UN DÉLAI pour éviter les calculs trop fréquents
+    let mouseMoveTimeout: NodeJS.Timeout;
+    const throttledMouseMove = (event: MouseEvent) => {
+      clearTimeout(mouseMoveTimeout);
+      mouseMoveTimeout = setTimeout(() => handleMouseMove(event), 50); // 50ms de délai
+    };
+
+    canvas.addEventListener('mousemove', throttledMouseMove);
     canvas.addEventListener('mouseleave', handleMouseLeave);
 
     return () => {
-      canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('mousemove', throttledMouseMove);
       canvas.removeEventListener('mouseleave', handleMouseLeave);
+      clearTimeout(mouseMoveTimeout);
     };
   }, [pixels, canvasReady]);
 
