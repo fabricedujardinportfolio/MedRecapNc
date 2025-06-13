@@ -122,20 +122,20 @@ export const CollaborativePixelArt: React.FC = () => {
       console.log('🎨 Pixels chargés:', allPixels.length, 'pixels');
       
       // Validation et filtrage des pixels
-      const validPixels = allPixels.filter(pixel => {
-        const isValid = pixel && 
-                       typeof pixel.x === 'number' && 
-                       typeof pixel.y === 'number' && 
-                       typeof pixel.color === 'string' &&
-                       pixel.color.match(/^#[0-9A-Fa-f]{6}$/) &&
-                       pixel.x >= 0 && pixel.x < 1200 &&
-                       pixel.y >= 0 && pixel.y < 1250;
-        
-        if (!isValid) {
-          console.warn('⚠️ Pixel invalide filtré:', pixel);
-        }
-        return isValid;
-      });
+const validPixels = allPixels.filter(pixel => {
+  const isValid = pixel &&
+    typeof pixel.x === 'number' &&
+    typeof pixel.y === 'number' &&
+    typeof pixel.color === 'string' &&
+    pixel.color.match(/^#[0-9A-Fa-f]{6}$/) &&
+    pixel.x >= 0 && pixel.x < 1200 &&
+    pixel.y >= 0 && pixel.y < 1250;
+
+  if (!isValid) {
+    console.warn('⚠️ Pixel invalide filtré:', pixel);
+  }
+  return isValid;
+});
 
       console.log('✅ Pixels valides:', validPixels.length, '/', allPixels.length);
       setPixels(validPixels);
