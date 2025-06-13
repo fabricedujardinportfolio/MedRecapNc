@@ -578,8 +578,24 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   };
 
+  // 🔧 FONCTION DE RETOUR CORRIGÉE - Retour vers l'application principale
   const handleGoBack = () => {
-    window.history.back();
+    // Vérifier d'où vient l'utilisateur pour un retour approprié
+    const referrer = document.referrer;
+    const currentOrigin = window.location.origin;
+    
+    console.log('🔙 Retour demandé depuis:', window.location.href);
+    console.log('🔗 Referrer:', referrer);
+    
+    // Si l'utilisateur vient de la même origine (notre app), utiliser history.back()
+    if (referrer && referrer.startsWith(currentOrigin)) {
+      console.log('↩️ Retour via history.back() vers l\'application');
+      window.history.back();
+    } else {
+      // Sinon, rediriger vers la page d'accueil de l'application
+      console.log('🏠 Redirection vers la page d\'accueil de l\'application');
+      window.location.href = '/';
+    }
   };
 
   // 🔧 FONCTION DE PARTAGE CORRIGÉE
@@ -1124,13 +1140,13 @@ export const CollaborativePixelArt: React.FC = () => {
               <p className="text-purple-100 mb-4">
                 {t('pixel.art.cta.description')}
               </p>
-              <a
-                href="/"
+              <button
+                onClick={handleGoBack}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
               >
                 <Zap className="w-5 h-5" />
                 {t('pixel.art.cta.back')}
-              </a>
+              </button>
             </div>
           </div>
         </div>
