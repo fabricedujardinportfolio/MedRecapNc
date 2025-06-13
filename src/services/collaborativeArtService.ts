@@ -51,6 +51,7 @@ export interface CreatePixelResponse {
 class CollaborativeArtService {
   private static instance: CollaborativeArtService;
   private currentSessionId: string;
+  private currentIpHash: string | null = null;
   private pixelChannel: any = null;
   private statsChannel: any = null;
   private isPixelChannelSubscribed: boolean = false;
@@ -62,6 +63,8 @@ class CollaborativeArtService {
   constructor() {
     // Générer un ID de session unique basé sur le navigateur et le timestamp
     this.currentSessionId = this.generateSessionId();
+    // Initialiser le hash IP
+    this.initializeIpHash();
   }
 
   static getInstance(): CollaborativeArtService {
@@ -78,7 +81,24 @@ class CollaborativeArtService {
     return `session_${timestamp}_${random}_${btoa(userAgent).slice(0, 10)}`;
   }
 
+  // 🔒 NOUVELLE MÉTHODE : Initialiser et stocker le hash IP
+  private async initializeIpHash(): Promise<void> {
+    try {
+      this.currentIpHash = await this.hashIP();
+      console.log('🔒 IP Hash initialisé:', this.currentIpHash?.substring(0, 8) + '...');
+    } catch (error) {
+      console.warn('⚠️ Impossible d\'initialiser le hash IP:', error);
+      this.currentIpHash = 'fallback_' + Math.random().toString(36).substring(2);
+    }
+  }
+
+  // 🔒 MÉTHODE AMÉLIORÉE : Hash IP avec cache
   private async hashIP(): Promise<string> {
+    // Si déjà calculé, retourner le cache
+    if (this.currentIpHash) {
+      return this.currentIpHash;
+    }
+
     try {
       // Obtenir l'IP via un service externe (pour la démo)
       const response = await fetch('https://api.ipify.org?format=json');
@@ -86,13 +106,17 @@ class CollaborativeArtService {
       
       // Hasher l'IP pour la confidentialité
       const encoder = new TextEncoder();
-      const data_encoded = encoder.encode(data.ip + 'medrecap_salt');
+      const data_encoded = encoder.encode(data.ip + 'medrecap_salt_2025');
       const hashBuffer = await crypto.subtle.digest('SHA-256', data_encoded);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+      const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+      
+      console.log('🔒 IP hashée avec succès:', hash.substring(0, 8) + '...');
+      return hash;
     } catch (error) {
-      console.warn('Impossible d\'obtenir l\'IP, utilisation d\'un hash par défaut');
-      return 'default_hash_' + Math.random().toString(36).substring(2);
+      console.warn('⚠️ Impossible d\'obtenir l\'IP, utilisation d\'un hash par défaut');
+      const fallbackHash = 'fallback_' + Math.random().toString(36).substring(2) + '_' + Date.now().toString(36);
+      return fallbackHash.slice(0, 16);
     }
   }
 
@@ -233,31 +257,53 @@ class CollaborativeArtService {
     }
   }
 
-  // Créer un pixel pour la session actuelle - CORRIGÉ pour éviter les doublons
+  // 🔒 MÉTHODE CORRIGÉE : Créer un pixel avec vérification IP stricte
   async createPixelForCurrentSession(
     color: string = '#3B82F6',
     contributorName: string = 'Anonyme'
   ): Promise<CreatePixelResponse | null> {
     try {
-      const ipHash = await this.hashIP();
+      // S'assurer que l'IP hash est initialisé
+      if (!this.currentIpHash) {
+        console.log('🔒 Initialisation du hash IP...');
+        await this.initializeIpHash();
+      }
+
+      const ipHash = this.currentIpHash || await this.hashIP();
       const userAgent = navigator.userAgent;
 
       console.log('🎨 Création d\'un pixel pour la session:', this.currentSessionId);
+      console.log('🔒 Vérification IP hash:', ipHash?.substring(0, 8) + '...');
 
-      // VÉRIFICATION STRICTE : Une session ne peut avoir qu'un seul pixel
-      const existingPixel = await this.getCurrentSessionPixel();
-      if (existingPixel) {
-        console.log('⚠️ Cette session a déjà un pixel, retour du pixel existant');
+      // 🔒 VÉRIFICATION STRICTE : Cette IP a-t-elle déjà un pixel ?
+      const existingPixelByIp = await this.getPixelByIpHash(ipHash);
+      if (existingPixelByIp) {
+        console.log('🚫 Cette IP a déjà un pixel, retour du pixel existant');
         return {
-          pixel_id: existingPixel.id,
-          x: existingPixel.x,
-          y: existingPixel.y,
-          color: existingPixel.color,
-          created_at: existingPixel.created_at,
+          pixel_id: existingPixelByIp.id,
+          x: existingPixelByIp.x,
+          y: existingPixelByIp.y,
+          color: existingPixelByIp.color,
+          created_at: existingPixelByIp.created_at,
           is_new_session: false
         };
       }
 
+      // Vérification supplémentaire par session
+      const existingPixelBySession = await this.getCurrentSessionPixel();
+      if (existingPixelBySession) {
+        console.log('⚠️ Cette session a déjà un pixel, retour du pixel existant');
+        return {
+          pixel_id: existingPixelBySession.id,
+          x: existingPixelBySession.x,
+          y: existingPixelBySession.y,
+          color: existingPixelBySession.color,
+          created_at: existingPixelBySession.created_at,
+          is_new_session: false
+        };
+      }
+
+      // Appeler la fonction Supabase avec vérification IP
       const { data, error } = await supabase.rpc('create_pixel_for_session', {
         p_session_id: this.currentSessionId,
         p_color: color,
@@ -267,7 +313,24 @@ class CollaborativeArtService {
       });
 
       if (error) {
-        console.error('Erreur lors de la création du pixel:', error);
+        console.error('❌ Erreur lors de la création du pixel:', error);
+        
+        // Si l'erreur indique qu'un pixel existe déjà pour cette IP
+        if (error.message?.includes('unique') || error.code === '23505') {
+          console.log('🔒 Pixel déjà existant pour cette IP, récupération...');
+          const existingPixel = await this.getPixelByIpHash(ipHash);
+          if (existingPixel) {
+            return {
+              pixel_id: existingPixel.id,
+              x: existingPixel.x,
+              y: existingPixel.y,
+              color: existingPixel.color,
+              created_at: existingPixel.created_at,
+              is_new_session: false
+            };
+          }
+        }
+        
         return null;
       }
 
@@ -284,7 +347,39 @@ class CollaborativeArtService {
 
       return null;
     } catch (error) {
-      console.error('Erreur service création pixel:', error);
+      console.error('❌ Erreur service création pixel:', error);
+      return null;
+    }
+  }
+
+  // 🔒 NOUVELLE MÉTHODE : Récupérer un pixel par IP hash
+  private async getPixelByIpHash(ipHash: string): Promise<PixelData | null> {
+    try {
+      console.log('🔍 Recherche de pixel pour IP hash:', ipHash?.substring(0, 8) + '...');
+      
+      const { data, error } = await supabase
+        .from('collaborative_pixels')
+        .select(`
+          *,
+          pixel_sessions!inner(ip_hash)
+        `)
+        .eq('pixel_sessions.ip_hash', ipHash)
+        .maybeSingle();
+
+      if (error) {
+        console.error('❌ Erreur lors de la recherche par IP:', error);
+        return null;
+      }
+
+      if (data) {
+        console.log('🎨 Pixel trouvé pour cette IP:', data);
+        return data;
+      } else {
+        console.log('📝 Aucun pixel trouvé pour cette IP');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la vérification du pixel par IP:', error);
       return null;
     }
   }
@@ -554,6 +649,11 @@ class CollaborativeArtService {
   // Obtenir l'ID de session actuel
   getCurrentSessionId(): string {
     return this.currentSessionId;
+  }
+
+  // 🔒 NOUVELLE MÉTHODE : Obtenir le hash IP actuel
+  getCurrentIpHash(): string | null {
+    return this.currentIpHash;
   }
 
   // Régénérer l'ID de session (pour forcer une nouvelle session)

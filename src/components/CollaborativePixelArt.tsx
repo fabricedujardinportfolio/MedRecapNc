@@ -19,7 +19,8 @@ import {
   Loader,
   CheckCircle,
   AlertCircle,
-  X
+  X,
+  Shield
 } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { LanguageSelector } from './LanguageSelector';
@@ -58,6 +59,7 @@ export const CollaborativePixelArt: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadingStep, setLoadingStep] = useState<string>('');
   const [canvasReady, setCanvasReady] = useState(false);
+  const [ipLimitReached, setIpLimitReached] = useState(false);
 
   // Couleurs prédéfinies pour l'art collaboratif
   const predefinedColors = [
@@ -148,12 +150,17 @@ export const CollaborativePixelArt: React.FC = () => {
         console.log('📊 Statistiques chargées:', detailedStats);
       }
 
-      // 3. Vérifier si l'utilisateur a déjà un pixel
+      // 3. 🔒 Vérifier si l'utilisateur a déjà un pixel (par IP ET session)
       setLoadingStep('Vérification du pixel utilisateur...');
       const existingPixel = await collaborativeArtService.getCurrentSessionPixel();
       if (existingPixel) {
         setCurrentUserPixel(existingPixel);
+        setIpLimitReached(true); // Cette IP a déjà un pixel
         console.log('👤 Pixel utilisateur existant trouvé:', existingPixel);
+        console.log('🔒 Limite IP atteinte, création bloquée');
+      } else {
+        console.log('📝 Aucun pixel trouvé pour cette session/IP');
+        setIpLimitReached(false);
       }
 
       // 4. Charger les contributeurs récents
@@ -370,13 +377,26 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   };
 
-  // Générer un pixel pour l'utilisateur actuel
+  // 🔒 FONCTION CORRIGÉE : Générer un pixel avec vérification IP stricte
   const generateUserPixel = async () => {
-    if (isCreatingPixel || currentUserPixel) return;
+    if (isCreatingPixel) {
+      console.log('🚫 Création déjà en cours, ignoré');
+      return;
+    }
+
+    // 🔒 Vérification préalable : Cette IP a-t-elle déjà un pixel ?
+    if (ipLimitReached || currentUserPixel) {
+      console.log('🚫 Limite IP atteinte ou pixel déjà existant');
+      setError('Vous avez déjà contribué à cette œuvre d\'art ! Un seul pixel par utilisateur est autorisé.');
+      return;
+    }
 
     try {
       setIsCreatingPixel(true);
       setError(null);
+
+      console.log('🎨 Tentative de création d\'un pixel...');
+      console.log('🔒 IP Hash actuel:', collaborativeArtService.getCurrentIpHash()?.substring(0, 8) + '...');
 
       const result = await collaborativeArtService.createPixelForCurrentSession(
         selectedColor,
@@ -384,36 +404,64 @@ export const CollaborativePixelArt: React.FC = () => {
       );
 
       if (result) {
-        const newPixel: PixelData = {
-          id: result.pixel_id,
-          x: result.x,
-          y: result.y,
-          color: result.color,
-          session_id: collaborativeArtService.getCurrentSessionId(),
-          contributor_name: t('pixel.art.contributor.you') || 'Vous',
-          created_at: result.created_at
-        };
-
-        setCurrentUserPixel(newPixel);
-        
         if (result.is_new_session) {
-          // Nouveau pixel créé
+          // Nouveau pixel créé avec succès
+          const newPixel: PixelData = {
+            id: result.pixel_id,
+            x: result.x,
+            y: result.y,
+            color: result.color,
+            session_id: collaborativeArtService.getCurrentSessionId(),
+            contributor_name: t('pixel.art.contributor.you') || 'Vous',
+            created_at: result.created_at
+          };
+
+          setCurrentUserPixel(newPixel);
           setPixels(prev => [...prev, newPixel]);
+          setIpLimitReached(true); // Marquer la limite comme atteinte
+          
+          console.log('✅ Nouveau pixel créé avec succès:', newPixel);
+        } else {
+          // Pixel existant retourné (cette IP a déjà un pixel)
+          const existingPixel: PixelData = {
+            id: result.pixel_id,
+            x: result.x,
+            y: result.y,
+            color: result.color,
+            session_id: collaborativeArtService.getCurrentSessionId(),
+            contributor_name: t('pixel.art.contributor.you') || 'Vous',
+            created_at: result.created_at
+          };
+
+          setCurrentUserPixel(existingPixel);
+          setIpLimitReached(true);
+          
+          console.log('🔒 Pixel existant retourné (limite IP):', existingPixel);
+          setError('Vous avez déjà contribué à cette œuvre d\'art ! Voici votre pixel existant.');
         }
 
-        // Recharger les statistiques
+        // Recharger les statistiques et contributeurs
         await loadStats();
-        
-        // Recharger les contributeurs récents
         const contributors = await collaborativeArtService.getRecentContributors(5);
         setRecentContributors(contributors);
 
       } else {
-        setError(t('pixel.art.error.create') || 'Impossible de créer le pixel. Veuillez réessayer.');
+        console.error('❌ Aucun résultat retourné par le service');
+        setError(t('pixel.art.error.create') || 'Impossible de créer le pixel. Vous avez peut-être déjà contribué.');
       }
     } catch (error) {
-      console.error('Erreur lors de la création du pixel:', error);
-      setError(t('pixel.art.error.create') || 'Erreur lors de la création du pixel. Veuillez réessayer.');
+      console.error('❌ Erreur lors de la création du pixel:', error);
+      
+      if (error instanceof Error) {
+        if (error.message.includes('unique') || error.message.includes('déjà')) {
+          setError('Vous avez déjà contribué à cette œuvre d\'art ! Un seul pixel par utilisateur est autorisé.');
+          setIpLimitReached(true);
+        } else {
+          setError(t('pixel.art.error.create') || 'Erreur lors de la création du pixel. Veuillez réessayer.');
+        }
+      } else {
+        setError(t('pixel.art.error.create') || 'Erreur lors de la création du pixel. Veuillez réessayer.');
+      }
     } finally {
       setIsCreatingPixel(false);
     }
@@ -676,32 +724,47 @@ export const CollaborativePixelArt: React.FC = () => {
 
           {/* Interaction Section */}
           <div className="space-y-6">
-            {/* Votre Contribution */}
+            {/* 🔒 Votre Contribution - AVEC PROTECTION IP */}
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
                 {t('pixel.art.contribution.title')}
               </h2>
               
-              {currentUserPixel ? (
+              {currentUserPixel || ipLimitReached ? (
                 <div className="text-center">
                   <div className="w-16 h-16 mx-auto mb-4 border-4 border-gray-300 rounded-lg flex items-center justify-center">
                     <div 
                       className="w-8 h-8 rounded"
-                      style={{ backgroundColor: currentUserPixel.color }}
+                      style={{ backgroundColor: currentUserPixel?.color || selectedColor }}
                     ></div>
                   </div>
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <CheckCircle className="w-5 h-5 text-green-600" />
                     <p className="text-green-600 font-medium">
-                      {t('pixel.art.contribution.success')}
+                      {currentUserPixel ? t('pixel.art.contribution.success') : 'Contribution déjà effectuée'}
                     </p>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">
-                    {t('pixel.art.contribution.position').replace('{x}', currentUserPixel.x.toString()).replace('{y}', currentUserPixel.y.toString())}
-                  </p>
-                  <p className="text-xs text-blue-600">
-                    {t('pixel.art.contribution.stored')}
-                  </p>
+                  {currentUserPixel && (
+                    <>
+                      <p className="text-sm text-gray-600 mb-2">
+                        {t('pixel.art.contribution.position').replace('{x}', currentUserPixel.x.toString()).replace('{y}', currentUserPixel.y.toString())}
+                      </p>
+                      <p className="text-xs text-blue-600">
+                        {t('pixel.art.contribution.stored')}
+                      </p>
+                    </>
+                  )}
+                  
+                  {/* 🔒 Message de protection IP */}
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Shield className="w-5 h-5 text-blue-600" />
+                      <span className="font-medium text-blue-800">Protection Anti-Spam</span>
+                    </div>
+                    <p className="text-sm text-blue-700">
+                      Un seul pixel par utilisateur est autorisé pour garantir l'équité de cette œuvre collaborative.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center">
@@ -734,7 +797,7 @@ export const CollaborativePixelArt: React.FC = () => {
                   
                   <button
                     onClick={generateUserPixel}
-                    disabled={isCreatingPixel}
+                    disabled={isCreatingPixel || ipLimitReached}
                     className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
                     {isCreatingPixel ? (
@@ -748,6 +811,17 @@ export const CollaborativePixelArt: React.FC = () => {
                       </>
                     )}
                   </button>
+                  
+                  {/* 🔒 Information de sécurité */}
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Shield className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-700">Sécurité</span>
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      Votre adresse IP est utilisée pour garantir qu'un seul pixel par utilisateur soit créé.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
