@@ -249,6 +249,12 @@ export const translations = {
     'pixel.art.contributor.name.label': 'Votre nom (optionnel)',
     'pixel.art.contributor.name.help': 'Ce nom apparaîtra dans les contributeurs récents',
     'pixel.art.hover.instruction': 'Survolez les pixels pour voir les contributeurs !',
+    
+    // 🔒 NOUVELLES TRADUCTIONS SÉCURITÉ
+    'pixel.art.security.title': 'Protection Anti-Spam',
+    'pixel.art.security.description': 'Un seul pixel par utilisateur est autorisé pour garantir l\'équité de cette œuvre collaborative.',
+    'pixel.art.security.ip.title': 'Sécurité',
+    'pixel.art.security.ip.description': 'Votre adresse IP est utilisée pour garantir qu\'un seul pixel par utilisateur soit créé.',
 
     // Common
     'common.loading': 'Chargement...',
@@ -528,6 +534,12 @@ export const translations = {
     'pixel.art.contributor.name.label': 'Your name (optional)',
     'pixel.art.contributor.name.help': 'This name will appear in recent contributors',
     'pixel.art.hover.instruction': 'Hover over pixels to see contributors!',
+    
+    // 🔒 NOUVELLES TRADUCTIONS SÉCURITÉ EN ANGLAIS
+    'pixel.art.security.title': 'Anti-Spam Protection',
+    'pixel.art.security.description': 'Only one pixel per user is allowed to ensure fairness in this collaborative artwork.',
+    'pixel.art.security.ip.title': 'Security',
+    'pixel.art.security.ip.description': 'Your IP address is used to ensure only one pixel per user is created.',
 
     // Common
     'common.loading': 'Loading...',

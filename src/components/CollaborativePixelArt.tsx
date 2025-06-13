@@ -582,19 +582,79 @@ export const CollaborativePixelArt: React.FC = () => {
     window.history.back();
   };
 
-  const shareProject = () => {
-    const title = t('pixel.art.share.title') || 'Art Collaboratif MedRecap+ - 1,5 Million de Pixels';
-    const text = t('pixel.art.share.text') || 'Participez à la création d\'une œuvre d\'art collaborative ! Chaque session génère un pixel unique.';
+  // 🔧 FONCTION DE PARTAGE CORRIGÉE
+  const shareProject = async () => {
+    const title = t('pixel.art.share.title');
+    const text = t('pixel.art.share.text');
+    const url = window.location.href;
     
-    if (navigator.share) {
-      navigator.share({
-        title,
-        text,
-        url: window.location.href
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert(t('pixel.art.share.copied') || 'Lien copié dans le presse-papiers !');
+    try {
+      // Vérifier si l'API Web Share est disponible
+      if (navigator.share && navigator.canShare && navigator.canShare({ title, text, url })) {
+        console.log('📱 Utilisation de l\'API Web Share native');
+        await navigator.share({
+          title,
+          text,
+          url
+        });
+        console.log('✅ Partage réussi via API native');
+      } else {
+        // Fallback : copier dans le presse-papiers
+        console.log('📋 Fallback vers le presse-papiers');
+        
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(url);
+          console.log('✅ URL copiée dans le presse-papiers');
+          
+          // Afficher une notification temporaire
+          const originalError = error;
+          setError(null);
+          
+          // Créer un message de succès temporaire
+          const successMessage = t('pixel.art.share.copied');
+          setError(successMessage);
+          
+          // Retirer le message après 3 secondes
+          setTimeout(() => {
+            setError(originalError);
+          }, 3000);
+        } else {
+          // Fallback ultime : sélection manuelle
+          console.log('📝 Fallback vers sélection manuelle');
+          
+          // Créer un élément temporaire pour la sélection
+          const textArea = document.createElement('textarea');
+          textArea.value = url;
+          textArea.style.position = 'fixed';
+          textArea.style.left = '-999999px';
+          textArea.style.top = '-999999px';
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          
+          try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+              console.log('✅ URL copiée via execCommand');
+              setError(t('pixel.art.share.copied'));
+              setTimeout(() => setError(null), 3000);
+            } else {
+              throw new Error('execCommand failed');
+            }
+          } catch (err) {
+            console.error('❌ Échec de la copie:', err);
+            setError('Impossible de copier le lien. URL: ' + url);
+          } finally {
+            document.body.removeChild(textArea);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors du partage:', error);
+      
+      // En cas d'erreur, afficher l'URL pour copie manuelle
+      setError(`Lien à partager: ${url}`);
+      setTimeout(() => setError(null), 5000);
     }
   };
 
@@ -685,13 +745,27 @@ export const CollaborativePixelArt: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Error Banner */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className={`mb-6 border rounded-lg p-4 ${
+            error.includes('copié') || error.includes('copied') 
+              ? 'bg-green-50 border-green-200' 
+              : 'bg-red-50 border-red-200'
+          }`}>
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <p className="text-red-700">{error}</p>
+              {error.includes('copié') || error.includes('copied') ? (
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-red-600" />
+              )}
+              <p className={error.includes('copié') || error.includes('copied') ? 'text-green-700' : 'text-red-700'}>
+                {error}
+              </p>
               <button
                 onClick={() => setError(null)}
-                className="ml-auto text-red-600 hover:text-red-800"
+                className={`ml-auto ${
+                  error.includes('copié') || error.includes('copied') 
+                    ? 'text-green-600 hover:text-green-800' 
+                    : 'text-red-600 hover:text-red-800'
+                }`}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -878,10 +952,10 @@ export const CollaborativePixelArt: React.FC = () => {
                   <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex items-center gap-2 mb-2">
                       <Shield className="w-5 h-5 text-blue-600" />
-                      <span className="font-medium text-blue-800">Protection Anti-Spam</span>
+                      <span className="font-medium text-blue-800">{t('pixel.art.security.title')}</span>
                     </div>
                     <p className="text-sm text-blue-700">
-                      Un seul pixel par utilisateur est autorisé pour garantir l'équité de cette œuvre collaborative.
+                      {t('pixel.art.security.description')}
                     </p>
                   </div>
                 </div>
@@ -956,10 +1030,10 @@ export const CollaborativePixelArt: React.FC = () => {
                   <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-2 mb-1">
                       <Shield className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm font-medium text-gray-700">Sécurité</span>
+                      <span className="text-sm font-medium text-gray-700">{t('pixel.art.security.ip.title')}</span>
                     </div>
                     <p className="text-xs text-gray-600">
-                      Votre adresse IP est utilisée pour garantir qu'un seul pixel par utilisateur soit créé.
+                      {t('pixel.art.security.ip.description')}
                     </p>
                   </div>
                 </div>
