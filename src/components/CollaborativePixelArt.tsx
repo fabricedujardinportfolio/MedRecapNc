@@ -199,7 +199,7 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   };
 
-  // Dessiner l'image sur le canvas - AMÉLIORÉ
+  // Dessiner l'image sur le canvas - CORRIGÉ
   useEffect(() => {
     if (!canvasRef.current || isLoading) return;
 
@@ -224,19 +224,52 @@ export const CollaborativePixelArt: React.FC = () => {
       const scaleX = displayWidth / 1200;
       const scaleY = displayHeight / 1250;
 
+      console.log('🎨 Début du rendu des pixels...');
+      console.log('📏 Échelle:', { scaleX, scaleY });
+
+      let renderedCount = 0;
       pixels.forEach((pixel, index) => {
         try {
+          // Validation des données du pixel
+          if (!pixel || typeof pixel.x !== 'number' || typeof pixel.y !== 'number' || !pixel.color) {
+            console.warn(`⚠️ Pixel ${index} invalide:`, pixel);
+            return;
+          }
+
+          // Vérifier que les coordonnées sont dans les limites
+          if (pixel.x < 0 || pixel.x >= 1200 || pixel.y < 0 || pixel.y >= 1250) {
+            console.warn(`⚠️ Pixel ${index} hors limites:`, { x: pixel.x, y: pixel.y });
+            return;
+          }
+
+          // Vérifier le format de la couleur
+          if (!pixel.color.match(/^#[0-9A-Fa-f]{6}$/)) {
+            console.warn(`⚠️ Couleur invalide pour le pixel ${index}:`, pixel.color);
+            return;
+          }
+
           ctx.fillStyle = pixel.color;
-          ctx.fillRect(
-            Math.floor(pixel.x * scaleX),
-            Math.floor(pixel.y * scaleY),
-            Math.ceil(scaleX),
-            Math.ceil(scaleY)
-          );
+          const pixelX = Math.floor(pixel.x * scaleX);
+          const pixelY = Math.floor(pixel.y * scaleY);
+          const pixelWidth = Math.ceil(scaleX);
+          const pixelHeight = Math.ceil(scaleY);
+
+          ctx.fillRect(pixelX, pixelY, pixelWidth, pixelHeight);
+          renderedCount++;
+
+          // Log pour les premiers pixels pour debug
+          if (index < 5) {
+            console.log(`🎨 Pixel ${index}:`, {
+              original: { x: pixel.x, y: pixel.y, color: pixel.color },
+              rendered: { x: pixelX, y: pixelY, width: pixelWidth, height: pixelHeight }
+            });
+          }
         } catch (error) {
-          console.warn(`Erreur lors du rendu du pixel ${index}:`, error);
+          console.warn(`❌ Erreur lors du rendu du pixel ${index}:`, error);
         }
       });
+
+      console.log(`✅ ${renderedCount}/${pixels.length} pixels rendus avec succès`);
 
       // Dessiner le pixel de l'utilisateur actuel avec un contour
       if (currentUserPixel) {
@@ -246,14 +279,23 @@ export const CollaborativePixelArt: React.FC = () => {
           ctx.lineWidth = 2;
           const x = Math.floor(currentUserPixel.x * scaleX);
           const y = Math.floor(currentUserPixel.y * scaleY);
-          ctx.fillRect(x, y, Math.ceil(scaleX), Math.ceil(scaleY));
-          ctx.strokeRect(x, y, Math.ceil(scaleX), Math.ceil(scaleY));
+          const width = Math.ceil(scaleX);
+          const height = Math.ceil(scaleY);
+          
+          ctx.fillRect(x, y, width, height);
+          ctx.strokeRect(x, y, width, height);
+          
+          console.log('👤 Pixel utilisateur rendu avec contour:', {
+            x: currentUserPixel.x,
+            y: currentUserPixel.y,
+            color: currentUserPixel.color
+          });
         } catch (error) {
-          console.warn('Erreur lors du rendu du pixel utilisateur:', error);
+          console.warn('❌ Erreur lors du rendu du pixel utilisateur:', error);
         }
       }
 
-      console.log('✅ Canvas rendu avec succès -', pixels.length, 'pixels affichés');
+      console.log('✅ Canvas rendu avec succès -', renderedCount, 'pixels affichés');
     } else {
       console.log('⚠️ Aucun pixel à afficher');
     }

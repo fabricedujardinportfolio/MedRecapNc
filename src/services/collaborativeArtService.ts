@@ -131,7 +131,7 @@ class CollaborativeArtService {
     return null;
   }
 
-  // Récupérer tous les pixels existants avec cache et retry - AMÉLIORÉ
+  // Récupérer tous les pixels existants avec cache et retry - CORRIGÉ
   async getAllPixels(forceRefresh: boolean = false): Promise<PixelData[]> {
     const now = Date.now();
     
@@ -150,7 +150,7 @@ class CollaborativeArtService {
         
         // Utiliser un timeout pour éviter les requêtes qui traînent
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 10000)
+          setTimeout(() => reject(new Error('Timeout')), 15000) // Augmenté à 15 secondes
         );
         
         const queryPromise = supabase
@@ -158,7 +158,8 @@ class CollaborativeArtService {
           .select('*')
           .order('created_at', { ascending: true });
 
-        const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+        const result = await Promise.race([queryPromise, timeoutPromise]);
+        const { data, error } = result as any;
 
         if (error) {
           console.error('Erreur lors de la récupération des pixels:', error);
@@ -174,14 +175,26 @@ class CollaborativeArtService {
 
         const pixels = data || [];
         console.log('✅ Pixels récupérés avec succès:', pixels.length, 'pixels');
+        console.log('🎨 Premiers pixels:', pixels.slice(0, 3));
+        
+        // Valider les données des pixels
+        const validPixels = pixels.filter((pixel: any) => {
+          return pixel && 
+                 typeof pixel.x === 'number' && 
+                 typeof pixel.y === 'number' && 
+                 typeof pixel.color === 'string' &&
+                 pixel.color.match(/^#[0-9A-Fa-f]{6}$/);
+        });
+
+        console.log('✅ Pixels valides:', validPixels.length, '/', pixels.length);
         
         // Mettre à jour le cache seulement si on a des données valides
-        if (Array.isArray(pixels)) {
-          this.pixelsCache = pixels;
+        if (Array.isArray(validPixels)) {
+          this.pixelsCache = validPixels;
           this.lastLoadTime = now;
         }
         
-        return pixels;
+        return validPixels;
       } catch (error) {
         console.error(`❌ Erreur service pixels (tentative ${retries + 1}):`, error);
         if (retries === maxRetries - 1) {
@@ -220,7 +233,7 @@ class CollaborativeArtService {
     }
   }
 
-  // Créer un pixel pour la session actuelle
+  // Créer un pixel pour la session actuelle - CORRIGÉ pour éviter les doublons
   async createPixelForCurrentSession(
     color: string = '#3B82F6',
     contributorName: string = 'Anonyme'
@@ -230,6 +243,20 @@ class CollaborativeArtService {
       const userAgent = navigator.userAgent;
 
       console.log('🎨 Création d\'un pixel pour la session:', this.currentSessionId);
+
+      // VÉRIFICATION STRICTE : Une session ne peut avoir qu'un seul pixel
+      const existingPixel = await this.getCurrentSessionPixel();
+      if (existingPixel) {
+        console.log('⚠️ Cette session a déjà un pixel, retour du pixel existant');
+        return {
+          pixel_id: existingPixel.id,
+          x: existingPixel.x,
+          y: existingPixel.y,
+          color: existingPixel.color,
+          created_at: existingPixel.created_at,
+          is_new_session: false
+        };
+      }
 
       const { data, error } = await supabase.rpc('create_pixel_for_session', {
         p_session_id: this.currentSessionId,
@@ -250,6 +277,7 @@ class CollaborativeArtService {
         
         // Invalider le cache pour forcer un rechargement
         this.lastLoadTime = 0;
+        this.pixelsCache = [];
         
         return result;
       }
@@ -261,18 +289,28 @@ class CollaborativeArtService {
     }
   }
 
-  // Vérifier si la session actuelle a déjà un pixel
+  // Vérifier si la session actuelle a déjà un pixel - AMÉLIORÉ
   async getCurrentSessionPixel(): Promise<PixelData | null> {
     try {
+      console.log('🔍 Vérification du pixel pour la session:', this.currentSessionId);
+      
       const { data: sessionData, error: sessionError } = await supabase
         .from('pixel_sessions')
         .select('id')
         .eq('session_id', this.currentSessionId)
         .maybeSingle();
 
-      if (sessionError || !sessionData) {
+      if (sessionError) {
+        console.error('Erreur lors de la vérification de session:', sessionError);
         return null;
       }
+
+      if (!sessionData) {
+        console.log('📝 Aucune session trouvée pour:', this.currentSessionId);
+        return null;
+      }
+
+      console.log('✅ Session trouvée:', sessionData.id);
 
       const { data: pixelData, error: pixelError } = await supabase
         .from('collaborative_pixels')
@@ -280,11 +318,18 @@ class CollaborativeArtService {
         .eq('session_id', sessionData.id)
         .maybeSingle();
 
-      if (pixelError || !pixelData) {
+      if (pixelError) {
+        console.error('Erreur lors de la vérification du pixel:', pixelError);
         return null;
       }
 
-      return pixelData;
+      if (pixelData) {
+        console.log('🎨 Pixel existant trouvé pour cette session:', pixelData);
+        return pixelData;
+      } else {
+        console.log('📝 Aucun pixel trouvé pour cette session');
+        return null;
+      }
     } catch (error) {
       console.error('Erreur lors de la vérification du pixel de session:', error);
       return null;
