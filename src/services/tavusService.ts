@@ -13,7 +13,6 @@ export interface TavusVideoSession {
   conversationId?: string;
   isDemoMode?: boolean;
   patientData?: Patient;
-  reasonForDemo?: string;
 }
 
 export interface TavusConversationRequest {
@@ -449,14 +448,13 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
     } catch (error) {
       console.error('Erreur lors de l\'initialisation de la session Tavus:', error);
       
-      // Create fallback demo session with patient data and reason
+      // Create fallback demo session with patient data
       const fallbackSession: TavusVideoSession = {
         sessionId,
         videoUrl: '#demo-mode',
         status: 'initializing',
         isDemoMode: true,
-        patientData: patient,
-        reasonForDemo: this.getDemoReason(error)
+        patientData: patient
       };
 
       this.currentSession = fallbackSession;
@@ -467,21 +465,16 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
         }
       }, 1000);
 
-      // Return the demo session instead of throwing an error
-      return fallbackSession;
-    }
-  }
-
-  // Get appropriate demo reason based on error
-  private getDemoReason(error: any): string {
-    if (error instanceof Error) {
-      if (error.message === 'CONCURRENT_LIMIT_REACHED') {
-        return 'Limite de conversations simultanées atteinte. Veuillez réessayer dans quelques minutes ou fermer d\'autres sessions Tavus actives.';
-      } else if (error.message.includes('Configuration Tavus incomplète')) {
-        return 'Configuration Tavus incomplète. Fonctionnement en mode démonstration avec synthèse vocale et accès complet aux données patient.';
+      if (error instanceof Error) {
+        if (error.message === 'CONCURRENT_LIMIT_REACHED') {
+          throw new Error('Limite de conversations simultanées atteinte. Veuillez réessayer dans quelques minutes ou fermer d\'autres sessions Tavus actives.');
+        } else if (error.message.includes('Configuration Tavus incomplète')) {
+          throw new Error('Configuration Tavus incomplète. Fonctionnement en mode démonstration avec synthèse vocale et accès complet aux données patient.');
+        }
       }
+
+      throw new Error('Service Tavus temporairement indisponible. Fonctionnement en mode démonstration avec synthèse vocale et accès complet aux données patient.');
     }
-    return 'Service Tavus temporairement indisponible. Fonctionnement en mode démonstration avec synthèse vocale et accès complet aux données patient.';
   }
 
   // Send message to Tavus AI
