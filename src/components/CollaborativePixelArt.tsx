@@ -86,10 +86,15 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   }, [isLoading]);
 
-  // Effet pour le rendu du canvas - SÉPARÉ et OPTIMISÉ avec taille de pixels augmentée
+  // 🎯 EFFET CORRIGÉ : Rendu du canvas avec vérification canvasReady
   useEffect(() => {
     if (!canvasRef.current) {
-      console.log('⚠️ Canvas ref non disponible');
+      console.log('⛔️ Canvas ref non prêt, attente...');
+      return;
+    }
+
+    if (!canvasReady) {
+      console.log('⛔️ Canvas pas prêt pour le rendu, attente...');
       return;
     }
 
@@ -98,16 +103,16 @@ export const CollaborativePixelArt: React.FC = () => {
       return;
     }
 
-    console.log('🖼️ Déclenchement du rendu canvas avec', pixels.length, 'pixels');
+    console.log('✅ Canvas prêt, déclenchement du rendu avec', pixels.length, 'pixels');
     renderCanvas();
-  }, [pixels, currentUserPixel, isLoading, language]);
+  }, [pixels, currentUserPixel, canvasReady, isLoading, language]);
 
   const loadInitialData = async () => {
     try {
       setIsLoading(true);
       setError(null);
       setLoadingStep('Initialisation...');
-      setCanvasReady(false);
+      setCanvasReady(false); // 🔧 Reset du canvas ready
 
       console.log('🚀 Chargement initial des données...');
 
@@ -158,8 +163,12 @@ export const CollaborativePixelArt: React.FC = () => {
       console.log('👥 Contributeurs récents chargés:', contributors.length);
 
       setLoadingStep('Finalisation...');
-      setCanvasReady(true);
-      console.log('✅ Chargement initial terminé avec succès');
+      
+      // 🎯 CORRECTION CRITIQUE : Attendre que le canvas soit dans le DOM
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      setCanvasReady(true); // ✅ Canvas maintenant prêt pour le rendu
+      console.log('✅ Chargement initial terminé avec succès, canvas prêt');
 
     } catch (error) {
       console.error('❌ Erreur lors du chargement des données:', error);
@@ -238,10 +247,15 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   };
 
-  // Fonction de rendu du canvas - AMÉLIORÉE avec pixels plus grands
+  // 🎯 FONCTION DE RENDU AMÉLIORÉE avec logs détaillés
   const renderCanvas = () => {
     if (!canvasRef.current) {
       console.log('⚠️ Canvas ref non disponible pour le rendu');
+      return;
+    }
+
+    if (!canvasReady) {
+      console.log('⚠️ Canvas pas encore prêt pour le rendu');
       return;
     }
 
@@ -252,10 +266,10 @@ export const CollaborativePixelArt: React.FC = () => {
       return;
     }
 
-    console.log('🖼️ Début du rendu canvas avec', pixels.length, 'pixels');
+    console.log('🖼️ Début du rendu canvas avec', pixels.length, 'pixels (TAILLE AUGMENTÉE)');
 
     try {
-      // NOUVELLE CONFIGURATION : Canvas plus grand avec pixels plus visibles
+      // CONFIGURATION AGRANDIE : Canvas plus grand avec pixels plus visibles
       const displayWidth = 800;  // Augmenté de 600 à 800
       const displayHeight = 833; // Augmenté proportionnellement (800 * 1250/1200)
       canvas.width = displayWidth;
@@ -271,7 +285,7 @@ export const CollaborativePixelArt: React.FC = () => {
         const scaleX = displayWidth / 1200;   // ~0.67 pixels par unité
         const scaleY = displayHeight / 1250;  // ~0.67 pixels par unité
 
-        console.log('🎨 Début du rendu des pixels...');
+        console.log('🎨 Début du rendu des pixels AGRANDIS...');
         console.log('📏 Nouvelle échelle (pixels plus grands):', { scaleX, scaleY });
 
         let renderedCount = 0;
