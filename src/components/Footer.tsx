@@ -1,97 +1,159 @@
-import React from 'react';
-import { Shield, Heart } from 'lucide-react';
+import React, { useState } from 'react';
+import { Shield, Heart, Gift } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 
 export const Footer: React.FC = () => {
   const { t } = useLanguage();
+  const [showSecretEasterEgg, setShowSecretEasterEgg] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
+
+  // Easter egg caché : triple-clic sur le logo
+  const handleLogoClick = () => {
+    setClickCount(prev => prev + 1);
+    
+    if (clickCount === 2) { // Au 3ème clic
+      setShowSecretEasterEgg(true);
+      setClickCount(0);
+      setTimeout(() => setShowSecretEasterEgg(false), 8000);
+    } else {
+      // Reset après 2 secondes si pas de triple-clic
+      setTimeout(() => setClickCount(0), 2000);
+    }
+  };
 
   return (
-    <footer className="bg-gray-900 text-white mt-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Logo and Description */}
-          <div className="col-span-1">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold">{t('header.title')}</h3>
-                <p className="text-sm text-gray-400">v3.0</p>
-              </div>
-            </div>
-            <p className="text-gray-300 text-sm mb-4">
-              {t('footer.description')}
-            </p>
-            <div className="flex items-center gap-2 text-sm text-gray-400">
-              <Heart className="w-4 h-4 text-red-500" />
-              <span>{t('footer.built')} <strong className="text-white">Bolt.new</strong></span>
-            </div>
-          </div>
-
-          {/* Certifications */}
-          <div className="col-span-1">
-            <h4 className="text-lg font-semibold mb-4">{t('footer.certifications')}</h4>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                  <Shield className="w-4 h-4 text-white" />
-                </div>
+    <>
+      <footer className="bg-gray-900 text-white mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Logo and Description */}
+            <div className="col-span-1">
+              <div className="flex items-center gap-3 mb-4">
+                <button
+                  onClick={handleLogoClick}
+                  className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+                  title="🤫 Triple-cliquez pour une surprise..."
+                >
+                  <Shield className="w-6 h-6 text-white" />
+                </button>
                 <div>
-                  <p className="text-sm font-medium">HDS</p>
-                  <p className="text-xs text-gray-400">Hébergeur Données de Santé</p>
+                  <h3 className="text-xl font-bold">{t('header.title')}</h3>
+                  <p className="text-sm text-gray-400">v3.0</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Shield className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">ISO 27001/27017</p>
-                  <p className="text-xs text-gray-400">Sécurité de l'information</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-                  <Shield className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">RGPD</p>
-                  <p className="text-xs text-gray-400">Protection des données</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Contact and Legal */}
-          <div className="col-span-1">
-            <h4 className="text-lg font-semibold mb-4">{t('footer.legal')}</h4>
-            <div className="space-y-2 text-sm text-gray-300">
-              <p>{t('footer.copyright')}</p>
-              <p>{t('footer.location')}</p>
-              <p className="text-xs text-gray-400 mt-4">
-                {t('footer.compliance')}
+              <p className="text-gray-300 text-sm mb-4">
+                {t('footer.description')}
               </p>
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <Heart className="w-4 h-4 text-red-500" />
+                <span>{t('footer.built')} <strong className="text-white">Bolt.new</strong></span>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Bottom Bar */}
-        <div className="border-t border-gray-800 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center">
-          <div className="text-sm text-gray-400">
-            <p>{t('footer.updated')}</p>
-          </div>
-          <div className="flex items-center gap-4 mt-4 md:mt-0">
-            <div className="flex items-center gap-2 text-xs">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-gray-400">{t('footer.status')}</span>
+            {/* Certifications */}
+            <div className="col-span-1">
+              <h4 className="text-lg font-semibold mb-4">{t('footer.certifications')}</h4>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">HDS</p>
+                    <p className="text-xs text-gray-400">Hébergeur Données de Santé</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">ISO 27001/27017</p>
+                    <p className="text-xs text-gray-400">Sécurité de l'information</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">RGPD</p>
+                    <p className="text-xs text-gray-400">Protection des données</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="text-xs text-gray-400">
-              {t('footer.latency')}
+
+            {/* Contact and Legal */}
+            <div className="col-span-1">
+              <h4 className="text-lg font-semibold mb-4">{t('footer.legal')}</h4>
+              <div className="space-y-2 text-sm text-gray-300">
+                <p>{t('footer.copyright')}</p>
+                <p>{t('footer.location')}</p>
+                <p className="text-xs text-gray-400 mt-4">
+                  {t('footer.compliance')}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="border-t border-gray-800 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center">
+            <div className="text-sm text-gray-400">
+              <p>{t('footer.updated')}</p>
+            </div>
+            <div className="flex items-center gap-4 mt-4 md:mt-0">
+              <div className="flex items-center gap-2 text-xs">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-gray-400">{t('footer.status')}</span>
+              </div>
+              <div className="text-xs text-gray-400">
+                {t('footer.latency')}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </footer>
+      </footer>
+
+      {/* Easter Egg Secret Modal */}
+      {showSecretEasterEgg && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-8 max-w-lg w-full text-center text-white animate-pulse shadow-2xl">
+            <div className="text-8xl mb-6">🎊</div>
+            <h3 className="text-3xl font-bold mb-4">
+              BRAVO ! 🏆
+            </h3>
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-6">
+              <p className="text-lg font-semibold mb-3">
+                🕵️ Vous avez découvert l'easter egg secret !
+              </p>
+              <p className="text-sm opacity-90 mb-4">
+                Triple-cliquer sur le logo du footer... Qui aurait pensé à ça ? 🤯
+              </p>
+              <div className="bg-yellow-300/20 rounded-lg p-4 border border-yellow-300/30">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Gift className="w-5 h-5 text-yellow-300" />
+                  <span className="font-bold text-yellow-300">RÉCOMPENSE SPÉCIALE</span>
+                </div>
+                <p className="text-xs text-yellow-100">
+                  🎁 Vous êtes officiellement un "Détective d'Easter Eggs" certifié !<br/>
+                  🔍 Votre curiosité et votre persévérance sont remarquables.<br/>
+                  ⭐ Vous faites partie des 0.1% d'utilisateurs à avoir trouvé ceci !
+                </p>
+              </div>
+            </div>
+            <div className="text-xs opacity-75 mb-4">
+              🤫 Psst... Il y a peut-être d'autres secrets cachés dans l'application...
+            </div>
+            <button
+              onClick={() => setShowSecretEasterEgg(false)}
+              className="px-8 py-3 bg-white hover:bg-gray-100 text-purple-600 rounded-lg font-bold transition-colors shadow-lg"
+            >
+              Garder le secret 🤐
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
