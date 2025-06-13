@@ -55,6 +55,7 @@ export const CollaborativePixelArt: React.FC = () => {
     created_at: string;
     color: string;
   }>>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Couleurs prédéfinies pour l'art collaboratif
   const predefinedColors = [
@@ -80,28 +81,34 @@ export const CollaborativePixelArt: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
+      console.log('🚀 Chargement initial des données...');
+
       // Charger les statistiques
       const detailedStats = await collaborativeArtService.getDetailedStats();
       if (detailedStats) {
         setStats(detailedStats);
+        console.log('📊 Statistiques chargées:', detailedStats);
       }
 
       // Vérifier si l'utilisateur a déjà un pixel
       const existingPixel = await collaborativeArtService.getCurrentSessionPixel();
       if (existingPixel) {
         setCurrentUserPixel(existingPixel);
+        console.log('👤 Pixel utilisateur existant trouvé:', existingPixel);
       }
 
-      // Charger tous les pixels (optimisation possible : charger par région)
-      const allPixels = await collaborativeArtService.getAllPixels();
+      // Charger tous les pixels avec retry automatique
+      const allPixels = await collaborativeArtService.getAllPixels(true); // Force refresh
       setPixels(allPixels);
+      console.log('🎨 Pixels chargés:', allPixels.length, 'pixels');
 
       // Charger les contributeurs récents
       const contributors = await collaborativeArtService.getRecentContributors(5);
       setRecentContributors(contributors);
+      console.log('👥 Contributeurs récents chargés:', contributors.length);
 
     } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
+      console.error('❌ Erreur lors du chargement des données:', error);
       setError(t('common.error') + ': ' + (error instanceof Error ? error.message : 'Erreur inconnue'));
     } finally {
       setIsLoading(false);
@@ -116,7 +123,15 @@ export const CollaborativePixelArt: React.FC = () => {
       const pixelSubscription = collaborativeArtService.subscribeToPixelUpdates((payload) => {
         console.log('🎨 Nouveau pixel reçu:', payload);
         if (payload.new) {
-          setPixels(prev => [...prev, payload.new]);
+          setPixels(prev => {
+            // Vérifier si le pixel n'existe pas déjà pour éviter les doublons
+            const exists = prev.some(p => p.id === payload.new.id);
+            if (!exists) {
+              console.log('➕ Ajout du nouveau pixel à la liste');
+              return [...prev, payload.new];
+            }
+            return prev;
+          });
           // Recharger les stats
           loadStats();
         }
@@ -147,6 +162,27 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   };
 
+  // Fonction pour forcer le rechargement des données
+  const handleForceRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      console.log('🔄 Rechargement forcé des données...');
+      
+      // Forcer le rechargement des pixels
+      await collaborativeArtService.forceRefresh();
+      
+      // Recharger toutes les données
+      await loadInitialData();
+      
+      console.log('✅ Rechargement terminé');
+    } catch (error) {
+      console.error('❌ Erreur lors du rechargement:', error);
+      setError('Erreur lors du rechargement des données');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Dessiner l'image sur le canvas
   useEffect(() => {
     if (!canvasRef.current || isLoading || !stats) return;
@@ -154,6 +190,8 @@ export const CollaborativePixelArt: React.FC = () => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    console.log('🖼️ Rendu du canvas avec', pixels.length, 'pixels');
 
     // Configurer le canvas
     const displayWidth = 600;
@@ -189,6 +227,8 @@ export const CollaborativePixelArt: React.FC = () => {
       ctx.fillRect(x, y, Math.ceil(scaleX), Math.ceil(scaleY));
       ctx.strokeRect(x, y, Math.ceil(scaleX), Math.ceil(scaleY));
     }
+
+    console.log('✅ Canvas rendu avec succès');
   }, [pixels, currentUserPixel, isLoading, stats]);
 
   // Générer un pixel pour l'utilisateur actuel
@@ -423,11 +463,12 @@ export const CollaborativePixelArt: React.FC = () => {
                   {t('pixel.art.realtime.title')}
                 </h2>
                 <button
-                  onClick={loadInitialData}
-                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  onClick={handleForceRefresh}
+                  disabled={isRefreshing}
+                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
                   title={t('pixel.art.realtime.refresh')}
                 >
-                  <RefreshCw className="w-5 h-5" />
+                  <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
                 </button>
               </div>
               
@@ -437,6 +478,14 @@ export const CollaborativePixelArt: React.FC = () => {
                   className="w-full h-auto border border-gray-300 rounded-lg shadow-sm"
                   style={{ imageRendering: 'pixelated' }}
                 />
+                {isRefreshing && (
+                  <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg">
+                    <div className="flex items-center gap-2 text-purple-600">
+                      <Loader className="w-5 h-5 animate-spin" />
+                      <span className="text-sm font-medium">Rechargement...</span>
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div className="mt-4 text-center">
@@ -444,7 +493,7 @@ export const CollaborativePixelArt: React.FC = () => {
                   {t('pixel.art.realtime.final')}
                 </p>
                 <p className="text-xs text-green-600 mt-1">
-                  ✅ {t('pixel.art.realtime.stored')}
+                  ✅ {t('pixel.art.realtime.stored')} • {pixels.length} pixels chargés
                 </p>
               </div>
             </div>

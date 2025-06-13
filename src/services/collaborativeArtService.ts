@@ -55,6 +55,9 @@ class CollaborativeArtService {
   private statsChannel: any = null;
   private isPixelChannelSubscribed: boolean = false;
   private isStatsChannelSubscribed: boolean = false;
+  private pixelsCache: PixelData[] = [];
+  private lastLoadTime: number = 0;
+  private readonly CACHE_DURATION = 30000; // 30 secondes
 
   constructor() {
     // Générer un ID de session unique basé sur le navigateur et le timestamp
@@ -93,44 +96,94 @@ class CollaborativeArtService {
     }
   }
 
-  // Récupérer les statistiques du projet
+  // Récupérer les statistiques du projet avec retry
   async getProjectStats(): Promise<ArtProjectStats | null> {
-    try {
-      const { data, error } = await supabase
-        .from('art_project_stats')
-        .select('*')
-        .single();
+    const maxRetries = 3;
+    let retries = 0;
 
-      if (error) {
-        console.error('Erreur lors de la récupération des statistiques:', error);
-        return null;
+    while (retries < maxRetries) {
+      try {
+        console.log(`🔄 Tentative ${retries + 1}/${maxRetries} - Récupération des statistiques`);
+        
+        const { data, error } = await supabase
+          .from('art_project_stats')
+          .select('*')
+          .single();
+
+        if (error) {
+          console.error('Erreur lors de la récupération des statistiques:', error);
+          if (retries === maxRetries - 1) return null;
+          retries++;
+          await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+          continue;
+        }
+
+        console.log('✅ Statistiques récupérées avec succès:', data);
+        return data;
+      } catch (error) {
+        console.error(`❌ Erreur service statistiques (tentative ${retries + 1}):`, error);
+        if (retries === maxRetries - 1) return null;
+        retries++;
+        await new Promise(resolve => setTimeout(resolve, 1000 * retries));
       }
-
-      return data;
-    } catch (error) {
-      console.error('Erreur service statistiques:', error);
-      return null;
     }
+
+    return null;
   }
 
-  // Récupérer tous les pixels existants
-  async getAllPixels(): Promise<PixelData[]> {
-    try {
-      const { data, error } = await supabase
-        .from('collaborative_pixels')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (error) {
-        console.error('Erreur lors de la récupération des pixels:', error);
-        return [];
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error('Erreur service pixels:', error);
-      return [];
+  // Récupérer tous les pixels existants avec cache et retry
+  async getAllPixels(forceRefresh: boolean = false): Promise<PixelData[]> {
+    const now = Date.now();
+    
+    // Utiliser le cache si disponible et récent (sauf si forceRefresh)
+    if (!forceRefresh && this.pixelsCache.length > 0 && (now - this.lastLoadTime) < this.CACHE_DURATION) {
+      console.log('📦 Utilisation du cache pixels:', this.pixelsCache.length, 'pixels');
+      return this.pixelsCache;
     }
+
+    const maxRetries = 3;
+    let retries = 0;
+
+    while (retries < maxRetries) {
+      try {
+        console.log(`🔄 Tentative ${retries + 1}/${maxRetries} - Chargement de tous les pixels`);
+        
+        const { data, error } = await supabase
+          .from('collaborative_pixels')
+          .select('*')
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          console.error('Erreur lors de la récupération des pixels:', error);
+          if (retries === maxRetries - 1) {
+            // En cas d'échec final, retourner le cache s'il existe
+            return this.pixelsCache;
+          }
+          retries++;
+          await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+          continue;
+        }
+
+        const pixels = data || [];
+        console.log('✅ Pixels récupérés avec succès:', pixels.length, 'pixels');
+        
+        // Mettre à jour le cache
+        this.pixelsCache = pixels;
+        this.lastLoadTime = now;
+        
+        return pixels;
+      } catch (error) {
+        console.error(`❌ Erreur service pixels (tentative ${retries + 1}):`, error);
+        if (retries === maxRetries - 1) {
+          // En cas d'échec final, retourner le cache s'il existe
+          return this.pixelsCache;
+        }
+        retries++;
+        await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+      }
+    }
+
+    return this.pixelsCache;
   }
 
   // Récupérer les pixels dans une zone spécifique (pour optimisation)
@@ -183,6 +236,10 @@ class CollaborativeArtService {
       if (data && data.length > 0) {
         const result = data[0];
         console.log('✅ Pixel créé avec succès:', result);
+        
+        // Invalider le cache pour forcer un rechargement
+        this.lastLoadTime = 0;
+        
         return result;
       }
 
@@ -324,7 +381,12 @@ class CollaborativeArtService {
           schema: 'public',
           table: 'collaborative_pixels'
         },
-        callback
+        (payload) => {
+          console.log('🎨 Nouveau pixel reçu via realtime:', payload);
+          // Invalider le cache quand un nouveau pixel arrive
+          this.lastLoadTime = 0;
+          callback(payload);
+        }
       );
 
     // Marquer comme souscrit avant d'appeler subscribe
@@ -418,6 +480,14 @@ class CollaborativeArtService {
       this.statsChannel = null;
       this.isStatsChannelSubscribed = false;
     }
+  }
+
+  // Méthode pour forcer le rechargement des données
+  async forceRefresh(): Promise<void> {
+    console.log('🔄 Rechargement forcé des données');
+    this.lastLoadTime = 0;
+    this.pixelsCache = [];
+    await this.getAllPixels(true);
   }
 
   // Obtenir l'ID de session actuel
