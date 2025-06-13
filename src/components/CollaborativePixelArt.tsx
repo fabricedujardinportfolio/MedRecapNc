@@ -86,7 +86,7 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   }, [isLoading]);
 
-  // Effet pour le rendu du canvas - SÉPARÉ et OPTIMISÉ
+  // Effet pour le rendu du canvas - SÉPARÉ et OPTIMISÉ avec taille de pixels augmentée
   useEffect(() => {
     if (!canvasRef.current) {
       console.log('⚠️ Canvas ref non disponible');
@@ -100,7 +100,7 @@ export const CollaborativePixelArt: React.FC = () => {
 
     console.log('🖼️ Déclenchement du rendu canvas avec', pixels.length, 'pixels');
     renderCanvas();
-  }, [pixels, currentUserPixel, isLoading, language]); // Ajout de language comme dépendance
+  }, [pixels, currentUserPixel, isLoading, language]);
 
   const loadInitialData = async () => {
     try {
@@ -238,7 +238,7 @@ export const CollaborativePixelArt: React.FC = () => {
     }
   };
 
-  // Fonction de rendu du canvas - SÉPARÉE et OPTIMISÉE
+  // Fonction de rendu du canvas - AMÉLIORÉE avec pixels plus grands
   const renderCanvas = () => {
     if (!canvasRef.current) {
       console.log('⚠️ Canvas ref non disponible pour le rendu');
@@ -255,9 +255,9 @@ export const CollaborativePixelArt: React.FC = () => {
     console.log('🖼️ Début du rendu canvas avec', pixels.length, 'pixels');
 
     try {
-      // Configurer le canvas
-      const displayWidth = 600;
-      const displayHeight = 625;
+      // NOUVELLE CONFIGURATION : Canvas plus grand avec pixels plus visibles
+      const displayWidth = 800;  // Augmenté de 600 à 800
+      const displayHeight = 833; // Augmenté proportionnellement (800 * 1250/1200)
       canvas.width = displayWidth;
       canvas.height = displayHeight;
 
@@ -267,11 +267,12 @@ export const CollaborativePixelArt: React.FC = () => {
 
       // Dessiner les pixels existants seulement s'il y en a
       if (pixels.length > 0) {
-        const scaleX = displayWidth / 1200;
-        const scaleY = displayHeight / 1250;
+        // NOUVELLE ÉCHELLE : Pixels plus grands et plus visibles
+        const scaleX = displayWidth / 1200;   // ~0.67 pixels par unité
+        const scaleY = displayHeight / 1250;  // ~0.67 pixels par unité
 
         console.log('🎨 Début du rendu des pixels...');
-        console.log('📏 Échelle:', { scaleX, scaleY });
+        console.log('📏 Nouvelle échelle (pixels plus grands):', { scaleX, scaleY });
 
         let renderedCount = 0;
         pixels.forEach((pixel, index) => {
@@ -295,17 +296,19 @@ export const CollaborativePixelArt: React.FC = () => {
             }
 
             ctx.fillStyle = pixel.color;
+            
+            // PIXELS PLUS GRANDS : Calcul amélioré pour une meilleure visibilité
             const pixelX = Math.floor(pixel.x * scaleX);
             const pixelY = Math.floor(pixel.y * scaleY);
-            const pixelWidth = Math.ceil(scaleX);
-            const pixelHeight = Math.ceil(scaleY);
+            const pixelWidth = Math.max(1, Math.ceil(scaleX));   // Minimum 1 pixel de large
+            const pixelHeight = Math.max(1, Math.ceil(scaleY));  // Minimum 1 pixel de haut
 
             ctx.fillRect(pixelX, pixelY, pixelWidth, pixelHeight);
             renderedCount++;
 
             // Log pour les premiers pixels pour debug
             if (index < 3) {
-              console.log(`🎨 Pixel ${index}:`, {
+              console.log(`🎨 Pixel ${index} (TAILLE AUGMENTÉE):`, {
                 original: { x: pixel.x, y: pixel.y, color: pixel.color },
                 rendered: { x: pixelX, y: pixelY, width: pixelWidth, height: pixelHeight }
               });
@@ -315,33 +318,35 @@ export const CollaborativePixelArt: React.FC = () => {
           }
         });
 
-        console.log(`✅ ${renderedCount}/${pixels.length} pixels rendus avec succès`);
+        console.log(`✅ ${renderedCount}/${pixels.length} pixels rendus avec TAILLE AUGMENTÉE`);
 
-        // Dessiner le pixel de l'utilisateur actuel avec un contour
+        // Dessiner le pixel de l'utilisateur actuel avec un contour plus visible
         if (currentUserPixel) {
           try {
             ctx.fillStyle = currentUserPixel.color;
             ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 3; // Contour plus épais
+            
             const x = Math.floor(currentUserPixel.x * scaleX);
             const y = Math.floor(currentUserPixel.y * scaleY);
-            const width = Math.ceil(scaleX);
-            const height = Math.ceil(scaleY);
+            const width = Math.max(1, Math.ceil(scaleX));
+            const height = Math.max(1, Math.ceil(scaleY));
             
             ctx.fillRect(x, y, width, height);
             ctx.strokeRect(x, y, width, height);
             
-            console.log('👤 Pixel utilisateur rendu avec contour:', {
+            console.log('👤 Pixel utilisateur rendu avec contour ÉPAIS:', {
               x: currentUserPixel.x,
               y: currentUserPixel.y,
-              color: currentUserPixel.color
+              color: currentUserPixel.color,
+              rendered: { x, y, width, height }
             });
           } catch (error) {
             console.warn('❌ Erreur lors du rendu du pixel utilisateur:', error);
           }
         }
 
-        console.log('✅ Canvas rendu avec succès -', renderedCount, 'pixels affichés');
+        console.log('✅ Canvas rendu avec PIXELS AGRANDIS -', renderedCount, 'pixels affichés');
       } else {
         console.log('⚠️ Aucun pixel à afficher');
       }
@@ -584,7 +589,7 @@ export const CollaborativePixelArt: React.FC = () => {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12">
-          {/* Canvas Section */}
+          {/* Canvas Section - TAILLE AUGMENTÉE */}
           <div className="space-y-6">
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
               <div className="flex items-center justify-between mb-4">
@@ -623,6 +628,9 @@ export const CollaborativePixelArt: React.FC = () => {
                 </p>
                 <p className="text-xs text-green-600 mt-1">
                   ✅ {t('pixel.art.realtime.stored')} • {pixels.length} pixels chargés
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  🔍 <strong>Pixels agrandis</strong> pour une meilleure visibilité !
                 </p>
               </div>
             </div>
