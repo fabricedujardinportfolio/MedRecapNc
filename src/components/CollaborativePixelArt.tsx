@@ -405,7 +405,7 @@ export const CollaborativePixelArt: React.FC = () => {
 
       if (result) {
         if (result.is_new_session) {
-          // Nouveau pixel créé avec succès
+          // ✅ NOUVEAU PIXEL CRÉÉ - Afficher le message de succès
           const newPixel: PixelData = {
             id: result.pixel_id,
             x: result.x,
@@ -421,8 +421,9 @@ export const CollaborativePixelArt: React.FC = () => {
           setIpLimitReached(true); // Marquer la limite comme atteinte
           
           console.log('✅ Nouveau pixel créé avec succès:', newPixel);
+          // ✅ Pas d'erreur pour un nouveau pixel
         } else {
-          // Pixel existant retourné (cette IP a déjà un pixel)
+          // 🔒 PIXEL EXISTANT RETOURNÉ - Protection anti-spam activée
           const existingPixel: PixelData = {
             id: result.pixel_id,
             x: result.x,
@@ -437,6 +438,7 @@ export const CollaborativePixelArt: React.FC = () => {
           setIpLimitReached(true);
           
           console.log('🔒 Pixel existant retourné (limite IP):', existingPixel);
+          // 🔒 AFFICHER MESSAGE ANTI-SPAM au lieu du message de succès
           setError('Vous avez déjà contribué à cette œuvre d\'art ! Voici votre pixel existant.');
         }
 
@@ -744,7 +746,8 @@ export const CollaborativePixelArt: React.FC = () => {
                       {currentUserPixel ? t('pixel.art.contribution.success') : 'Contribution déjà effectuée'}
                     </p>
                   </div>
-                  {currentUserPixel && (
+                  {/* 🔒 AFFICHAGE CONDITIONNEL : Seulement pour les NOUVEAUX pixels */}
+                  {currentUserPixel && !error && (
                     <>
                       <p className="text-sm text-gray-600 mb-2">
                         {t('pixel.art.contribution.position').replace('{x}', currentUserPixel.x.toString()).replace('{y}', currentUserPixel.y.toString())}
