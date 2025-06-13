@@ -168,7 +168,7 @@ export const CollaborativePixelArt: React.FC = () => {
         setTooltip({
           x: hoveredPixel.x,
           y: hoveredPixel.y,
-          contributorName: hoveredPixel.contributor_name || 'Contributeur Anonyme',
+          contributorName: hoveredPixel.contributor_name || t('pixel.art.contributor.name'),
           color: hoveredPixel.color,
           createdAt: hoveredPixel.created_at
         });
@@ -203,19 +203,19 @@ export const CollaborativePixelArt: React.FC = () => {
       canvas.removeEventListener('mouseleave', handleMouseLeave);
       clearTimeout(mouseMoveTimeout);
     };
-  }, [pixels, canvasReady]);
+  }, [pixels, canvasReady, t]);
 
   const loadInitialData = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      setLoadingStep('Initialisation...');
+      setLoadingStep(t('pixel.art.loading'));
       setCanvasReady(false); // 🔧 Reset du canvas ready
 
       console.log('🚀 Chargement initial des données...');
 
       // 1. Charger les pixels en premier (le plus important)
-      setLoadingStep('Chargement des pixels...');
+      setLoadingStep(t('pixel.art.loading.supabase'));
       const allPixels = await collaborativeArtService.getAllPixels(true); // Force refresh
       console.log('🎨 Pixels chargés:', allPixels.length, 'pixels');
       
@@ -506,7 +506,7 @@ export const CollaborativePixelArt: React.FC = () => {
       console.log('🔒 IP Hash actuel:', collaborativeArtService.getCurrentIpHash()?.substring(0, 8) + '...');
 
       // 🆕 Utiliser le nom du contributeur ou un nom par défaut
-      const finalContributorName = contributorName.trim() || 'Contributeur Anonyme';
+      const finalContributorName = contributorName.trim() || t('pixel.art.contributor.name');
       console.log('👤 Nom du contributeur:', finalContributorName);
 
       const result = await collaborativeArtService.createPixelForCurrentSession(
@@ -622,7 +622,7 @@ export const CollaborativePixelArt: React.FC = () => {
           )}
           <div className="mt-4 bg-white rounded-lg p-4 shadow-sm max-w-md mx-auto">
             <p className="text-xs text-gray-500">
-              🔄 Chargement des données depuis Supabase...
+              🔄 {t('pixel.art.loading.supabase')}
             </p>
             <div className="mt-2 bg-gray-200 rounded-full h-2">
               <div className="bg-purple-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
@@ -804,7 +804,7 @@ export const CollaborativePixelArt: React.FC = () => {
                   ✅ {t('pixel.art.realtime.stored')} • {pixels.length} pixels chargés
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
-                  🖱️ <strong>Survolez les pixels</strong> pour voir les contributeurs !
+                  🖱️ <strong>{t('pixel.art.hover.instruction')}</strong>
                 </p>
               </div>
             </div>
@@ -826,7 +826,7 @@ export const CollaborativePixelArt: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <User className="w-4 h-4 text-gray-500" />
                           <span className="text-sm font-medium text-gray-900 truncate">
-                            {contributor.contributor_name || 'Contributeur Anonyme'}
+                            {contributor.contributor_name || t('pixel.art.contributor.name')}
                           </span>
                         </div>
                         <span className="text-xs text-gray-500">
@@ -897,19 +897,19 @@ export const CollaborativePixelArt: React.FC = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         <div className="flex items-center gap-2">
                           <User className="w-4 h-4" />
-                          Votre nom (optionnel)
+                          {t('pixel.art.contributor.name.label')}
                         </div>
                       </label>
                       <input
                         type="text"
                         value={contributorName}
                         onChange={(e) => setContributorName(e.target.value)}
-                        placeholder="Entrez votre pseudo..."
+                        placeholder={t('pixel.art.contributor.name.placeholder')}
                         maxLength={30}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-center"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Ce nom apparaîtra dans les contributeurs récents
+                        {t('pixel.art.contributor.name.help')}
                       </p>
                     </div>
                     
@@ -1124,7 +1124,7 @@ export const CollaborativePixelArt: React.FC = () => {
               Position: ({tooltip.x}, {tooltip.y})
             </div>
             <div className="text-xs text-gray-300">
-              {new Date(tooltip.createdAt).toLocaleDateString('fr-FR', {
+              {new Date(tooltip.createdAt).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
                 day: 'numeric',
                 month: 'short',
                 hour: '2-digit',

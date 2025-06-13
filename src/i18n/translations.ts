@@ -245,6 +245,10 @@ export const translations = {
     'pixel.art.share.title': 'Art Collaboratif MedRecap+ - 1,5 Million de Pixels',
     'pixel.art.share.text': 'Participez à la création d\'une œuvre d\'art collaborative ! Chaque session génère un pixel unique.',
     'pixel.art.share.copied': 'Lien copié dans le presse-papiers !',
+    'pixel.art.contributor.name.placeholder': 'Entrez votre pseudo...',
+    'pixel.art.contributor.name.label': 'Votre nom (optionnel)',
+    'pixel.art.contributor.name.help': 'Ce nom apparaîtra dans les contributeurs récents',
+    'pixel.art.hover.instruction': 'Survolez les pixels pour voir les contributeurs !',
 
     // Common
     'common.loading': 'Chargement...',
@@ -291,7 +295,7 @@ export const translations = {
     'login.demo.superadmin': 'Super Admin:',
     'login.demo.admin': 'Tech Admin:',
     'login.demo.auditor': 'Auditor:',
-    'login.demo.cabinet': 'Cabinet Doctor:',
+    'login.demo.cabinet': 'Practice Doctor:',
     'login.demo.description.superadmin': 'Full hospital system access',
     'login.demo.description.admin': 'Hospital technical management',
     'login.demo.description.auditor': 'Logs and reports consultation',
@@ -463,7 +467,7 @@ export const translations = {
     'footer.status': 'System operational',
     'footer.latency': 'Latency: <150ms',
 
-    // Collaborative Pixel Art
+    // Collaborative Pixel Art - NOUVELLES TRADUCTIONS COMPLÈTES
     'pixel.art.title': 'Collaborative Art',
     'pixel.art.subtitle': '1.5 Million Pixels',
     'pixel.art.back': 'Back',
@@ -520,6 +524,10 @@ export const translations = {
     'pixel.art.share.title': 'MedRecap+ Collaborative Art - 1.5 Million Pixels',
     'pixel.art.share.text': 'Join the creation of a collaborative artwork! Each session generates a unique pixel.',
     'pixel.art.share.copied': 'Link copied to clipboard!',
+    'pixel.art.contributor.name.placeholder': 'Enter your username...',
+    'pixel.art.contributor.name.label': 'Your name (optional)',
+    'pixel.art.contributor.name.help': 'This name will appear in recent contributors',
+    'pixel.art.hover.instruction': 'Hover over pixels to see contributors!',
 
     // Common
     'common.loading': 'Loading...',
