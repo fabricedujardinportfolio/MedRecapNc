@@ -798,14 +798,14 @@ export const PublicProjectPage: React.FC = () => {
               </h3>
               <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
                 <a
-                  href="mailto:contact@medrecap.nc"
+                  href="mailto:fabricedujardin873@gmail.com"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-100 text-blue-600 rounded-lg font-semibold transition-colors"
                 >
                   <Mail className="w-5 h-5" />
                   {t('Nous contacter', 'Contact us')}
                 </a>
                 <a
-                  href="https://github.com/medrecap-nc"
+                  href="https://github.com/fabricedujardinportfolio/MedRecapNc"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold transition-colors"
                 >
                   <Github className="w-5 h-5" />
@@ -885,7 +885,7 @@ export const PublicProjectPage: React.FC = () => {
                 <a href="/" className="block text-gray-300 hover:text-white transition-colors text-sm">
                   {t('Démo en ligne', 'Online demo')}
                 </a>
-                <a href="https://github.com/medrecap-nc" className="block text-gray-300 hover:text-white transition-colors text-sm">
+                <a href="https://github.com/fabricedujardinportfolio/MedRecapNc" className="block text-gray-300 hover:text-white transition-colors text-sm">
                   {t('Code source', 'Source code')}
                 </a>
                 <a href="mailto:contact@medrecap.nc" className="block text-gray-300 hover:text-white transition-colors text-sm">
