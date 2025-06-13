@@ -494,7 +494,7 @@ export const CollaborativePixelArt: React.FC = () => {
     // 🔒 Vérification préalable : Cette IP a-t-elle déjà un pixel ?
     if (ipLimitReached || currentUserPixel) {
       console.log('🚫 Limite IP atteinte ou pixel déjà existant');
-      setError('Vous avez déjà contribué à cette œuvre d\'art ! Un seul pixel par utilisateur est autorisé.');
+      setError(t('pixel.art.existing.pixel.alert'));
       return;
     }
 
@@ -550,7 +550,7 @@ export const CollaborativePixelArt: React.FC = () => {
           
           console.log('🔒 Pixel existant retourné (limite IP):', existingPixel);
           // 🔒 AFFICHER MESSAGE ANTI-SPAM au lieu du message de succès
-          setError('Vous avez déjà contribué à cette œuvre d\'art ! Voici votre pixel existant.');
+          setError(t('pixel.art.existing.pixel.alert'));
         }
 
         // Recharger les statistiques et contributeurs
@@ -565,7 +565,7 @@ export const CollaborativePixelArt: React.FC = () => {
       
       if (error instanceof Error) {
         if (error.message.includes('unique') || error.message.includes('déjà')) {
-          setError('Vous avez déjà contribué à cette œuvre d\'art ! Un seul pixel par utilisateur est autorisé.');
+          setError(t('pixel.art.existing.pixel.alert'));
           setIpLimitReached(true);
         } else {
           setError(t('pixel.art.error.create') || 'Erreur lors de la création du pixel. Veuillez réessayer.');

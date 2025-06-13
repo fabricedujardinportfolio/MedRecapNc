@@ -125,7 +125,7 @@ export const translations = {
     'patient.modal.invoices': 'Factures et paiements',
     'patient.modal.appointments': 'Rendez-vous',
     'patient.modal.new.consultation': 'Nouvelle consultation',
-    'patient.modal.new.invoice': 'Nouvelle facture',
+    'pixel.modal.new.invoice': 'Nouvelle facture',
     'patient.modal.new.appointment': 'Nouveau rendez-vous',
     'patient.modal.no.consultations': 'Aucune consultation enregistrée',
     'patient.modal.no.invoices': 'Aucune facture enregistrée',
@@ -255,6 +255,9 @@ export const translations = {
     'pixel.art.security.description': 'Un seul pixel par utilisateur est autorisé pour garantir l\'équité de cette œuvre collaborative.',
     'pixel.art.security.ip.title': 'Sécurité',
     'pixel.art.security.ip.description': 'Votre adresse IP est utilisée pour garantir qu\'un seul pixel par utilisateur soit créé.',
+    
+    // 🆕 NOUVELLE TRADUCTION POUR L'ALERTE PIXEL EXISTANT
+    'pixel.art.existing.pixel.alert': 'Vous avez déjà contribué à cette œuvre d\'art ! Voici votre pixel existant.',
 
     // Common
     'common.loading': 'Chargement...',
@@ -540,6 +543,9 @@ export const translations = {
     'pixel.art.security.description': 'Only one pixel per user is allowed to ensure fairness in this collaborative artwork.',
     'pixel.art.security.ip.title': 'Security',
     'pixel.art.security.ip.description': 'Your IP address is used to ensure only one pixel per user is created.',
+    
+    // 🆕 NOUVELLE TRADUCTION POUR L'ALERTE PIXEL EXISTANT EN ANGLAIS
+    'pixel.art.existing.pixel.alert': 'You have already contributed to this artwork! Here is your existing pixel.',
 
     // Common
     'common.loading': 'Loading...',
