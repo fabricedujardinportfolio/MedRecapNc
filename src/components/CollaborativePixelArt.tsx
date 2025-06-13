@@ -20,7 +20,8 @@ import {
   CheckCircle,
   AlertCircle,
   X,
-  Shield
+  Shield,
+  User
 } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { LanguageSelector } from './LanguageSelector';
@@ -50,6 +51,7 @@ export const CollaborativePixelArt: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingPixel, setIsCreatingPixel] = useState(false);
   const [selectedColor, setSelectedColor] = useState('#3B82F6');
+  const [contributorName, setContributorName] = useState(''); // 🆕 Nom du contributeur
   const [error, setError] = useState<string | null>(null);
   const [recentContributors, setRecentContributors] = useState<Array<{
     contributor_name: string;
@@ -203,8 +205,9 @@ export const CollaborativePixelArt: React.FC = () => {
             }
             return prev;
           });
-          // Recharger les stats
+          // Recharger les stats et contributeurs
           loadStats();
+          loadRecentContributors();
         }
       });
 
@@ -230,6 +233,16 @@ export const CollaborativePixelArt: React.FC = () => {
       }
     } catch (error) {
       console.error('Erreur lors du rechargement des stats:', error);
+    }
+  };
+
+  // 🆕 Fonction pour recharger les contributeurs récents
+  const loadRecentContributors = async () => {
+    try {
+      const contributors = await collaborativeArtService.getRecentContributors(5);
+      setRecentContributors(contributors);
+    } catch (error) {
+      console.error('Erreur lors du rechargement des contributeurs:', error);
     }
   };
 
@@ -398,9 +411,13 @@ export const CollaborativePixelArt: React.FC = () => {
       console.log('🎨 Tentative de création d\'un pixel...');
       console.log('🔒 IP Hash actuel:', collaborativeArtService.getCurrentIpHash()?.substring(0, 8) + '...');
 
+      // 🆕 Utiliser le nom du contributeur ou un nom par défaut
+      const finalContributorName = contributorName.trim() || 'Contributeur Anonyme';
+      console.log('👤 Nom du contributeur:', finalContributorName);
+
       const result = await collaborativeArtService.createPixelForCurrentSession(
         selectedColor,
-        t('pixel.art.contributor.name') || 'Contributeur MedRecap+'
+        finalContributorName
       );
 
       if (result) {
@@ -412,7 +429,7 @@ export const CollaborativePixelArt: React.FC = () => {
             y: result.y,
             color: result.color,
             session_id: collaborativeArtService.getCurrentSessionId(),
-            contributor_name: t('pixel.art.contributor.you') || 'Vous',
+            contributor_name: finalContributorName, // 🆕 Utiliser le nom saisi
             created_at: result.created_at
           };
 
@@ -444,9 +461,7 @@ export const CollaborativePixelArt: React.FC = () => {
 
         // Recharger les statistiques et contributeurs
         await loadStats();
-        const contributors = await collaborativeArtService.getRecentContributors(5);
-        setRecentContributors(contributors);
-
+        await loadRecentContributors(); // 🆕 Recharger les contributeurs pour voir le nouveau nom
       } else {
         console.error('❌ Aucun résultat retourné par le service');
         setError(t('pixel.art.error.create') || 'Impossible de créer le pixel. Vous avez peut-être déjà contribué.');
@@ -706,17 +721,24 @@ export const CollaborativePixelArt: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   {t('pixel.art.contributors.title')}
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {recentContributors.map((contributor, index) => (
-                    <div key={index} className="flex items-center gap-3">
+                    <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                       <div 
-                        className="w-4 h-4 rounded-full border border-gray-300"
+                        className="w-6 h-6 rounded-full border-2 border-gray-300 flex-shrink-0"
                         style={{ backgroundColor: contributor.color }}
                       ></div>
-                      <span className="text-sm text-gray-700">{contributor.contributor_name}</span>
-                      <span className="text-xs text-gray-500 ml-auto">
-                        {new Date(contributor.created_at).toLocaleTimeString()}
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-gray-500" />
+                          <span className="text-sm font-medium text-gray-900 truncate">
+                            {contributor.contributor_name || 'Contributeur Anonyme'}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {new Date(contributor.created_at).toLocaleTimeString()}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -775,6 +797,27 @@ export const CollaborativePixelArt: React.FC = () => {
                     <p className="text-gray-600 mb-4">
                       {t('pixel.art.contribution.choose')}
                     </p>
+                    
+                    {/* 🆕 Champ nom du contributeur */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4" />
+                          Votre nom (optionnel)
+                        </div>
+                      </label>
+                      <input
+                        type="text"
+                        value={contributorName}
+                        onChange={(e) => setContributorName(e.target.value)}
+                        placeholder="Entrez votre pseudo..."
+                        maxLength={30}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-center"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Ce nom apparaîtra dans les contributeurs récents
+                      </p>
+                    </div>
                     
                     {/* Color Picker */}
                     <div className="flex flex-wrap justify-center gap-2 mb-4">
