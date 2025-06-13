@@ -341,10 +341,30 @@ INFORMATIONS GÉNÉRALES:
 Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé complet, des détails sur ses consultations, sa situation financière, ou tout autre aspect de son dossier.`;
   }
 
+  // Check if API key is valid (not a placeholder)
+  private isValidApiKey(apiKey: string | undefined): boolean {
+    if (!apiKey) return false;
+    
+    // Check for common placeholder patterns
+    const placeholderPatterns = [
+      'your_tavus_api_key_here',
+      'your_actual_tavus_api_key_here',
+      'replace_with_your_key',
+      'api_key_here',
+      'your_key_here'
+    ];
+    
+    return !placeholderPatterns.some(pattern => 
+      apiKey.toLowerCase().includes(pattern.toLowerCase())
+    );
+  }
+
   // Create Tavus conversation with unique naming
   private async createTavusConversation(patient: Patient): Promise<any> {
-    if (!TAVUS_API_KEY || !TAVUS_REPLICA_ID || !TAVUS_PERSONA_ID) {
-      throw new Error('Configuration Tavus incomplète. Vérifiez vos variables d\'environnement.');
+    // Check if API key is properly configured
+    if (!this.isValidApiKey(TAVUS_API_KEY) || !TAVUS_REPLICA_ID || !TAVUS_PERSONA_ID) {
+      console.log('⚠️ Configuration Tavus incomplète - utilisation du mode démonstration');
+      throw new Error('TAVUS_NOT_CONFIGURED');
     }
 
     // Créer un nom unique pour éviter les conflits
@@ -379,7 +399,7 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': TAVUS_API_KEY
+          'x-api-key': TAVUS_API_KEY!
         },
         body: JSON.stringify(conversationData)
       });
@@ -387,6 +407,10 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('❌ Erreur API Tavus:', response.status, errorData);
+        
+        if (response.status === 401) {
+          throw new Error('INVALID_API_KEY');
+        }
         
         if (response.status === 400 && errorData.message?.includes('maximum concurrent conversations')) {
           throw new Error('CONCURRENT_LIMIT_REACHED');
@@ -479,14 +503,21 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
       }, 1000);
 
       if (error instanceof Error) {
-        if (error.message === 'CONCURRENT_LIMIT_REACHED') {
+        if (error.message === 'TAVUS_NOT_CONFIGURED') {
+          console.log('ℹ️ Tavus non configuré - mode démonstration activé');
+          // Don't throw error, just use demo mode silently
+          return fallbackSession;
+        } else if (error.message === 'INVALID_API_KEY') {
+          console.log('ℹ️ Clé API Tavus invalide - mode démonstration activé');
+          // Don't throw error, just use demo mode silently
+          return fallbackSession;
+        } else if (error.message === 'CONCURRENT_LIMIT_REACHED') {
           throw new Error('Limite de conversations simultanées atteinte. Veuillez réessayer dans quelques minutes ou fermer d\'autres sessions Tavus actives.');
-        } else if (error.message.includes('Configuration Tavus incomplète')) {
-          throw new Error('Configuration Tavus incomplète. Fonctionnement en mode démonstration avec synthèse vocale et accès complet aux données patient.');
         }
       }
 
-      throw new Error('Service Tavus temporairement indisponible. Fonctionnement en mode démonstration avec synthèse vocale et accès complet aux données patient.');
+      console.log('ℹ️ Service Tavus indisponible - mode démonstration activé');
+      return fallbackSession;
     }
   }
 
@@ -500,7 +531,7 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
       console.log('💬 Message envoyé à Tavus avec contexte patient:', message);
       
       // If we have a real conversation ID, send to Tavus API
-      if (globalActiveSession.conversationId && TAVUS_API_KEY && !globalActiveSession.isDemoMode) {
+      if (globalActiveSession.conversationId && this.isValidApiKey(TAVUS_API_KEY) && !globalActiveSession.isDemoMode) {
         console.log('📤 Envoi du message via Tavus API avec données patient...');
       }
       
@@ -520,12 +551,12 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
 
   // End current session
   async endSession(): Promise<void> {
-    if (globalActiveSession?.conversationId && TAVUS_API_KEY && !globalActiveSession.isDemoMode) {
+    if (globalActiveSession?.conversationId && this.isValidApiKey(TAVUS_API_KEY) && !globalActiveSession.isDemoMode) {
       try {
         await fetch(`${TAVUS_BASE_URL}/v2/conversations/${globalActiveSession.conversationId}/end`, {
           method: 'POST',
           headers: {
-            'x-api-key': TAVUS_API_KEY
+            'x-api-key': TAVUS_API_KEY!
           }
         });
         console.log('✅ Session Tavus fermée avec succès');
@@ -547,7 +578,7 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
 
   // Check if Tavus is properly configured
   isConfigured(): boolean {
-    return !!(TAVUS_API_KEY && TAVUS_REPLICA_ID && TAVUS_PERSONA_ID);
+    return !!(this.isValidApiKey(TAVUS_API_KEY) && TAVUS_REPLICA_ID && TAVUS_PERSONA_ID);
   }
 
   // Get configuration status
@@ -556,11 +587,13 @@ Que souhaitez-vous savoir précisément ? Vous pouvez me demander un résumé co
     hasReplicaId: boolean;
     hasPersonaId: boolean;
     isFullyConfigured: boolean;
+    isValidApiKey: boolean;
   } {
     return {
       hasApiKey: !!TAVUS_API_KEY,
       hasReplicaId: !!TAVUS_REPLICA_ID,
       hasPersonaId: !!TAVUS_PERSONA_ID,
+      isValidApiKey: this.isValidApiKey(TAVUS_API_KEY),
       isFullyConfigured: this.isConfigured()
     };
   }
