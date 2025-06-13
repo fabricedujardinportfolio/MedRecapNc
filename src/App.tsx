@@ -8,6 +8,7 @@ import { CollaborativePixelArt } from './components/CollaborativePixelArt';
 import { Footer } from './components/Footer';
 import { LanguageProvider } from './components/LanguageProvider';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
@@ -22,7 +23,9 @@ function App() {
   if (showPublicPage) {
     return (
       <LanguageProvider>
-        <PublicProjectPage />
+        <ErrorBoundary>
+          <PublicProjectPage />
+        </ErrorBoundary>
       </LanguageProvider>
     );
   }
@@ -30,7 +33,15 @@ function App() {
   if (showPixelArtPage) {
     return (
       <LanguageProvider>
-        <CollaborativePixelArt />
+        <ErrorBoundary 
+          onError={(error, errorInfo) => {
+            console.error('🎨 Erreur dans CollaborativePixelArt:', error);
+            console.error('📊 Context:', errorInfo);
+            // Ici on pourrait envoyer l'erreur à un service de monitoring
+          }}
+        >
+          <CollaborativePixelArt />
+        </ErrorBoundary>
       </LanguageProvider>
     );
   }
@@ -51,22 +62,38 @@ function App() {
   return (
     <LanguageProvider>
       <NotificationProvider>
-        {!isAuthenticated || !user ? (
-          <LoginForm onLogin={login} isLoading={isLoading} />
-        ) : (
-          <div className="min-h-screen bg-gray-50 flex flex-col">
-            <Header user={user} onLogout={logout} />
-            <main className="flex-1">
-              {/* Affichage conditionnel selon le type d'utilisateur */}
-              {user.type === 'cabinet' ? (
-                <CabinetDashboard />
-              ) : (
-                <Dashboard />
-              )}
-            </main>
-            <Footer />
-          </div>
-        )}
+        <ErrorBoundary>
+          {!isAuthenticated || !user ? (
+            <LoginForm onLogin={login} isLoading={isLoading} />
+          ) : (
+            <div className="min-h-screen bg-gray-50 flex flex-col">
+              <Header user={user} onLogout={logout} />
+              <main className="flex-1">
+                <ErrorBoundary fallback={
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                      <h3 className="text-lg font-semibold text-red-800 mb-2">
+                        Erreur dans le tableau de bord
+                      </h3>
+                      <p className="text-red-600">
+                        Une erreur est survenue lors du chargement du tableau de bord. 
+                        Veuillez rafraîchir la page ou contacter le support technique.
+                      </p>
+                    </div>
+                  </div>
+                }>
+                  {/* Affichage conditionnel selon le type d'utilisateur */}
+                  {user.type === 'cabinet' ? (
+                    <CabinetDashboard />
+                  ) : (
+                    <Dashboard />
+                  )}
+                </ErrorBoundary>
+              </main>
+              <Footer />
+            </div>
+          )}
+        </ErrorBoundary>
       </NotificationProvider>
     </LanguageProvider>
   );
