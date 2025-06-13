@@ -4,6 +4,7 @@ import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { CabinetDashboard } from './components/CabinetDashboard';
 import { PublicProjectPage } from './components/PublicProjectPage';
+import { CollaborativePixelArt } from './components/CollaborativePixelArt';
 import { Footer } from './components/Footer';
 import { LanguageProvider } from './components/LanguageProvider';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -14,11 +15,22 @@ function App() {
 
   // Check if we should show the public page
   const showPublicPage = window.location.pathname === '/public' || window.location.hash === '#public';
+  
+  // Check if we should show the collaborative pixel art page
+  const showPixelArtPage = window.location.pathname === '/collaborative-pixel-art' || window.location.hash === '#collaborative-pixel-art';
 
   if (showPublicPage) {
     return (
       <LanguageProvider>
         <PublicProjectPage />
+      </LanguageProvider>
+    );
+  }
+
+  if (showPixelArtPage) {
+    return (
+      <LanguageProvider>
+        <CollaborativePixelArt />
       </LanguageProvider>
     );
   }

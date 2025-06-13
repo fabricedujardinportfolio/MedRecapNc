@@ -14,7 +14,7 @@ export const Footer: React.FC = () => {
     if (clickCount === 2) { // Au 3ème clic
       setShowSecretEasterEgg(true);
       setClickCount(0);
-      setTimeout(() => setShowSecretEasterEgg(false), 15000); // Augmenté à 15 secondes
+      setTimeout(() => setShowSecretEasterEgg(false), 15000); // 15 secondes
     } else {
       // Reset après 2 secondes si pas de triple-clic
       setTimeout(() => setClickCount(0), 2000);
@@ -104,7 +104,7 @@ export const Footer: React.FC = () => {
             </div>
             <div className="flex items-center gap-4 mt-4 md:mt-0">
               <div className="flex items-center gap-2 text-xs">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                 <span className="text-gray-400">{t('footer.status')}</span>
               </div>
               <div className="text-xs text-gray-400">
@@ -145,12 +145,20 @@ export const Footer: React.FC = () => {
             <div className="text-xs opacity-75 mb-4">
               🤫 Psst... Il y a peut-être d'autres secrets cachés dans l'application...
             </div>
-            <button
-              onClick={() => setShowSecretEasterEgg(false)}
-              className="px-8 py-3 bg-white hover:bg-gray-100 text-purple-600 rounded-lg font-bold transition-colors shadow-lg"
-            >
-              Garder le secret 🤐
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => setShowSecretEasterEgg(false)}
+                className="px-8 py-3 bg-white hover:bg-gray-100 text-purple-600 rounded-lg font-bold transition-colors shadow-lg"
+              >
+                Garder le secret 🤐
+              </button>
+              <a
+                href="/collaborative-pixel-art"
+                className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white rounded-lg font-bold transition-colors shadow-lg"
+              >
+                🎨 Découvrir l'Art Collaboratif
+              </a>
+            </div>
           </div>
         </div>
       )}

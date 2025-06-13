@@ -77,7 +77,7 @@ export const PublicProjectPage: React.FC = () => {
       console.log('🎉 Séquence complète et correcte !');
       setShowEasterEgg(true);
       setSecretSequence([]);
-      setTimeout(() => setShowEasterEgg(false), 20000); // Augmenté à 20 secondes
+      setTimeout(() => setShowEasterEgg(false), 20000); // 20 secondes
       return;
     }
     
@@ -847,12 +847,20 @@ export const PublicProjectPage: React.FC = () => {
             <div className="text-xs opacity-75 mb-4">
               💡 {t('Un autre easter egg est caché quelque part sur le site principal. Saurez-vous le retrouver ?', 'Another easter egg is hidden somewhere on the main site. Can you find it?')}
             </div>
-            <button
-              onClick={() => setShowEasterEgg(false)}
-              className="px-8 py-3 bg-white hover:bg-gray-100 text-purple-600 rounded-lg font-bold transition-colors shadow-lg"
-            >
-              {t('Mission accomplie ! 🎯', 'Mission accomplished! 🎯')}
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => setShowEasterEgg(false)}
+                className="px-8 py-3 bg-white hover:bg-gray-100 text-purple-600 rounded-lg font-bold transition-colors shadow-lg"
+              >
+                {t('Mission accomplie ! 🎯', 'Mission accomplished! 🎯')}
+              </button>
+              <a
+                href="/collaborative-pixel-art"
+                className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white rounded-lg font-bold transition-colors shadow-lg"
+              >
+                🎨 {t('Découvrir l\'Art Collaboratif', 'Discover Collaborative Art')}
+              </a>
+            </div>
           </div>
         </div>
       )}
