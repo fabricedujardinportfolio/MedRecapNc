@@ -460,7 +460,7 @@ export const CabinetDashboard: React.FC = () => {
       {/* Navigation Tabs */}
       <div className="mb-8">
         <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex flex-wrap justify-center sm:justify-start space-x-8">
             {[
               { id: 'patients', label: t('cabinet.tabs.patients'), icon: Users },
               { id: 'consultations', label: t('cabinet.tabs.consultations'), icon: Stethoscope },
