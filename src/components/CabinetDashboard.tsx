@@ -6,8 +6,7 @@ import { ConsultationModal } from './ConsultationModal';
 import { FactureModal } from './FactureModal';
 import { RendezVousModal } from './RendezVousModal';
 import { AddPatientModal } from './AddPatientModal';
-import { mockPatients } from '../data/mockPatients';
-import { mockCabinetStats, updatePatientsWithCabinetData, mockConsultations, mockFactures, mockRendezVous } from '../data/mockCabinetData';
+import { mockCabinetStats } from '../data/mockCabinetData';
 import { Patient, SearchFilters as SearchFiltersType, CabinetStats, Consultation, Facture, RendezVous } from '../types/Patient';
 import { PatientData, patientService, ConsultationData, FactureData, RendezVousData, supabase } from '../services/patientService';
 import { useLanguage } from '../hooks/useLanguage';
@@ -76,7 +75,7 @@ export const CabinetDashboard: React.FC = () => {
       console.log('🔄 Chargement des patients depuis Supabase...');
       
       const patients = await patientService.getAllPatients();
-      console.log('✅ Patients chargés:', patients.length);
+      console.log('✅ Patients chargés depuis la BDD:', patients.length);
       
       setPatientsFromDB(patients);
       
@@ -107,7 +106,7 @@ export const CabinetDashboard: React.FC = () => {
       
     } catch (error) {
       console.error('❌ Erreur lors du chargement des patients:', error);
-      // En cas d'erreur, utiliser les données mock
+      // En cas d'erreur, utiliser un tableau vide
       setPatientsFromDB([]);
     } finally {
       setIsLoadingPatients(false);
@@ -282,16 +281,20 @@ export const CabinetDashboard: React.FC = () => {
     };
   };
 
-  // Combiner les patients de la DB avec les données mock
+  // CORRECTION : Utiliser UNIQUEMENT les patients de la base de données
   const allPatients = useMemo(() => {
+    console.log('🔄 Conversion des patients de la BDD:', patientsFromDB.length);
     const dbPatients = patientsFromDB.map(convertDBPatientToPatient);
-    const mockPatientsWithCabinetData = updatePatientsWithCabinetData(mockPatients);
+    console.log('✅ Patients convertis:', dbPatients.length);
     
-    // Éviter les doublons en utilisant les IDs
-    const existingIds = new Set(dbPatients.map(p => p.id));
-    const uniqueMockPatients = mockPatientsWithCabinetData.filter(p => !existingIds.has(p.id));
+    // SUPPRIMÉ : Ne plus combiner avec les données mock
+    // const mockPatientsWithCabinetData = updatePatientsWithCabinetData(mockPatients);
+    // const existingIds = new Set(dbPatients.map(p => p.id));
+    // const uniqueMockPatients = mockPatientsWithCabinetData.filter(p => !existingIds.has(p.id));
+    // return [...dbPatients, ...uniqueMockPatients];
     
-    return [...dbPatients, ...uniqueMockPatients];
+    // NOUVEAU : Retourner uniquement les patients de la base de données
+    return dbPatients;
   }, [patientsFromDB]);
 
   // Filter patients based on search criteria
