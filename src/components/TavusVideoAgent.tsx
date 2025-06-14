@@ -75,6 +75,8 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
       patient.factures &&
       patient.rendezVous
     ) {
+      console.log('🧠 Données patient envoyées à TavusService:', patient);
+
       initializeSession();
     }
   }, [isVisible, session, patient, language]);
