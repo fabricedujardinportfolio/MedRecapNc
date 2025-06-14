@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
     <>
       <header className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex flex-wrap justify-center sm:justify-between items-center min-h-fit sm:h-16">
             {/* Logo and Title */}
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
