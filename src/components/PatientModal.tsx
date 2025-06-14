@@ -1336,16 +1336,14 @@ export const PatientModal: React.FC<PatientModalProps> = ({
           </div>
         </div>
       </div>
-{showTavusAgent && (
-  <>
-    {console.log("👁️ Patient envoyé à Dr. Léa Martin (IA):", enrichedPatient || patient)}
-    <TavusVideoAgent
-      patient={enrichedPatient || patient}
-      isVisible={showTavusAgent}
-      onClose={() => setShowTavusAgent(false)}
-    />
-  </>
-)}
+    {console.log("👁️ Patient envoyé à Dr. Léa Martin (IA):",  patient)}
+
+      {/* Tavus Video Agent Modal */}
+      <TavusVideoAgent
+        patient={patient}
+        isVisible={showTavusAgent}
+        onClose={() => setShowTavusAgent(false)}
+      />
 
       {/* Consultation Modal */}
       {showConsultationModal && (
