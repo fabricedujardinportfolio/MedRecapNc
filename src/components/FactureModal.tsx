@@ -80,7 +80,9 @@ export const FactureModal: React.FC<FactureModalProps> = ({ onClose, patientId, 
         montant_restant: typeof formData.montant_restant === 'string' ? parseFloat(formData.montant_restant) : formData.montant_restant,
         remboursement_securite_sociale: typeof formData.remboursement_securite_sociale === 'string' ? parseFloat(formData.remboursement_securite_sociale) : formData.remboursement_securite_sociale,
         remboursement_mutuelle: typeof formData.remboursement_mutuelle === 'string' ? parseFloat(formData.remboursement_mutuelle) : formData.remboursement_mutuelle,
-        remboursement_reste_a_charge: typeof formData.remboursement_reste_a_charge === 'string' ? parseFloat(formData.remboursement_reste_a_charge) : formData.remboursement_reste_a_charge
+        remboursement_reste_a_charge: typeof formData.remboursement_reste_a_charge === 'string' ? parseFloat(formData.remboursement_reste_a_charge) : formData.remboursement_reste_a_charge,
+        // Gérer les champs UUID - convertir les chaînes vides en undefined
+        consultation_id: formData.consultation_id && formData.consultation_id.trim() !== '' ? formData.consultation_id : undefined
       };
       
       const newFacture = await patientService.createFacture(factureData);

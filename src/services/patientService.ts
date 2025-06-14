@@ -351,27 +351,30 @@ class PatientService {
         throw externalIdError;
       }
 
+      // Préparer les données de la facture en gérant les champs UUID
+      const factureToInsert = {
+        patient_id: factureData.patient_id,
+        consultation_id: factureData.consultation_id || null, // Convertir undefined en null
+        external_id: externalId,
+        numero: factureData.numero,
+        date: factureData.date,
+        montant_total: factureData.montant_total,
+        montant_paye: factureData.montant_paye,
+        montant_restant: factureData.montant_restant,
+        statut: factureData.statut,
+        methode_paiement: factureData.methode_paiement,
+        date_echeance: factureData.date_echeance,
+        date_paiement: factureData.date_paiement,
+        remboursement_securite_sociale: factureData.remboursement_securite_sociale,
+        remboursement_mutuelle: factureData.remboursement_mutuelle,
+        remboursement_reste_a_charge: factureData.remboursement_reste_a_charge,
+        notes: factureData.notes
+      };
+
       // Créer la facture principale
       const { data: factureCreated, error: factureError } = await supabase
         .from('factures')
-        .insert([{
-          patient_id: factureData.patient_id,
-          consultation_id: factureData.consultation_id,
-          external_id: externalId,
-          numero: factureData.numero,
-          date: factureData.date,
-          montant_total: factureData.montant_total,
-          montant_paye: factureData.montant_paye,
-          montant_restant: factureData.montant_restant,
-          statut: factureData.statut,
-          methode_paiement: factureData.methode_paiement,
-          date_echeance: factureData.date_echeance,
-          date_paiement: factureData.date_paiement,
-          remboursement_securite_sociale: factureData.remboursement_securite_sociale,
-          remboursement_mutuelle: factureData.remboursement_mutuelle,
-          remboursement_reste_a_charge: factureData.remboursement_reste_a_charge,
-          notes: factureData.notes
-        }])
+        .insert([factureToInsert])
         .select()
         .single();
 
