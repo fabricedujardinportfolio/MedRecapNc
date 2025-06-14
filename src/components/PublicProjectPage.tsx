@@ -932,7 +932,7 @@ export const PublicProjectPage: React.FC = () => {
                 <a href="https://github.com/fabricedujardinportfolio/MedRecapNc" className="block text-gray-300 hover:text-white transition-colors text-sm">
                   {t('Code source', 'Source code')}
                 </a>
-                <a href="mailto:contact@medrecap.nc" className="block text-gray-300 hover:text-white transition-colors text-sm">
+                <a href="mailto:fabricedujardin873@gmail.com" className="block text-gray-300 hover:text-white transition-colors text-sm">
                   {t('Contact', 'Contact')}
                 </a>
               </div>
