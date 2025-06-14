@@ -30,6 +30,8 @@ import { RendezVousModal } from './RendezVousModal';
 import { useLanguage } from '../hooks/useLanguage';
 import { patientService, ConsultationData, FactureData, RendezVousData } from '../services/patientService';
 
+const [enrichedPatient, setEnrichedPatient] = useState<Patient | null>(null);
+
 interface PatientModalProps {
   patient: Patient;
   onClose: () => void;
