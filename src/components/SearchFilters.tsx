@@ -154,11 +154,11 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         )}
 
         {/* Date Range */}
-        <div className="flex flex-wrap md:col-span-2">
+        <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             {t('filters.date')}
           </label>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <div className="relative flex-1">
               <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
