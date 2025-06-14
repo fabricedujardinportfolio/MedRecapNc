@@ -570,7 +570,7 @@ export const CollaborativePixelArt: React.FC = () => {
           <div className="flex flex-wrap justify-center sm:justify-between items-center min-h-fit sm:h-16">
             <button
               onClick={handleGoBack}
-              className="w-min sm:w-auto mx-auto flex justify-center items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-center"
+              className="w-full sm:w-min sm:mx-auto flex justify-center items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-center"
             >
               <ArrowLeft className="w-5 h-5" />
               <span>{t('pixel.art.back')}</span>
