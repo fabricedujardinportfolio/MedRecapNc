@@ -7,6 +7,7 @@ import { FactureModal } from './FactureModal';
 import { RendezVousModal } from './RendezVousModal';
 import { AddPatientModal } from './AddPatientModal';
 import { EditFactureModal } from './EditFactureModal';
+import { EditConsultationModal } from './EditConsultationModal';
 import { mockCabinetStats } from '../data/mockCabinetData';
 import { Patient, SearchFilters as SearchFiltersType, CabinetStats, Consultation, Facture, RendezVous } from '../types/Patient';
 import { PatientData, patientService, ConsultationData, FactureData, RendezVousData, supabase } from '../services/patientService';
@@ -42,7 +43,9 @@ export const CabinetDashboard: React.FC = () => {
   const [showRendezVousModal, setShowRendezVousModal] = useState(false);
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
   const [showEditFactureModal, setShowEditFactureModal] = useState(false);
+  const [showEditConsultationModal, setShowEditConsultationModal] = useState(false);
   const [selectedFacture, setSelectedFacture] = useState<FactureData | null>(null);
+  const [selectedConsultation, setSelectedConsultation] = useState<ConsultationData | null>(null);
   const [activeTab, setActiveTab] = useState<'patients' | 'consultations' | 'factures' | 'rendez-vous'>('patients');
   const [patientsFromDB, setPatientsFromDB] = useState<PatientData[]>([]);
   const [consultationsFromDB, setConsultationsFromDB] = useState<ConsultationData[]>([]);
@@ -379,6 +382,12 @@ export const CabinetDashboard: React.FC = () => {
   const handleEditFacture = (facture: FactureData) => {
     setSelectedFacture(facture);
     setShowEditFactureModal(true);
+  };
+
+  // Gérer l'édition d'une consultation
+  const handleEditConsultation = (consultation: ConsultationData) => {
+    setSelectedConsultation(consultation);
+    setShowEditConsultationModal(true);
   };
 
   // Fonctions utilitaires pour les statuts
@@ -733,7 +742,10 @@ export const CabinetDashboard: React.FC = () => {
                       <button className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors">
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                      <button 
+                        onClick={() => handleEditConsultation(consultation)}
+                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
                         <Edit className="w-4 h-4" />
                       </button>
                     </div>
@@ -1103,6 +1115,22 @@ export const CabinetDashboard: React.FC = () => {
             handleDataUpdated();
             setShowEditFactureModal(false);
             setSelectedFacture(null);
+          }}
+        />
+      )}
+
+      {showEditConsultationModal && selectedConsultation && (
+        <EditConsultationModal
+          consultation={selectedConsultation}
+          isOpen={showEditConsultationModal}
+          onClose={() => {
+            setShowEditConsultationModal(false);
+            setSelectedConsultation(null);
+          }}
+          onConsultationUpdated={() => {
+            handleDataUpdated();
+            setShowEditConsultationModal(false);
+            setSelectedConsultation(null);
           }}
         />
       )}
