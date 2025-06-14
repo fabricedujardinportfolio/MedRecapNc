@@ -62,8 +62,12 @@ export const FactureModal: React.FC<FactureModalProps> = ({ onClose, patientId, 
     setError(null);
     
     try {
-      // Validation basique
-      if (!formData.patient_id || !formData.numero || !formData.date) {
+      // Validation basique - vérifier que patient_id n'est pas vide
+      if (!formData.patient_id || formData.patient_id.trim() === '') {
+        throw new Error('Veuillez sélectionner un patient');
+      }
+      
+      if (!formData.numero || !formData.date) {
         throw new Error('Veuillez remplir tous les champs obligatoires');
       }
       
@@ -179,7 +183,7 @@ export const FactureModal: React.FC<FactureModalProps> = ({ onClose, patientId, 
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Patient
+                    Patient *
                   </label>
                   <select
                     value={formData.patient_id}
