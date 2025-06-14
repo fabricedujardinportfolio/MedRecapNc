@@ -567,7 +567,7 @@ export const CollaborativePixelArt: React.FC = () => {
           : 'bg-white/80'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex flex-wrap justify-center sm:justify-between items-center min-h-fit sm:h-16">
             <button
               onClick={handleGoBack}
               className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
