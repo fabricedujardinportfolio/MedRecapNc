@@ -9,7 +9,7 @@ import { AddPatientModal } from './AddPatientModal';
 import { mockPatients } from '../data/mockPatients';
 import { mockCabinetStats, updatePatientsWithCabinetData, mockConsultations, mockFactures, mockRendezVous } from '../data/mockCabinetData';
 import { Patient, SearchFilters as SearchFiltersType, CabinetStats, Consultation, Facture, RendezVous } from '../types/Patient';
-import { PatientData, patientService } from '../services/patientService';
+import { PatientData, patientService, ConsultationData, FactureData, RendezVousData } from '../services/patientService';
 import { useLanguage } from '../hooks/useLanguage';
 import { 
   Users, 
@@ -43,7 +43,13 @@ export const CabinetDashboard: React.FC = () => {
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'patients' | 'consultations' | 'factures' | 'rendez-vous'>('patients');
   const [patientsFromDB, setPatientsFromDB] = useState<PatientData[]>([]);
+  const [consultationsFromDB, setConsultationsFromDB] = useState<ConsultationData[]>([]);
+  const [facturesFromDB, setFacturesFromDB] = useState<FactureData[]>([]);
+  const [rendezVousFromDB, setRendezVousFromDB] = useState<RendezVousData[]>([]);
   const [isLoadingPatients, setIsLoadingPatients] = useState(true);
+  const [isLoadingConsultations, setIsLoadingConsultations] = useState(false);
+  const [isLoadingFactures, setIsLoadingFactures] = useState(false);
+  const [isLoadingRendezVous, setIsLoadingRendezVous] = useState(false);
   const [stats, setStats] = useState<CabinetStats>(mockCabinetStats);
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
@@ -52,6 +58,17 @@ export const CabinetDashboard: React.FC = () => {
   useEffect(() => {
     loadPatientsFromDB();
   }, []);
+
+  // Charger les consultations quand on change d'onglet
+  useEffect(() => {
+    if (activeTab === 'consultations') {
+      loadConsultationsFromDB();
+    } else if (activeTab === 'factures') {
+      loadFacturesFromDB();
+    } else if (activeTab === 'rendez-vous') {
+      loadRendezVousFromDB();
+    }
+  }, [activeTab]);
 
   const loadPatientsFromDB = async () => {
     try {
@@ -94,6 +111,94 @@ export const CabinetDashboard: React.FC = () => {
       setPatientsFromDB([]);
     } finally {
       setIsLoadingPatients(false);
+    }
+  };
+
+  const loadConsultationsFromDB = async () => {
+    try {
+      setIsLoadingConsultations(true);
+      console.log('🔄 Chargement des consultations depuis Supabase...');
+      
+      // Récupérer toutes les consultations avec les informations patient
+      const { data, error } = await patientService.supabase
+        .from('consultations')
+        .select(`
+          *,
+          patients!inner(nom, prenom)
+        `)
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('❌ Erreur lors du chargement des consultations:', error);
+        throw error;
+      }
+
+      console.log('✅ Consultations chargées:', data?.length || 0);
+      setConsultationsFromDB(data || []);
+      
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des consultations:', error);
+      setConsultationsFromDB([]);
+    } finally {
+      setIsLoadingConsultations(false);
+    }
+  };
+
+  const loadFacturesFromDB = async () => {
+    try {
+      setIsLoadingFactures(true);
+      console.log('🔄 Chargement des factures depuis Supabase...');
+      
+      // Récupérer toutes les factures avec les informations patient
+      const { data, error } = await patientService.supabase
+        .from('factures')
+        .select(`
+          *,
+          patients!inner(nom, prenom),
+          facture_details(*)
+        `)
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('❌ Erreur lors du chargement des factures:', error);
+        throw error;
+      }
+
+      console.log('✅ Factures chargées:', data?.length || 0);
+      setFacturesFromDB(data || []);
+      
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des factures:', error);
+      setFacturesFromDB([]);
+    } finally {
+      setIsLoadingFactures(false);
+    }
+  };
+
+  const loadRendezVousFromDB = async () => {
+    try {
+      setIsLoadingRendezVous(true);
+      console.log('🔄 Chargement des rendez-vous depuis Supabase...');
+      
+      // Récupérer tous les rendez-vous
+      const { data, error } = await patientService.supabase
+        .from('rendez_vous')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('❌ Erreur lors du chargement des rendez-vous:', error);
+        throw error;
+      }
+
+      console.log('✅ Rendez-vous chargés:', data?.length || 0);
+      setRendezVousFromDB(data || []);
+      
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des rendez-vous:', error);
+      setRendezVousFromDB([]);
+    } finally {
+      setIsLoadingRendezVous(false);
     }
   };
 
@@ -254,6 +359,14 @@ export const CabinetDashboard: React.FC = () => {
   const handleDataUpdated = () => {
     console.log('🔄 Mise à jour des données après modification');
     loadPatientsFromDB();
+    // Recharger aussi les données de l'onglet actuel
+    if (activeTab === 'consultations') {
+      loadConsultationsFromDB();
+    } else if (activeTab === 'factures') {
+      loadFacturesFromDB();
+    } else if (activeTab === 'rendez-vous') {
+      loadRendezVousFromDB();
+    }
   };
 
   // Fonctions utilitaires pour les statuts
@@ -376,7 +489,7 @@ export const CabinetDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">{t('cabinet.stats.consultations')}</p>
-              <p className="text-3xl font-bold text-green-600">{stats.consultations.aujourdhui}</p>
+              <p className="text-3xl font-bold text-green-600">{consultationsFromDB.length}</p>
             </div>
             <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg">
               <Stethoscope className="w-6 h-6 text-green-600" />
@@ -393,7 +506,7 @@ export const CabinetDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">{t('cabinet.stats.appointments')}</p>
-              <p className="text-3xl font-bold text-orange-600">{stats.rendezVous.aujourdhui}</p>
+              <p className="text-3xl font-bold text-orange-600">{rendezVousFromDB.length}</p>
             </div>
             <div className="flex items-center justify-center w-12 h-12 bg-orange-100 rounded-lg">
               <Calendar className="w-6 h-6 text-orange-600" />
@@ -521,7 +634,15 @@ export const CabinetDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">{t('patient.modal.consultations')}</h2>
-              <p className="text-gray-600">{mockConsultations.length} {t('cabinet.tabs.consultations').toLowerCase()}</p>
+              <p className="text-gray-600">
+                {consultationsFromDB.length} {t('cabinet.tabs.consultations').toLowerCase()}
+                {isLoadingConsultations && (
+                  <span className="ml-2 text-blue-600">
+                    <RefreshCw className="w-4 h-4 inline animate-spin mr-1" />
+                    Chargement...
+                  </span>
+                )}
+              </p>
             </div>
             <button
               onClick={() => setShowConsultationModal(true)}
@@ -531,82 +652,100 @@ export const CabinetDashboard: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid gap-4">
-            {mockConsultations.map((consultation) => (
-              <div key={consultation.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
-                        <Stethoscope className="w-5 h-5 text-blue-600" />
+          {isLoadingConsultations ? (
+            <div className="text-center py-8">
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <p className="text-gray-600">Chargement des consultations...</p>
+            </div>
+          ) : consultationsFromDB.length > 0 ? (
+            <div className="grid gap-4">
+              {consultationsFromDB.map((consultation) => (
+                <div key={consultation.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
+                          <Stethoscope className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{consultation.motif}</h3>
+                          <p className="text-sm text-gray-600">
+                            {t('common.patient')}: {(consultation as any).patients?.prenom} {(consultation as any).patients?.nom}
+                          </p>
+                          {consultation.external_id && (
+                            <p className="text-xs text-blue-600">ID: {consultation.external_id}</p>
+                          )}
+                        </div>
+                        <span className={`px-3 py-1 text-xs rounded-full font-medium ${getConsultationStatusColor(consultation.statut)}`}>
+                          {getConsultationStatusText(consultation.statut)}
+                        </span>
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{consultation.motif}</h3>
-                        <p className="text-sm text-gray-600">
-                          {t('common.patient')}: {allPatients.find(p => p.id === consultation.patientId)?.prenom} {allPatients.find(p => p.id === consultation.patientId)?.nom}
-                        </p>
-                      </div>
-                      <span className={`px-3 py-1 text-xs rounded-full font-medium ${getConsultationStatusColor(consultation.statut)}`}>
-                        {getConsultationStatusText(consultation.statut)}
-                      </span>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">{t('common.date')} & {t('common.time')}</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {format(new Date(consultation.date), 'dd/MM/yyyy à HH:mm', { locale })}
-                        </p>
-                        <p className="text-xs text-gray-600">{t('common.duration')}: {consultation.duree} min</p>
-                      </div>
-                      
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">{t('common.diagnosis')}</p>
-                        <p className="text-sm text-gray-900">{consultation.diagnostic}</p>
-                      </div>
-                      
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">{t('common.amount')}</p>
-                        <p className="text-sm font-medium text-gray-900">{consultation.tarif}€</p>
-                        {consultation.factureId && (
-                          <p className="text-xs text-green-600">{t('invoice.status.paid')}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {consultation.traitement && (
-                      <div className="bg-blue-50 rounded-lg p-3 mb-4">
-                        <p className="text-xs font-medium text-blue-800 mb-1">{t('common.treatment')}</p>
-                        <p className="text-sm text-blue-900">{consultation.traitement}</p>
-                      </div>
-                    )}
-
-                    {consultation.ordonnance && consultation.ordonnance.medicaments.length > 0 && (
-                      <div className="bg-green-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-green-800 mb-2">Ordonnance</p>
-                        <div className="space-y-1">
-                          {consultation.ordonnance.medicaments.map((med, index) => (
-                            <div key={index} className="text-sm text-green-900">
-                              <span className="font-medium">{med.nom}</span> - {med.dosage} ({med.instructions})
-                            </div>
-                          ))}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-gray-500 mb-1">{t('common.date')} & {t('common.time')}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {format(new Date(consultation.date), 'dd/MM/yyyy à HH:mm', { locale })}
+                          </p>
+                          <p className="text-xs text-gray-600">{t('common.duration')}: {consultation.duree} min</p>
+                        </div>
+                        
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-gray-500 mb-1">{t('common.diagnosis')}</p>
+                          <p className="text-sm text-gray-900">{consultation.diagnostic}</p>
+                        </div>
+                        
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-gray-500 mb-1">{t('common.amount')}</p>
+                          <p className="text-sm font-medium text-gray-900">{consultation.tarif}€</p>
+                          <p className="text-xs text-gray-600">{consultation.medecin_nom}</p>
                         </div>
                       </div>
-                    )}
-                  </div>
 
-                  <div className="flex items-center gap-2 ml-4">
-                    <button className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors">
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                      <Edit className="w-4 h-4" />
-                    </button>
+                      {consultation.traitement && (
+                        <div className="bg-blue-50 rounded-lg p-3 mb-4">
+                          <p className="text-xs font-medium text-blue-800 mb-1">{t('common.treatment')}</p>
+                          <p className="text-sm text-blue-900">{consultation.traitement}</p>
+                        </div>
+                      )}
+
+                      {consultation.observations && (
+                        <div className="bg-green-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-green-800 mb-1">Observations</p>
+                          <p className="text-sm text-green-900">{consultation.observations}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 ml-4">
+                      <button className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Stethoscope className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Aucune consultation trouvée
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Commencez par créer votre première consultation
+              </p>
+              <button
+                onClick={() => setShowConsultationModal(true)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                {t('patient.modal.new.consultation')}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -616,7 +755,15 @@ export const CabinetDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">{t('patient.modal.invoices')}</h2>
-              <p className="text-gray-600">{mockFactures.length} {t('cabinet.tabs.invoices').toLowerCase()} • {mockFactures.filter(f => f.statut === 'en_attente').length} {t('cabinet.stats.pending')}</p>
+              <p className="text-gray-600">
+                {facturesFromDB.length} {t('cabinet.tabs.invoices').toLowerCase()}
+                {isLoadingFactures && (
+                  <span className="ml-2 text-blue-600">
+                    <RefreshCw className="w-4 h-4 inline animate-spin mr-1" />
+                    Chargement...
+                  </span>
+                )}
+              </p>
             </div>
             <button
               onClick={() => setShowFactureModal(true)}
@@ -626,100 +773,128 @@ export const CabinetDashboard: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid gap-4">
-            {mockFactures.map((facture) => (
-              <div key={facture.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-lg">
-                        <FileText className="w-5 h-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">Facture {facture.numero}</h3>
-                        <p className="text-sm text-gray-600">
-                          {t('common.patient')}: {allPatients.find(p => p.id === facture.patientId)?.prenom} {allPatients.find(p => p.id === facture.patientId)?.nom}
-                        </p>
-                      </div>
-                      <span className={`px-3 py-1 text-xs rounded-full font-medium ${getFactureStatusColor(facture.statut)}`}>
-                        {getFactureStatusText(facture.statut)}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">{t('common.date')}</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {format(new Date(facture.date), 'dd/MM/yyyy', { locale })}
-                        </p>
-                      </div>
-                      
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">{t('common.total')}</p>
-                        <p className="text-sm font-bold text-gray-900">{facture.montantTotal.toFixed(2)}€</p>
-                      </div>
-                      
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">Payé</p>
-                        <p className="text-sm font-medium text-green-600">{facture.montantPaye.toFixed(2)}€</p>
-                      </div>
-                      
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">Reste à payer</p>
-                        <p className={`text-sm font-bold ${facture.montantRestant > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                          {facture.montantRestant.toFixed(2)}€
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="bg-blue-50 rounded-lg p-3 mb-4">
-                      <p className="text-xs font-medium text-blue-800 mb-2">Détails de facturation</p>
-                      {facture.details.map((detail, index) => (
-                        <div key={index} className="flex justify-between text-sm text-blue-900">
-                          <span>{detail.description} (x{detail.quantite})</span>
-                          <span className="font-medium">{detail.total.toFixed(2)}€</span>
+          {isLoadingFactures ? (
+            <div className="text-center py-8">
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-purple-600" />
+              <p className="text-gray-600">Chargement des factures...</p>
+            </div>
+          ) : facturesFromDB.length > 0 ? (
+            <div className="grid gap-4">
+              {facturesFromDB.map((facture) => (
+                <div key={facture.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-lg">
+                          <FileText className="w-5 h-5 text-purple-600" />
                         </div>
-                      ))}
-                    </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">Facture {facture.numero}</h3>
+                          <p className="text-sm text-gray-600">
+                            {t('common.patient')}: {(facture as any).patients?.prenom} {(facture as any).patients?.nom}
+                          </p>
+                          {facture.external_id && (
+                            <p className="text-xs text-purple-600">ID: {facture.external_id}</p>
+                          )}
+                        </div>
+                        <span className={`px-3 py-1 text-xs rounded-full font-medium ${getFactureStatusColor(facture.statut)}`}>
+                          {getFactureStatusText(facture.statut)}
+                        </span>
+                      </div>
 
-                    {facture.remboursement && (
-                      <div className="bg-green-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-green-800 mb-2">Remboursement</p>
-                        <div className="grid grid-cols-3 gap-4 text-sm text-green-900">
-                          <div>
-                            <span className="text-xs text-green-600">Sécurité Sociale</span>
-                            <p className="font-medium">{facture.remboursement.securiteSociale.toFixed(2)}€</p>
-                          </div>
-                          <div>
-                            <span className="text-xs text-green-600">Mutuelle</span>
-                            <p className="font-medium">{facture.remboursement.mutuelle.toFixed(2)}€</p>
-                          </div>
-                          <div>
-                            <span className="text-xs text-green-600">Reste à charge</span>
-                            <p className="font-medium">{facture.remboursement.restACharge.toFixed(2)}€</p>
-                          </div>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-gray-500 mb-1">{t('common.date')}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {format(new Date(facture.date), 'dd/MM/yyyy', { locale })}
+                          </p>
+                        </div>
+                        
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-gray-500 mb-1">{t('common.total')}</p>
+                          <p className="text-sm font-bold text-gray-900">{facture.montant_total}€</p>
+                        </div>
+                        
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-gray-500 mb-1">Payé</p>
+                          <p className="text-sm font-medium text-green-600">{facture.montant_paye}€</p>
+                        </div>
+                        
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-gray-500 mb-1">Reste à payer</p>
+                          <p className={`text-sm font-bold ${facture.montant_restant > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {facture.montant_restant}€
+                          </p>
                         </div>
                       </div>
-                    )}
-                  </div>
 
-                  <div className="flex items-center gap-2 ml-4">
-                    <button className="p-2 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors">
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    {facture.statut === 'en_attente' && (
-                      <button className="p-2 text-green-600 hover:bg-green-100 rounded-lg transition-colors">
-                        <CheckCircle className="w-4 h-4" />
+                      {(facture as any).facture_details && (facture as any).facture_details.length > 0 && (
+                        <div className="bg-blue-50 rounded-lg p-3 mb-4">
+                          <p className="text-xs font-medium text-blue-800 mb-2">Détails de facturation</p>
+                          {(facture as any).facture_details.map((detail: any, index: number) => (
+                            <div key={index} className="flex justify-between text-sm text-blue-900">
+                              <span>{detail.description} (x{detail.quantite})</span>
+                              <span className="font-medium">{detail.total}€</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {facture.remboursement_securite_sociale > 0 && (
+                        <div className="bg-green-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-green-800 mb-2">Remboursement</p>
+                          <div className="grid grid-cols-3 gap-4 text-sm text-green-900">
+                            <div>
+                              <span className="text-xs text-green-600">Sécurité Sociale</span>
+                              <p className="font-medium">{facture.remboursement_securite_sociale}€</p>
+                            </div>
+                            <div>
+                              <span className="text-xs text-green-600">Mutuelle</span>
+                              <p className="font-medium">{facture.remboursement_mutuelle}€</p>
+                            </div>
+                            <div>
+                              <span className="text-xs text-green-600">Reste à charge</span>
+                              <p className="font-medium">{facture.remboursement_reste_a_charge}€</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 ml-4">
+                      <button className="p-2 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors">
+                        <Eye className="w-4 h-4" />
                       </button>
-                    )}
+                      <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      {facture.statut === 'en_attente' && (
+                        <button className="p-2 text-green-600 hover:bg-green-100 rounded-lg transition-colors">
+                          <CheckCircle className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Aucune facture trouvée
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Commencez par créer votre première facture
+              </p>
+              <button
+                onClick={() => setShowFactureModal(true)}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              >
+                {t('patient.modal.new.invoice')}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -729,7 +904,15 @@ export const CabinetDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">{t('patient.modal.appointments')}</h2>
-              <p className="text-gray-600">{mockRendezVous.length} {t('cabinet.tabs.appointments').toLowerCase()} • {mockRendezVous.filter(r => r.statut === 'confirme').length} confirmés</p>
+              <p className="text-gray-600">
+                {rendezVousFromDB.length} {t('cabinet.tabs.appointments').toLowerCase()}
+                {isLoadingRendezVous && (
+                  <span className="ml-2 text-blue-600">
+                    <RefreshCw className="w-4 h-4 inline animate-spin mr-1" />
+                    Chargement...
+                  </span>
+                )}
+              </p>
             </div>
             <button
               onClick={() => setShowRendezVousModal(true)}
@@ -739,86 +922,112 @@ export const CabinetDashboard: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid gap-4">
-            {mockRendezVous.map((rdv) => (
-              <div key={rdv.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="flex items-center justify-center w-10 h-10 bg-orange-100 rounded-lg">
-                        <Calendar className="w-5 h-5 text-orange-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{rdv.motif}</h3>
-                        <p className="text-sm text-gray-600">{t('common.patient')}: {rdv.patientNom}</p>
-                      </div>
-                      <span className={`px-3 py-1 text-xs rounded-full font-medium ${getRdvStatusColor(rdv.statut)}`}>
-                        {getRdvStatusText(rdv.statut)}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">{t('common.date')}</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {format(new Date(rdv.date), 'dd/MM/yyyy', { locale })}
-                        </p>
-                      </div>
-                      
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">Horaire</p>
-                        <p className="text-sm font-medium text-gray-900">{rdv.heureDebut} - {rdv.heureFin}</p>
-                      </div>
-                      
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">Type</p>
-                        <p className="text-sm text-gray-900 capitalize">{rdv.type}</p>
-                      </div>
-                      
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">Lieu</p>
-                        <p className="text-sm text-gray-900">{rdv.salle}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        {rdv.rappelEnvoye ? (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <XCircle className="w-4 h-4 text-red-600" />
-                        )}
-                        <span className={rdv.rappelEnvoye ? 'text-green-600' : 'text-red-600'}>
-                          {rdv.rappelEnvoye ? 'Rappel envoyé' : 'Rappel non envoyé'}
+          {isLoadingRendezVous ? (
+            <div className="text-center py-8">
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-orange-600" />
+              <p className="text-gray-600">Chargement des rendez-vous...</p>
+            </div>
+          ) : rendezVousFromDB.length > 0 ? (
+            <div className="grid gap-4">
+              {rendezVousFromDB.map((rdv) => (
+                <div key={rdv.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex items-center justify-center w-10 h-10 bg-orange-100 rounded-lg">
+                          <Calendar className="w-5 h-5 text-orange-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{rdv.motif}</h3>
+                          <p className="text-sm text-gray-600">{t('common.patient')}: {rdv.patient_nom}</p>
+                          {rdv.external_id && (
+                            <p className="text-xs text-orange-600">ID: {rdv.external_id}</p>
+                          )}
+                        </div>
+                        <span className={`px-3 py-1 text-xs rounded-full font-medium ${getRdvStatusColor(rdv.statut)}`}>
+                          {getRdvStatusText(rdv.statut)}
                         </span>
                       </div>
-                      
-                      {rdv.notes && (
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <AlertCircle className="w-4 h-4" />
-                          <span>{t('common.notes')} disponibles</span>
+
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-gray-500 mb-1">{t('common.date')}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {format(new Date(rdv.date), 'dd/MM/yyyy', { locale })}
+                          </p>
                         </div>
+                        
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-gray-500 mb-1">Horaire</p>
+                          <p className="text-sm font-medium text-gray-900">{rdv.heure_debut} - {rdv.heure_fin}</p>
+                        </div>
+                        
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-gray-500 mb-1">Type</p>
+                          <p className="text-sm text-gray-900 capitalize">{rdv.type}</p>
+                        </div>
+                        
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-gray-500 mb-1">Lieu</p>
+                          <p className="text-sm text-gray-900">{rdv.salle}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          {rdv.rappel_envoye ? (
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <XCircle className="w-4 h-4 text-red-600" />
+                          )}
+                          <span className={rdv.rappel_envoye ? 'text-green-600' : 'text-red-600'}>
+                            {rdv.rappel_envoye ? 'Rappel envoyé' : 'Rappel non envoyé'}
+                          </span>
+                        </div>
+                        
+                        {rdv.notes && (
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <AlertCircle className="w-4 h-4" />
+                            <span>{t('common.notes')} disponibles</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 ml-4">
+                      <button className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      {rdv.statut === 'programme' && (
+                        <button className="p-2 text-green-600 hover: bg-green-100 rounded-lg transition-colors">
+                          <CheckCircle className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2 ml-4">
-                    <button className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors">
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    {rdv.statut === 'programme' && (
-                      <button className="p-2 text-green-600 hover: bg-green-100 rounded-lg transition-colors">
-                        <CheckCircle className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Aucun rendez-vous trouvé
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Commencez par créer votre premier rendez-vous
+              </p>
+              <button
+                onClick={() => setShowRendezVousModal(true)}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+              >
+                {t('patient.modal.new.appointment')}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

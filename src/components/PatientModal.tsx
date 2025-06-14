@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   User, 
@@ -17,7 +17,8 @@ import {
   Stethoscope,
   Euro,
   Clock,
-  Plus
+  Plus,
+  RefreshCw
 } from 'lucide-react';
 import { Patient } from '../types/Patient';
 import { format } from 'date-fns';
@@ -27,6 +28,7 @@ import { ConsultationModal } from './ConsultationModal';
 import { FactureModal } from './FactureModal';
 import { RendezVousModal } from './RendezVousModal';
 import { useLanguage } from '../hooks/useLanguage';
+import { patientService, ConsultationData, FactureData, RendezVousData } from '../services/patientService';
 
 interface PatientModalProps {
   patient: Patient;
@@ -48,6 +50,83 @@ export const PatientModal: React.FC<PatientModalProps> = ({
   const [activeTab, setActiveTab] = useState<'medical' | 'consultations' | 'factures' | 'rendez-vous'>('medical');
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
+  
+  const [consultations, setConsultations] = useState<ConsultationData[]>([]);
+  const [factures, setFactures] = useState<FactureData[]>([]);
+  const [rendezVous, setRendezVous] = useState<RendezVousData[]>([]);
+  const [isLoadingConsultations, setIsLoadingConsultations] = useState(false);
+  const [isLoadingFactures, setIsLoadingFactures] = useState(false);
+  const [isLoadingRendezVous, setIsLoadingRendezVous] = useState(false);
+
+  // Charger les données du patient quand on change d'onglet
+  useEffect(() => {
+    if (showCabinetFeatures) {
+      if (activeTab === 'consultations') {
+        loadConsultations();
+      } else if (activeTab === 'factures') {
+        loadFactures();
+      } else if (activeTab === 'rendez-vous') {
+        loadRendezVous();
+      }
+    }
+  }, [activeTab, patient.id, showCabinetFeatures]);
+
+  const loadConsultations = async () => {
+    if (!patient.id) return;
+    
+    try {
+      setIsLoadingConsultations(true);
+      console.log('🔄 Chargement des consultations pour le patient:', patient.id);
+      
+      const consultationsData = await patientService.getPatientConsultations(patient.id);
+      console.log('✅ Consultations chargées:', consultationsData.length);
+      
+      setConsultations(consultationsData);
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des consultations:', error);
+      setConsultations([]);
+    } finally {
+      setIsLoadingConsultations(false);
+    }
+  };
+
+  const loadFactures = async () => {
+    if (!patient.id) return;
+    
+    try {
+      setIsLoadingFactures(true);
+      console.log('🔄 Chargement des factures pour le patient:', patient.id);
+      
+      const facturesData = await patientService.getPatientFactures(patient.id);
+      console.log('✅ Factures chargées:', facturesData.length);
+      
+      setFactures(facturesData);
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des factures:', error);
+      setFactures([]);
+    } finally {
+      setIsLoadingFactures(false);
+    }
+  };
+
+  const loadRendezVous = async () => {
+    if (!patient.id) return;
+    
+    try {
+      setIsLoadingRendezVous(true);
+      console.log('🔄 Chargement des rendez-vous pour le patient:', patient.id);
+      
+      const rendezVousData = await patientService.getPatientRendezVous(patient.id);
+      console.log('✅ Rendez-vous chargés:', rendezVousData.length);
+      
+      setRendezVous(rendezVousData);
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des rendez-vous:', error);
+      setRendezVous([]);
+    } finally {
+      setIsLoadingRendezVous(false);
+    }
+  };
 
   const getAlertColor = (niveau: string) => {
     switch (niveau) {
@@ -110,6 +189,16 @@ export const PatientModal: React.FC<PatientModalProps> = ({
     }
   };
 
+  const getConsultationStatusColor = (statut: string) => {
+    switch (statut) {
+      case 'terminee': return 'bg-green-100 text-green-800';
+      case 'en_cours': return 'bg-orange-100 text-orange-800';
+      case 'programmee': return 'bg-blue-100 text-blue-800';
+      case 'annulee': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   const handleExport = () => {
     try {
       // Générer le contenu HTML complet
@@ -140,36 +229,26 @@ export const PatientModal: React.FC<PatientModalProps> = ({
   };
 
   const generateCompleteHTMLDocument = () => {
-    const consultationsHtml = patient.consultations && patient.consultations.length > 0 
-      ? patient.consultations.map(consultation => `
+    const consultationsHtml = consultations && consultations.length > 0 
+      ? consultations.map(consultation => `
           <div class="consultation-item">
             <div class="consultation-header">
               <strong>${consultation.motif}</strong>
               <span class="date">${format(new Date(consultation.date), 'dd/MM/yyyy à HH:mm', { locale })}</span>
             </div>
             <div class="consultation-details">
-              <p><strong>${t('common.doctor')}:</strong> ${consultation.medecinNom}</p>
+              <p><strong>${t('common.doctor')}:</strong> ${consultation.medecin_nom}</p>
               <p><strong>${t('common.diagnosis')}:</strong> ${consultation.diagnostic}</p>
               <p><strong>${t('common.treatment')}:</strong> ${consultation.traitement}</p>
               <p><strong>${t('common.duration')}:</strong> ${consultation.duree} min | <strong>${t('common.amount')}:</strong> ${consultation.tarif}€</p>
               ${consultation.observations ? `<p><strong>Observations:</strong> ${consultation.observations}</p>` : ''}
-              ${consultation.ordonnance?.medicaments.length > 0 ? `
-                <div class="ordonnance">
-                  <strong>Médicaments prescrits:</strong>
-                  <ul>
-                    ${consultation.ordonnance.medicaments.map(med => 
-                      `<li>${med.nom} ${med.dosage} - ${med.instructions}</li>`
-                    ).join('')}
-                  </ul>
-                </div>
-              ` : ''}
             </div>
           </div>
         `).join('')
       : `<p class="no-data">${t('patient.modal.no.consultations')}</p>`;
 
-    const facturesHtml = patient.factures && patient.factures.length > 0
-      ? patient.factures.map(facture => `
+    const facturesHtml = factures && factures.length > 0
+      ? factures.map(facture => `
           <div class="facture-item">
             <div class="facture-header">
               <strong>Facture ${facture.numero}</strong>
@@ -178,28 +257,20 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             <div class="facture-details">
               <div class="facture-row">
                 <span>${t('common.date')}: ${format(new Date(facture.date), 'dd/MM/yyyy', { locale })}</span>
-                <span>Échéance: ${format(new Date(facture.dateEcheance), 'dd/MM/yyyy', { locale })}</span>
+                <span>Échéance: ${format(new Date(facture.date_echeance), 'dd/MM/yyyy', { locale })}</span>
               </div>
               <div class="facture-row">
-                <span>${t('common.total')}: ${facture.montantTotal.toFixed(2)}€</span>
-                <span>Payé: ${facture.montantPaye.toFixed(2)}€</span>
-                <span>Reste: ${facture.montantRestant.toFixed(2)}€</span>
+                <span>${t('common.total')}: ${facture.montant_total}€</span>
+                <span>Payé: ${facture.montant_paye}€</span>
+                <span>Reste: ${facture.montant_restant}€</span>
               </div>
-              ${facture.remboursement ? `
-                <div class="remboursement">
-                  <strong>Remboursement:</strong>
-                  Sécurité Sociale: ${facture.remboursement.securiteSociale.toFixed(2)}€ |
-                  Mutuelle: ${facture.remboursement.mutuelle.toFixed(2)}€ |
-                  Reste à charge: ${facture.remboursement.restACharge.toFixed(2)}€
-                </div>
-              ` : ''}
             </div>
           </div>
         `).join('')
       : `<p class="no-data">${t('patient.modal.no.invoices')}</p>`;
 
-    const rdvHtml = patient.rendezVous && patient.rendezVous.length > 0
-      ? patient.rendezVous.map(rdv => `
+    const rdvHtml = rendezVous && rendezVous.length > 0
+      ? rendezVous.map(rdv => `
           <div class="rdv-item">
             <div class="rdv-header">
               <strong>${rdv.motif}</strong>
@@ -208,11 +279,11 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             <div class="rdv-details">
               <div class="rdv-row">
                 <span>${t('common.date')}: ${format(new Date(rdv.date), 'dd/MM/yyyy', { locale })}</span>
-                <span>${t('common.time')}: ${rdv.heureDebut} - ${rdv.heureFin}</span>
+                <span>${t('common.time')}: ${rdv.heure_debut} - ${rdv.heure_fin}</span>
               </div>
               <div class="rdv-row">
                 <span>Type: ${rdv.type}</span>
-                <span>${t('common.doctor')}: ${rdv.medecinNom}</span>
+                <span>${t('common.doctor')}: ${rdv.medecin_nom}</span>
                 <span>Salle: ${rdv.salle}</span>
               </div>
             </div>
@@ -707,12 +778,15 @@ export const PatientModal: React.FC<PatientModalProps> = ({
     switch (type) {
       case 'consultation':
         setShowConsultationModal(false);
+        loadConsultations(); // Recharger les consultations
         break;
       case 'facture':
         setShowFactureModal(false);
+        loadFactures(); // Recharger les factures
         break;
       case 'rendez-vous':
         setShowRendezVousModal(false);
+        loadRendezVous(); // Recharger les rendez-vous
         break;
     }
     
@@ -1050,7 +1124,18 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             {showCabinetFeatures && activeTab === 'consultations' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.consultations')}</h3>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.consultations')}</h3>
+                    <p className="text-gray-600">
+                      {consultations.length} {t('cabinet.tabs.consultations').toLowerCase()}
+                      {isLoadingConsultations && (
+                        <span className="ml-2 text-blue-600">
+                          <RefreshCw className="w-4 h-4 inline animate-spin mr-1" />
+                          Chargement...
+                        </span>
+                      )}
+                    </p>
+                  </div>
                   <button 
                     onClick={() => setShowConsultationModal(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -1059,27 +1144,32 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                     {t('patient.modal.new.consultation')}
                   </button>
                 </div>
-                {patient.consultations && patient.consultations.length > 0 ? (
+                
+                {isLoadingConsultations ? (
+                  <div className="text-center py-8">
+                    <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+                    <p className="text-gray-600">Chargement des consultations...</p>
+                  </div>
+                ) : consultations.length > 0 ? (
                   <div className="space-y-4">
-                    {patient.consultations.map((consultation) => (
+                    {consultations.map((consultation) => (
                       <div key={consultation.id} className="bg-white border border-gray-200 rounded-lg p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
                               <h4 className="font-medium text-gray-900">{consultation.motif}</h4>
-                              <span className={`px-2 py-1 text-xs rounded-full ${
-                                consultation.statut === 'terminee' ? 'bg-green-100 text-green-800' :
-                                consultation.statut === 'en_cours' ? 'bg-orange-100 text-orange-800' :
-                                'bg-blue-100 text-blue-800'
-                              }`}>
+                              <span className={`px-2 py-1 text-xs rounded-full ${getConsultationStatusColor(consultation.statut)}`}>
                                 {getConsultationStatusText(consultation.statut)}
                               </span>
+                              {consultation.external_id && (
+                                <span className="text-xs text-blue-600">ID: {consultation.external_id}</span>
+                              )}
                             </div>
                             <p className="text-sm text-gray-600 mb-2">{consultation.diagnostic}</p>
                             <div className="grid grid-cols-2 gap-4 text-sm text-gray-500">
                               <div>{t('common.date')}: {format(new Date(consultation.date), 'dd/MM/yyyy à HH:mm', { locale })}</div>
                               <div>{t('common.duration')}: {consultation.duree} min</div>
-                              <div>{t('common.doctor')}: {consultation.medecinNom}</div>
+                              <div>{t('common.doctor')}: {consultation.medecin_nom}</div>
                               <div>{t('common.amount')}: {consultation.tarif}€</div>
                             </div>
                           </div>
@@ -1091,6 +1181,12 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                   <div className="text-center py-8 text-gray-500">
                     <Stethoscope className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p>{t('patient.modal.no.consultations')}</p>
+                    <button 
+                      onClick={() => setShowConsultationModal(true)}
+                      className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      {t('patient.modal.new.consultation')}
+                    </button>
                   </div>
                 )}
               </div>
@@ -1100,7 +1196,18 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             {showCabinetFeatures && activeTab === 'factures' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.invoices')}</h3>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.invoices')}</h3>
+                    <p className="text-gray-600">
+                      {factures.length} {t('cabinet.tabs.invoices').toLowerCase()}
+                      {isLoadingFactures && (
+                        <span className="ml-2 text-blue-600">
+                          <RefreshCw className="w-4 h-4 inline animate-spin mr-1" />
+                          Chargement...
+                        </span>
+                      )}
+                    </p>
+                  </div>
                   <button 
                     onClick={() => setShowFactureModal(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
@@ -1109,9 +1216,15 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                     {t('patient.modal.new.invoice')}
                   </button>
                 </div>
-                {patient.factures && patient.factures.length > 0 ? (
+                
+                {isLoadingFactures ? (
+                  <div className="text-center py-8">
+                    <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-purple-600" />
+                    <p className="text-gray-600">Chargement des factures...</p>
+                  </div>
+                ) : factures.length > 0 ? (
                   <div className="space-y-4">
-                    {patient.factures.map((facture) => (
+                    {factures.map((facture) => (
                       <div key={facture.id} className="bg-white border border-gray-200 rounded-lg p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -1120,12 +1233,15 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                               <span className={`px-2 py-1 text-xs rounded-full ${getFactureStatusColor(facture.statut)}`}>
                                 {getFactureStatusText(facture.statut)}
                               </span>
+                              {facture.external_id && (
+                                <span className="text-xs text-purple-600">ID: {facture.external_id}</span>
+                              )}
                             </div>
                             <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
                               <div>{t('common.date')}: {format(new Date(facture.date), 'dd/MM/yyyy', { locale })}</div>
-                              <div>Échéance: {format(new Date(facture.dateEcheance), 'dd/MM/yyyy', { locale })}</div>
-                              <div>{t('common.total')}: {facture.montantTotal}€</div>
-                              <div>Reste à payer: {facture.montantRestant}€</div>
+                              <div>Échéance: {format(new Date(facture.date_echeance), 'dd/MM/yyyy', { locale })}</div>
+                              <div>{t('common.total')}: {facture.montant_total}€</div>
+                              <div>Reste à payer: {facture.montant_restant}€</div>
                             </div>
                           </div>
                         </div>
@@ -1136,6 +1252,12 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                   <div className="text-center py-8 text-gray-500">
                     <Euro className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p>{t('patient.modal.no.invoices')}</p>
+                    <button 
+                      onClick={() => setShowFactureModal(true)}
+                      className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      {t('patient.modal.new.invoice')}
+                    </button>
                   </div>
                 )}
               </div>
@@ -1145,7 +1267,18 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             {showCabinetFeatures && activeTab === 'rendez-vous' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.appointments')}</h3>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.appointments')}</h3>
+                    <p className="text-gray-600">
+                      {rendezVous.length} {t('cabinet.tabs.appointments').toLowerCase()}
+                      {isLoadingRendezVous && (
+                        <span className="ml-2 text-blue-600">
+                          <RefreshCw className="w-4 h-4 inline animate-spin mr-1" />
+                          Chargement...
+                        </span>
+                      )}
+                    </p>
+                  </div>
                   <button 
                     onClick={() => setShowRendezVousModal(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
@@ -1154,9 +1287,15 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                     {t('patient.modal.new.appointment')}
                   </button>
                 </div>
-                {patient.rendezVous && patient.rendezVous.length > 0 ? (
+                
+                {isLoadingRendezVous ? (
+                  <div className="text-center py-8">
+                    <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-orange-600" />
+                    <p className="text-gray-600">Chargement des rendez-vous...</p>
+                  </div>
+                ) : rendezVous.length > 0 ? (
                   <div className="space-y-4">
-                    {patient.rendezVous.map((rdv) => (
+                    {rendezVous.map((rdv) => (
                       <div key={rdv.id} className="bg-white border border-gray-200 rounded-lg p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -1165,10 +1304,13 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                               <span className={`px-2 py-1 text-xs rounded-full ${getRdvStatusColor(rdv.statut)}`}>
                                 {getRdvStatusText(rdv.statut)}
                               </span>
+                              {rdv.external_id && (
+                                <span className="text-xs text-orange-600">ID: {rdv.external_id}</span>
+                              )}
                             </div>
                             <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
                               <div>{t('common.date')}: {format(new Date(rdv.date), 'dd/MM/yyyy', { locale })}</div>
-                              <div>{t('common.time')}: {rdv.heureDebut} - {rdv.heureFin}</div>
+                              <div>{t('common.time')}: {rdv.heure_debut} - {rdv.heure_fin}</div>
                               <div>Type: {rdv.type}</div>
                               <div>Salle: {rdv.salle}</div>
                             </div>
@@ -1181,6 +1323,12 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                   <div className="text-center py-8 text-gray-500">
                     <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p>{t('patient.modal.no.appointments')}</p>
+                    <button 
+                      onClick={() => setShowRendezVousModal(true)}
+                      className="mt-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                    >
+                      {t('patient.modal.new.appointment')}
+                    </button>
                   </div>
                 )}
               </div>
