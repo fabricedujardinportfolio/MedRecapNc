@@ -911,7 +911,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
           )}
 
           {/* Content */}
-          <div className="p-6 overflow-y-auto max-h-[calc(90vh-300px)]">
+          <div className="p-6 overflow-y-auto max-h-[calc(90vh-250px)]">
             {(!showCabinetFeatures || activeTab === 'medical') && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Personal Information */}
