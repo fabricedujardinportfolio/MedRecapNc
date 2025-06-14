@@ -883,7 +883,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
           {/* Navigation Tabs (for cabinet features) */}
           {showCabinetFeatures && (
             <div className="px-6 border-b border-gray-200">
-              <nav className="-mb-px flex space-x-8">
+              <nav className="-mb-px flex flex-wrap justify-center sm:justify-start space-x-8">
                 {[
                   { id: 'medical', label: t('patient.modal.medical'), icon: Heart },
                   { id: 'consultations', label: t('patient.modal.consultations'), icon: Stethoscope },
