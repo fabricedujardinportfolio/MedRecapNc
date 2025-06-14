@@ -30,7 +30,6 @@ import { RendezVousModal } from './RendezVousModal';
 import { useLanguage } from '../hooks/useLanguage';
 import { patientService, ConsultationData, FactureData, RendezVousData } from '../services/patientService';
 
-const [enrichedPatient, setEnrichedPatient] = useState<Patient | null>(null);
 
 interface PatientModalProps {
   patient: Patient;
@@ -60,6 +59,8 @@ export const PatientModal: React.FC<PatientModalProps> = ({
   const [isLoadingFactures, setIsLoadingFactures] = useState(false);
   const [isLoadingRendezVous, setIsLoadingRendezVous] = useState(false);
 
+const [enrichedPatient, setEnrichedPatient] = useState<Patient | null>(null);
+  
   // Charger les données du patient quand on change d'onglet
   useEffect(() => {
     if (showCabinetFeatures) {
