@@ -71,6 +71,38 @@ export const PatientModal: React.FC<PatientModalProps> = ({
     }
   }, [activeTab, patient.id, showCabinetFeatures]);
 
+  useEffect(() => {
+    const enrichPatient = async () => {
+      if (!patient.id || !showTavusAgent) return;
+
+      try {
+        const [consultationsData, facturesData, rendezVousData] = await Promise.all([
+          patientService.getPatientConsultations(patient.id),
+          patientService.getPatientFactures(patient.id),
+          patientService.getPatientRendezVous(patient.id),
+        ]);
+
+        setEnrichedPatient({
+          ...patient,
+          consultations: consultationsData,
+          factures: facturesData,
+          rendezVous: rendezVousData,
+        });
+
+        console.log("✅ Patient enrichi pour IA:", {
+          consultations: consultationsData.length,
+          factures: facturesData.length,
+          rendezVous: rendezVousData.length,
+        });
+      } catch (error) {
+        console.error("❌ Erreur enrichissement patient pour IA:", error);
+        setEnrichedPatient(patient); // fallback
+      }
+    };
+
+    enrichPatient();
+  }, [showTavusAgent, patient.id]); 
+
   const loadConsultations = async () => {
     if (!patient.id) return;
     
@@ -1336,14 +1368,14 @@ export const PatientModal: React.FC<PatientModalProps> = ({
           </div>
         </div>
       </div>
-    {console.log("👁️ Patient envoyé à Dr. Léa Martin (IA):",  patient)}
 
-      {/* Tavus Video Agent Modal */}
-      <TavusVideoAgent
-        patient={patient}
-        isVisible={showTavusAgent}
-        onClose={() => setShowTavusAgent(false)}
-      />
+      {showTavusAgent && (
+        <TavusVideoAgent
+          patient={enrichedPatient || patient}
+          isVisible={true}
+          onClose={() => setShowTavusAgent(false)}
+        />
+      )}
 
       {/* Consultation Modal */}
       {showConsultationModal && (
