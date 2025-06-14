@@ -74,6 +74,7 @@ export interface PatientData {
 
 export interface ConsultationData {
   id?: string;
+  external_id?: string; // Maintenant optionnel
   patient_id: string;
   date: string;
   motif: string;
@@ -95,6 +96,7 @@ export interface ConsultationData {
 
 export interface FactureData {
   id?: string;
+  external_id?: string; // Maintenant optionnel
   patient_id: string;
   consultation_id?: string;
   numero: string;
@@ -120,6 +122,7 @@ export interface FactureData {
 
 export interface RendezVousData {
   id?: string;
+  external_id?: string; // Maintenant optionnel
   patient_id: string;
   patient_nom: string;
   date: string;
@@ -137,6 +140,13 @@ export interface RendezVousData {
 }
 
 class PatientService {
+  // Générer un external_id unique
+  private generateExternalId(prefix: string): string {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    return `${prefix}-${timestamp}-${random}`;
+  }
+
   // Récupérer tous les patients avec leurs données complètes
   async getAllPatients(): Promise<PatientData[]> {
     try {
@@ -188,7 +198,8 @@ class PatientService {
         .from('patients')
         .insert([{
           ...patientData,
-          numero_dossier: numeroDossier
+          numero_dossier: numeroDossier,
+          external_id: this.generateExternalId('PAT') // Générer un external_id
         }])
         .select()
         .single();
@@ -294,9 +305,15 @@ class PatientService {
   // Créer une nouvelle consultation
   async createConsultation(consultationData: Omit<ConsultationData, 'id'>): Promise<ConsultationData> {
     try {
+      // Générer un external_id automatiquement
+      const dataWithExternalId = {
+        ...consultationData,
+        external_id: this.generateExternalId('CONS')
+      };
+
       const { data, error } = await supabase
         .from('consultations')
-        .insert([consultationData])
+        .insert([dataWithExternalId])
         .select()
         .single();
 
@@ -316,26 +333,30 @@ class PatientService {
   // Créer une nouvelle facture
   async createFacture(factureData: Omit<FactureData, 'id'>): Promise<FactureData> {
     try {
+      // Générer un external_id automatiquement
+      const mainFactureData = {
+        patient_id: factureData.patient_id,
+        consultation_id: factureData.consultation_id,
+        external_id: this.generateExternalId('FACT'),
+        numero: factureData.numero,
+        date: factureData.date,
+        montant_total: factureData.montant_total,
+        montant_paye: factureData.montant_paye,
+        montant_restant: factureData.montant_restant,
+        statut: factureData.statut,
+        methode_paiement: factureData.methode_paiement,
+        date_echeance: factureData.date_echeance,
+        date_paiement: factureData.date_paiement,
+        remboursement_securite_sociale: factureData.remboursement_securite_sociale,
+        remboursement_mutuelle: factureData.remboursement_mutuelle,
+        remboursement_reste_a_charge: factureData.remboursement_reste_a_charge,
+        notes: factureData.notes
+      };
+
       // Créer la facture principale
-      const { data: factureData, error: factureError } = await supabase
+      const { data: newFacture, error: factureError } = await supabase
         .from('factures')
-        .insert([{
-          patient_id: factureData.patient_id,
-          consultation_id: factureData.consultation_id,
-          numero: factureData.numero,
-          date: factureData.date,
-          montant_total: factureData.montant_total,
-          montant_paye: factureData.montant_paye,
-          montant_restant: factureData.montant_restant,
-          statut: factureData.statut,
-          methode_paiement: factureData.methode_paiement,
-          date_echeance: factureData.date_echeance,
-          date_paiement: factureData.date_paiement,
-          remboursement_securite_sociale: factureData.remboursement_securite_sociale,
-          remboursement_mutuelle: factureData.remboursement_mutuelle,
-          remboursement_reste_a_charge: factureData.remboursement_reste_a_charge,
-          notes: factureData.notes
-        }])
+        .insert([mainFactureData])
         .select()
         .single();
 
@@ -347,7 +368,7 @@ class PatientService {
       // Créer les détails de la facture
       if (factureData.details && factureData.details.length > 0) {
         const detailsWithFactureId = factureData.details.map(detail => ({
-          facture_id: factureData.id,
+          facture_id: newFacture.id,
           description: detail.description,
           quantite: detail.quantite,
           prix_unitaire: detail.prix_unitaire,
@@ -364,8 +385,8 @@ class PatientService {
         }
       }
 
-      console.log('✅ Facture créée avec succès:', factureData);
-      return factureData;
+      console.log('✅ Facture créée avec succès:', newFacture);
+      return { ...newFacture, details: factureData.details };
     } catch (error) {
       console.error('Erreur service création facture:', error);
       throw error;
@@ -375,9 +396,15 @@ class PatientService {
   // Créer un nouveau rendez-vous
   async createRendezVous(rdvData: Omit<RendezVousData, 'id'>): Promise<RendezVousData> {
     try {
+      // Générer un external_id automatiquement
+      const dataWithExternalId = {
+        ...rdvData,
+        external_id: this.generateExternalId('RDV')
+      };
+
       const { data, error } = await supabase
         .from('rendez_vous')
-        .insert([rdvData])
+        .insert([dataWithExternalId])
         .select()
         .single();
 
@@ -466,6 +493,11 @@ class PatientService {
       console.error('Erreur service statistiques cabinet:', error);
       throw error;
     }
+  }
+
+  // Méthode utilitaire pour récupérer les patients avec leurs données complètes (alias)
+  async getPatients(): Promise<PatientData[]> {
+    return this.getAllPatients();
   }
 }
 
