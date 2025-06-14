@@ -9,7 +9,7 @@ import { AddPatientModal } from './AddPatientModal';
 import { mockPatients } from '../data/mockPatients';
 import { mockCabinetStats, updatePatientsWithCabinetData, mockConsultations, mockFactures, mockRendezVous } from '../data/mockCabinetData';
 import { Patient, SearchFilters as SearchFiltersType, CabinetStats, Consultation, Facture, RendezVous } from '../types/Patient';
-import { PatientData, patientService, ConsultationData, FactureData, RendezVousData } from '../services/patientService';
+import { PatientData, patientService, ConsultationData, FactureData, RendezVousData, supabase } from '../services/patientService';
 import { useLanguage } from '../hooks/useLanguage';
 import { 
   Users, 
@@ -120,7 +120,7 @@ export const CabinetDashboard: React.FC = () => {
       console.log('🔄 Chargement des consultations depuis Supabase...');
       
       // Récupérer toutes les consultations avec les informations patient
-      const { data, error } = await patientService.supabase
+      const { data, error } = await supabase
         .from('consultations')
         .select(`
           *,
@@ -150,7 +150,7 @@ export const CabinetDashboard: React.FC = () => {
       console.log('🔄 Chargement des factures depuis Supabase...');
       
       // Récupérer toutes les factures avec les informations patient
-      const { data, error } = await patientService.supabase
+      const { data, error } = await supabase
         .from('factures')
         .select(`
           *,
@@ -181,7 +181,7 @@ export const CabinetDashboard: React.FC = () => {
       console.log('🔄 Chargement des rendez-vous depuis Supabase...');
       
       // Récupérer tous les rendez-vous
-      const { data, error } = await patientService.supabase
+      const { data, error } = await supabase
         .from('rendez_vous')
         .select('*')
         .order('date', { ascending: false });
