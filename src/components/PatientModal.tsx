@@ -1336,6 +1336,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
           </div>
         </div>
       </div>
+    {console.log("👁️ Patient envoyé à Dr. Léa Martin (IA):", enrichedPatient || patient)}
 
       {/* Tavus Video Agent Modal */}
       <TavusVideoAgent
