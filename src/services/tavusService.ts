@@ -332,17 +332,22 @@ What would you like to know specifically? You can ask me for a complete summary,
       ? `Consultation médicale complète - ${patient.prenom} ${patient.nom}`
       : `Complete medical consultation - ${patient.prenom} ${patient.nom}`;
 
-    const conversationData: TavusConversationRequest = {
-      replica_id: TAVUS_REPLICA_ID,
-      persona_id: TAVUS_PERSONA_ID,
-      conversation_name: conversationName,
-      properties: {
-        max_call_duration: 1800, // 30 minutes
-        participant_left_timeout: 60,
-        participant_absent_timeout: 300,
-        enable_recording: false
-      }
-    };
+const conversationSummary = this.generateComprehensiveMedicalSummary(patient, language);
+
+const conversationData: TavusConversationRequest & { metadata?: any } = {
+  replica_id: TAVUS_REPLICA_ID,
+  persona_id: TAVUS_PERSONA_ID,
+  conversation_name: conversationName,
+  properties: {
+    max_call_duration: 1800, // 30 minutes
+    participant_left_timeout: 60,
+    participant_absent_timeout: 300,
+    enable_recording: false
+  },
+  metadata: {
+    patient_summary: conversationSummary
+  }
+};
 
     try {
       console.log('Création de la conversation Tavus avec Dr. Léa Martin:', {
