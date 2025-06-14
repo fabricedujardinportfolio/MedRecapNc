@@ -178,7 +178,7 @@ export const translations = {
 
     // Footer
     'footer.description': 'Système professionnel de gestion des dossiers patients pour la Nouvelle-Calédonie.',
-    'footer.built': 'Développé avec ❤️ par',
+    'footer.built': 'Développé avec ❤️ avec',
     'footer.certifications': 'Certifications',
     'footer.legal': 'Informations légales',
     'footer.copyright': '© 2025 MedRecap+ NC',
@@ -331,7 +331,7 @@ export const translations = {
     'login.demo.description.admin': 'Hospital technical management',
     'login.demo.description.auditor': 'Logs and reports consultation',
     'login.demo.description.cabinet': 'Complete medical practice management',
-    'login.footer.built': 'Built with ❤️ by',
+    'login.footer.built': 'Built with ❤️ with',
     'login.footer.copyright': '© 2025 MedRecap+ - New Caledonia',
     'login.language.label': 'Language / Langue',
 
@@ -488,7 +488,7 @@ export const translations = {
 
     // Footer
     'footer.description': 'Professional patient record management system for New Caledonia.',
-    'footer.built': 'Built with ❤️ by',
+    'footer.built': 'Built with ❤️ with',
     'footer.certifications': 'Certifications',
     'footer.legal': 'Legal information',
     'footer.copyright': '© 2025 MedRecap+ NC',
