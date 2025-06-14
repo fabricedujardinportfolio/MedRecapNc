@@ -68,10 +68,16 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
 
   // Initialiser la session Tavus
   useEffect(() => {
-    if (isVisible && !session) {
+    if (
+      isVisible &&
+      !session &&
+      patient.consultations &&
+      patient.factures &&
+      patient.rendezVous
+    ) {
       initializeSession();
     }
-  }, [isVisible, language]);
+  }, [isVisible, session, patient, language]);
 
   // Nettoyer les ressources
   useEffect(() => {
