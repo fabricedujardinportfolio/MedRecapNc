@@ -12,6 +12,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export interface PatientData {
   id?: string;
+  external_id?: string; // Maintenant optionnel, généré automatiquement
   nom: string;
   prenom: string;
   sexe: 'M' | 'F' | 'Autre';
@@ -74,7 +75,7 @@ export interface PatientData {
 
 export interface ConsultationData {
   id?: string;
-  external_id?: string; // Maintenant optionnel
+  external_id?: string; // Généré automatiquement basé sur le patient
   patient_id: string;
   date: string;
   motif: string;
@@ -96,7 +97,7 @@ export interface ConsultationData {
 
 export interface FactureData {
   id?: string;
-  external_id?: string; // Maintenant optionnel
+  external_id?: string; // Généré automatiquement basé sur le patient
   patient_id: string;
   consultation_id?: string;
   numero: string;
@@ -122,7 +123,7 @@ export interface FactureData {
 
 export interface RendezVousData {
   id?: string;
-  external_id?: string; // Maintenant optionnel
+  external_id?: string; // Généré automatiquement basé sur le patient
   patient_id: string;
   patient_nom: string;
   date: string;
@@ -140,13 +141,6 @@ export interface RendezVousData {
 }
 
 class PatientService {
-  // Générer un external_id unique
-  private generateExternalId(prefix: string): string {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8);
-    return `${prefix}-${timestamp}-${random}`;
-  }
-
   // Récupérer tous les patients avec leurs données complètes
   async getAllPatients(): Promise<PatientData[]> {
     try {
@@ -188,18 +182,27 @@ class PatientService {
     }
   }
 
-  // Créer un nouveau patient
-  async createPatient(patientData: Omit<PatientData, 'id'>): Promise<PatientData> {
+  // Créer un nouveau patient avec external_id automatique
+  async createPatient(patientData: Omit<PatientData, 'id' | 'external_id'>): Promise<PatientData> {
     try {
       // Générer un numéro de dossier unique
       const numeroDossier = `MED-${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`;
+      
+      // Appeler la fonction Supabase pour générer l'external_id
+      const { data: nextExternalId, error: externalIdError } = await supabase
+        .rpc('generate_next_patient_external_id');
+
+      if (externalIdError) {
+        console.error('Erreur lors de la génération de l\'external_id:', externalIdError);
+        throw externalIdError;
+      }
       
       const { data, error } = await supabase
         .from('patients')
         .insert([{
           ...patientData,
           numero_dossier: numeroDossier,
-          external_id: this.generateExternalId('PAT') // Générer un external_id
+          external_id: nextExternalId
         }])
         .select()
         .single();
@@ -302,13 +305,21 @@ class PatientService {
     }
   }
 
-  // Créer une nouvelle consultation
-  async createConsultation(consultationData: Omit<ConsultationData, 'id'>): Promise<ConsultationData> {
+  // Créer une nouvelle consultation avec external_id basé sur le patient
+  async createConsultation(consultationData: Omit<ConsultationData, 'id' | 'external_id'>): Promise<ConsultationData> {
     try {
-      // Générer un external_id automatiquement
+      // Générer l'external_id basé sur le patient
+      const { data: externalId, error: externalIdError } = await supabase
+        .rpc('generate_consultation_external_id', { patient_uuid: consultationData.patient_id });
+
+      if (externalIdError) {
+        console.error('Erreur lors de la génération de l\'external_id consultation:', externalIdError);
+        throw externalIdError;
+      }
+
       const dataWithExternalId = {
         ...consultationData,
-        external_id: this.generateExternalId('CONS')
+        external_id: externalId
       };
 
       const { data, error } = await supabase
@@ -330,14 +341,22 @@ class PatientService {
     }
   }
 
-  // Créer une nouvelle facture
-  async createFacture(factureData: Omit<FactureData, 'id'>): Promise<FactureData> {
+  // Créer une nouvelle facture avec external_id basé sur le patient
+  async createFacture(factureData: Omit<FactureData, 'id' | 'external_id'>): Promise<FactureData> {
     try {
-      // Générer un external_id automatiquement
+      // Générer l'external_id basé sur le patient
+      const { data: externalId, error: externalIdError } = await supabase
+        .rpc('generate_facture_external_id', { patient_uuid: factureData.patient_id });
+
+      if (externalIdError) {
+        console.error('Erreur lors de la génération de l\'external_id facture:', externalIdError);
+        throw externalIdError;
+      }
+
       const mainFactureData = {
         patient_id: factureData.patient_id,
         consultation_id: factureData.consultation_id,
-        external_id: this.generateExternalId('FACT'),
+        external_id: externalId,
         numero: factureData.numero,
         date: factureData.date,
         montant_total: factureData.montant_total,
@@ -393,13 +412,21 @@ class PatientService {
     }
   }
 
-  // Créer un nouveau rendez-vous
-  async createRendezVous(rdvData: Omit<RendezVousData, 'id'>): Promise<RendezVousData> {
+  // Créer un nouveau rendez-vous avec external_id basé sur le patient
+  async createRendezVous(rdvData: Omit<RendezVousData, 'id' | 'external_id'>): Promise<RendezVousData> {
     try {
-      // Générer un external_id automatiquement
+      // Générer l'external_id basé sur le patient
+      const { data: externalId, error: externalIdError } = await supabase
+        .rpc('generate_rdv_external_id', { patient_uuid: rdvData.patient_id });
+
+      if (externalIdError) {
+        console.error('Erreur lors de la génération de l\'external_id rendez-vous:', externalIdError);
+        throw externalIdError;
+      }
+
       const dataWithExternalId = {
         ...rdvData,
-        external_id: this.generateExternalId('RDV')
+        external_id: externalId
       };
 
       const { data, error } = await supabase
