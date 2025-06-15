@@ -32,6 +32,8 @@ export interface TavusConversationRequest {
 export class TavusService {
   private static instance: TavusService;
   private currentSession: TavusVideoSession | null = null;
+  private activeConversations: Set<string> = new Set(); // Track active conversations
+  private isInitializing: boolean = false; // Prevent multiple initializations
 
   static getInstance(): TavusService {
     if (!TavusService.instance) {
@@ -250,6 +252,104 @@ ${derniereConsultation.ordonnance?.medicaments.length > 0 ?
           : `No consultations are recorded in ${patient.prenom} ${patient.nom}'s file.`;
       }
     }
+    
+    // Factures queries - NOUVELLE SECTION
+    if (lowerQuestion.includes('facture') || lowerQuestion.includes('paiement') || lowerQuestion.includes('invoice') || lowerQuestion.includes('payment') || lowerQuestion.includes('financial')) {
+      if (patient.factures && patient.factures.length > 0) {
+        const facturesEnAttente = patient.factures.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee');
+        const totalEnAttente = facturesEnAttente.reduce((sum, f) => sum + f.montantRestant, 0);
+        const derniereFacture = patient.factures.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+        
+        if (language === 'fr') {
+          return `Situation financière de ${patient.prenom} ${patient.nom}:
+
+Total des factures: ${patient.factures.length}
+Montant total facturé: ${patient.factures.reduce((sum, f) => sum + f.montantTotal, 0)}€
+Montant total payé: ${patient.factures.reduce((sum, f) => sum + f.montantPaye, 0)}€
+Montant restant à payer: ${totalEnAttente}€
+
+Factures en attente de paiement: ${facturesEnAttente.length}
+${facturesEnAttente.length > 0 ? 
+  `Détail des factures en attente:
+${facturesEnAttente.map(f => `- Facture ${f.numero} du ${new Date(f.date).toLocaleDateString('fr-FR')}: ${f.montantTotal}€ (reste ${f.montantRestant}€)`).join('\n')}` 
+  : ''}
+
+Dernière facture:
+Numéro: ${derniereFacture.numero}
+Date: ${new Date(derniereFacture.date).toLocaleDateString('fr-FR')}
+Montant: ${derniereFacture.montantTotal}€
+Statut: ${derniereFacture.statut}
+${derniereFacture.methodePaiement ? `Méthode de paiement: ${derniereFacture.methodePaiement}` : ''}`;
+        } else {
+          return `Financial situation for ${patient.prenom} ${patient.nom}:
+
+Total invoices: ${patient.factures.length}
+Total amount billed: ${patient.factures.reduce((sum, f) => sum + f.montantTotal, 0)}€
+Total amount paid: ${patient.factures.reduce((sum, f) => sum + f.montantPaye, 0)}€
+Remaining amount to pay: ${totalEnAttente}€
+
+Pending invoices: ${facturesEnAttente.length}
+${facturesEnAttente.length > 0 ? 
+  `Pending invoices details:
+${facturesEnAttente.map(f => `- Invoice ${f.numero} from ${new Date(f.date).toLocaleDateString('en-US')}: ${f.montantTotal}€ (remaining ${f.montantRestant}€)`).join('\n')}` 
+  : ''}
+
+Latest invoice:
+Number: ${derniereFacture.numero}
+Date: ${new Date(derniereFacture.date).toLocaleDateString('en-US')}
+Amount: ${derniereFacture.montantTotal}€
+Status: ${derniereFacture.statut}
+${derniereFacture.methodePaiement ? `Payment method: ${derniereFacture.methodePaiement}` : ''}`;
+        }
+      } else {
+        return language === 'fr' 
+          ? `Aucune facture n'est enregistrée dans le dossier de ${patient.prenom} ${patient.nom}.`
+          : `No invoices are recorded in ${patient.prenom} ${patient.nom}'s file.`;
+      }
+    }
+    
+    // Rendez-vous queries - NOUVELLE SECTION
+    if (lowerQuestion.includes('rendez-vous') || lowerQuestion.includes('rdv') || lowerQuestion.includes('appointment') || lowerQuestion.includes('schedule')) {
+      if (patient.rendezVous && patient.rendezVous.length > 0) {
+        const prochainsRdv = patient.rendezVous
+          .filter(r => new Date(r.date) > new Date())
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        const derniersRdv = patient.rendezVous
+          .filter(r => new Date(r.date) <= new Date())
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        if (language === 'fr') {
+          return `Rendez-vous de ${patient.prenom} ${patient.nom}:
+
+${prochainsRdv.length > 0 ? 
+  `Prochains rendez-vous (${prochainsRdv.length}):
+${prochainsRdv.map(r => `- ${new Date(r.date).toLocaleDateString('fr-FR')} à ${r.heureDebut}: ${r.motif} avec ${r.medecinNom} (${r.statut})`).join('\n')}` 
+  : 'Aucun rendez-vous à venir.'}
+
+${derniersRdv.length > 0 ? 
+  `Derniers rendez-vous (${Math.min(derniersRdv.length, 3)}):
+${derniersRdv.slice(0, 3).map(r => `- ${new Date(r.date).toLocaleDateString('fr-FR')} à ${r.heureDebut}: ${r.motif} avec ${r.medecinNom} (${r.statut})`).join('\n')}` 
+  : 'Aucun rendez-vous passé.'}`;
+        } else {
+          return `Appointments for ${patient.prenom} ${patient.nom}:
+
+${prochainsRdv.length > 0 ? 
+  `Upcoming appointments (${prochainsRdv.length}):
+${prochainsRdv.map(r => `- ${new Date(r.date).toLocaleDateString('en-US')} at ${r.heureDebut}: ${r.motif} with ${r.medecinNom} (${r.statut})`).join('\n')}` 
+  : 'No upcoming appointments.'}
+
+${derniersRdv.length > 0 ? 
+  `Past appointments (${Math.min(derniersRdv.length, 3)}):
+${derniersRdv.slice(0, 3).map(r => `- ${new Date(r.date).toLocaleDateString('en-US')} at ${r.heureDebut}: ${r.motif} with ${r.medecinNom} (${r.statut})`).join('\n')}` 
+  : 'No past appointments.'}`;
+        }
+      } else {
+        return language === 'fr' 
+          ? `Aucun rendez-vous n'est enregistré dans le dossier de ${patient.prenom} ${patient.nom}.`
+          : `No appointments are recorded in ${patient.prenom} ${patient.nom}'s file.`;
+      }
+    }
 
     // Summary queries
     if (lowerQuestion.includes('résumé') || lowerQuestion.includes('synthèse') || lowerQuestion.includes('bilan') || lowerQuestion.includes('summary') || lowerQuestion.includes('overview')) {
@@ -273,6 +373,31 @@ INFORMATIONS GÉNÉRALES:
 - Motif: ${derniereConsultation.motif}
 - Diagnostic: ${derniereConsultation.diagnostic}`;
         }
+        
+        // Ajouter les informations financières
+        if (patient.factures && patient.factures.length > 0) {
+          const facturesEnAttente = patient.factures.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee');
+          const totalEnAttente = facturesEnAttente.reduce((sum, f) => sum + f.montantRestant, 0);
+          
+          summary += `\n\nSITUATION FINANCIÈRE:
+- Total factures: ${patient.factures.length}
+- Factures en attente: ${facturesEnAttente.length} (${totalEnAttente}€)`;
+        }
+        
+        // Ajouter les rendez-vous
+        if (patient.rendezVous && patient.rendezVous.length > 0) {
+          const prochainsRdv = patient.rendezVous
+            .filter(r => new Date(r.date) > new Date())
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          
+          if (prochainsRdv.length > 0) {
+            const prochainRdv = prochainsRdv[0];
+            summary += `\n\nPROCHAIN RENDEZ-VOUS:
+- Date: ${new Date(prochainRdv.date).toLocaleDateString('fr-FR')} à ${prochainRdv.heureDebut}
+- Motif: ${prochainRdv.motif}
+- Médecin: ${prochainRdv.medecinNom}`;
+          }
+        }
 
         return summary;
       } else {
@@ -294,6 +419,31 @@ GENERAL INFORMATION:
           summary += `\n\nLAST CONSULTATION (${new Date(derniereConsultation.date).toLocaleDateString('en-US')}):
 - Reason: ${derniereConsultation.motif}
 - Diagnosis: ${derniereConsultation.diagnostic}`;
+        }
+        
+        // Add financial information
+        if (patient.factures && patient.factures.length > 0) {
+          const facturesEnAttente = patient.factures.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee');
+          const totalEnAttente = facturesEnAttente.reduce((sum, f) => sum + f.montantRestant, 0);
+          
+          summary += `\n\nFINANCIAL SITUATION:
+- Total invoices: ${patient.factures.length}
+- Pending invoices: ${facturesEnAttente.length} (${totalEnAttente}€)`;
+        }
+        
+        // Add appointments
+        if (patient.rendezVous && patient.rendezVous.length > 0) {
+          const prochainsRdv = patient.rendezVous
+            .filter(r => new Date(r.date) > new Date())
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          
+          if (prochainsRdv.length > 0) {
+            const prochainRdv = prochainsRdv[0];
+            summary += `\n\nNEXT APPOINTMENT:
+- Date: ${new Date(prochainRdv.date).toLocaleDateString('en-US')} at ${prochainRdv.heureDebut}
+- Reason: ${prochainRdv.motif}
+- Doctor: ${prochainRdv.medecinNom}`;
+          }
         }
 
         return summary;
@@ -322,15 +472,44 @@ What would you like to know specifically? You can ask me for a complete summary,
     }
   }
 
-  // Create Tavus conversation
+  // 🔧 NOUVELLE MÉTHODE : Fermer toutes les conversations actives
+  private async closeAllActiveConversations(): Promise<void> {
+    if (!TAVUS_API_KEY || this.activeConversations.size === 0) {
+      return;
+    }
+
+    console.log('🧹 Fermeture de toutes les conversations actives:', Array.from(this.activeConversations));
+
+    const closePromises = Array.from(this.activeConversations).map(async (conversationId) => {
+      try {
+        await fetch(`${TAVUS_BASE_URL}/v2/conversations/${conversationId}/end`, {
+          method: 'POST',
+          headers: {
+            'x-api-key': TAVUS_API_KEY
+          }
+        });
+        console.log('✅ Conversation fermée:', conversationId);
+      } catch (error) {
+        console.error('❌ Erreur fermeture conversation:', conversationId, error);
+      }
+    });
+
+    await Promise.allSettled(closePromises);
+    this.activeConversations.clear();
+  }
+
+  // Create Tavus conversation with duplicate prevention
   private async createTavusConversation(patient: Patient, language: 'fr' | 'en' = 'fr'): Promise<any> {
     if (!TAVUS_API_KEY || !TAVUS_REPLICA_ID || !TAVUS_PERSONA_ID) {
       throw new Error('Configuration Tavus incomplète. Vérifiez vos variables d\'environnement.');
     }
 
+    // 🔧 NOUVEAU : Fermer toutes les conversations actives avant d'en créer une nouvelle
+    await this.closeAllActiveConversations();
+
     const conversationName = language === 'fr'
-      ? `Consultation médicale complète - ${patient.prenom} ${patient.nom}`
-      : `Complete medical consultation - ${patient.prenom} ${patient.nom}`;
+      ? `Consultation médicale - ${patient.prenom} ${patient.nom} - ${new Date().toISOString()}`
+      : `Medical consultation - ${patient.prenom} ${patient.nom} - ${new Date().toISOString()}`;
 
     const conversationData: TavusConversationRequest = {
       replica_id: TAVUS_REPLICA_ID,
@@ -345,7 +524,7 @@ What would you like to know specifically? You can ask me for a complete summary,
     };
 
     try {
-      console.log('Création de la conversation Tavus avec Dr. Léa Martin:', {
+      console.log('🆕 Création d\'une NOUVELLE conversation Tavus unique:', {
         replica_id: TAVUS_REPLICA_ID,
         persona_id: TAVUS_PERSONA_ID,
         conversation_name: conversationData.conversation_name,
@@ -368,9 +547,11 @@ What would you like to know specifically? You can ask me for a complete summary,
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Erreur API Tavus:', response.status, errorData);
+        console.error('❌ Erreur API Tavus:', response.status, errorData);
         
         if (response.status === 400 && errorData.message?.includes('maximum concurrent conversations')) {
+          // Forcer la fermeture de toutes les conversations et réessayer
+          await this.closeAllActiveConversations();
           throw new Error('CONCURRENT_LIMIT_REACHED');
         }
         
@@ -378,28 +559,54 @@ What would you like to know specifically? You can ask me for a complete summary,
       }
 
       const result = await response.json();
-      console.log('Conversation Tavus créée avec succès pour Dr. Léa Martin:', result);
+      
+      // 🔧 NOUVEAU : Ajouter la conversation à la liste des conversations actives
+      if (result.conversation_id) {
+        this.activeConversations.add(result.conversation_id);
+        console.log('✅ Conversation ajoutée à la liste active:', result.conversation_id);
+      }
+
+      console.log('✅ Conversation Tavus UNIQUE créée avec succès:', result);
       return result;
     } catch (error) {
-      console.error('Erreur lors de la création de la conversation Tavus:', error);
+      console.error('❌ Erreur lors de la création de la conversation Tavus:', error);
       throw error;
     }
   }
 
-  // Initialize Tavus video session for patient with complete data - MULTILINGUE
+  // Initialize Tavus video session for patient with complete data - MULTILINGUE et ANTI-DOUBLON
   async initializePatientSession(patient: Patient, language: 'fr' | 'en' = 'fr'): Promise<TavusVideoSession> {
+    // 🔧 NOUVEAU : Prévenir les initialisations multiples
+    if (this.isInitializing) {
+      console.log('⚠️ Initialisation déjà en cours, attente...');
+      // Attendre que l'initialisation en cours se termine
+      while (this.isInitializing) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      if (this.currentSession) {
+        return this.currentSession;
+      }
+    }
+
+    // 🔧 NOUVEAU : Si une session existe déjà, la fermer d'abord
+    if (this.currentSession) {
+      console.log('🔄 Session existante détectée, fermeture...');
+      await this.endSession();
+    }
+
+    this.isInitializing = true;
     const sessionId = `session_${patient.id}_${Date.now()}`;
     
     try {
-      console.log('Initialisation de la session Dr. Léa Martin avec données complètes pour:', patient.prenom, patient.nom, 'Langue:', language);
-      console.log('Données disponibles:', {
+      console.log('🚀 Initialisation UNIQUE de Dr. Léa Martin pour:', patient.prenom, patient.nom, 'Langue:', language);
+      console.log('📊 Données disponibles:', {
         consultations: patient.consultations?.length || 0,
         factures: patient.factures?.length || 0,
         rendezVous: patient.rendezVous?.length || 0,
         typePatient: patient.typePatient
       });
       
-      // Create conversation with Tavus API
+      // Create conversation with Tavus API (avec protection anti-doublon)
       const conversationResponse = await this.createTavusConversation(patient, language);
       
       // Extract the conversation URL from the response
@@ -424,7 +631,7 @@ What would you like to know specifically? You can ask me for a complete summary,
 
       // Generate comprehensive medical summary with all data in the correct language
       const comprehensiveSummary = this.generateComprehensiveMedicalSummary(patient, language);
-      console.log('Résumé médical complet généré pour Dr. Léa Martin en', language, ':', comprehensiveSummary.substring(0, 300) + '...');
+      console.log('📋 Résumé médical complet généré pour Dr. Léa Martin en', language, ':', comprehensiveSummary.substring(0, 300) + '...');
       
       // Simulate initialization process
       setTimeout(() => {
@@ -435,7 +642,7 @@ What would you like to know specifically? You can ask me for a complete summary,
 
       return session;
     } catch (error) {
-      console.error('Erreur lors de l\'initialisation de la session Dr. Léa Martin:', error);
+      console.error('❌ Erreur lors de l\'initialisation de Dr. Léa Martin:', error);
       
       // Create fallback demo session with patient data
       const fallbackSession: TavusVideoSession = {
@@ -457,13 +664,15 @@ What would you like to know specifically? You can ask me for a complete summary,
 
       if (error instanceof Error) {
         if (error.message === 'CONCURRENT_LIMIT_REACHED') {
-          throw new Error('Limite de conversations simultanées atteinte. Veuillez réessayer dans quelques minutes ou fermer d\'autres sessions Tavus actives.');
+          throw new Error('Limite de conversations simultanées atteinte. Toutes les sessions précédentes ont été fermées. Veuillez réessayer.');
         } else if (error.message.includes('Configuration Tavus incomplète')) {
           throw new Error('Configuration Tavus incomplète. Fonctionnement en mode démonstration avec synthèse vocale et accès complet aux données patient.');
         }
       }
 
       throw new Error('Service Tavus temporairement indisponible. Fonctionnement en mode démonstration avec synthèse vocale et accès complet aux données patient.');
+    } finally {
+      this.isInitializing = false;
     }
   }
 
@@ -474,11 +683,11 @@ What would you like to know specifically? You can ask me for a complete summary,
     }
 
     try {
-      console.log('Message envoyé à Dr. Léa Martin avec contexte patient:', message);
+      console.log('💬 Message envoyé à Dr. Léa Martin avec contexte patient:', message);
       
       // If we have a real conversation ID, send to Tavus API
       if (this.currentSession.conversationId && TAVUS_API_KEY && !this.currentSession.isDemoMode) {
-        console.log('Envoi du message via Tavus API avec Dr. Léa Martin...');
+        console.log('📤 Envoi du message via Tavus API avec Dr. Léa Martin...');
       }
       
       // Update session status
@@ -490,13 +699,16 @@ What would you like to know specifically? You can ask me for a complete summary,
         }
       }, 1000);
     } catch (error) {
-      console.error('Erreur lors de l\'envoi du message:', error);
+      console.error('❌ Erreur lors de l\'envoi du message:', error);
       throw error;
     }
   }
 
-  // End current session
+  // End current session with cleanup
   async endSession(): Promise<void> {
+    console.log('🔚 Fermeture de la session Dr. Léa Martin...');
+
+    // 🔧 NOUVEAU : Fermer la conversation Tavus si elle existe
     if (this.currentSession?.conversationId && TAVUS_API_KEY && !this.currentSession.isDemoMode) {
       try {
         await fetch(`${TAVUS_BASE_URL}/v2/conversations/${this.currentSession.conversationId}/end`, {
@@ -505,9 +717,12 @@ What would you like to know specifically? You can ask me for a complete summary,
             'x-api-key': TAVUS_API_KEY
           }
         });
-        console.log('Session Dr. Léa Martin fermée avec succès');
+        console.log('✅ Conversation Tavus fermée:', this.currentSession.conversationId);
+        
+        // Retirer de la liste des conversations actives
+        this.activeConversations.delete(this.currentSession.conversationId);
       } catch (error) {
-        console.error('Erreur lors de la fermeture de la session Dr. Léa Martin:', error);
+        console.error('❌ Erreur lors de la fermeture de la conversation Tavus:', error);
       }
     }
 
@@ -515,6 +730,11 @@ What would you like to know specifically? You can ask me for a complete summary,
       this.currentSession.status = 'ended';
       this.currentSession = null;
     }
+
+    // 🔧 NOUVEAU : Nettoyer toutes les conversations actives restantes
+    await this.closeAllActiveConversations();
+    
+    console.log('✅ Session Dr. Léa Martin fermée et nettoyée');
   }
 
   // Get current session
@@ -540,6 +760,26 @@ What would you like to know specifically? You can ask me for a complete summary,
       hasPersonaId: !!TAVUS_PERSONA_ID,
       isFullyConfigured: this.isConfigured()
     };
+  }
+
+  // 🔧 NOUVELLE MÉTHODE : Obtenir le statut des conversations actives
+  getActiveConversationsStatus(): {
+    count: number;
+    conversations: string[];
+  } {
+    return {
+      count: this.activeConversations.size,
+      conversations: Array.from(this.activeConversations)
+    };
+  }
+
+  // 🔧 NOUVELLE MÉTHODE : Forcer le nettoyage de toutes les sessions
+  async forceCleanup(): Promise<void> {
+    console.log('🧹 Nettoyage forcé de toutes les sessions Tavus...');
+    this.isInitializing = false;
+    await this.endSession();
+    await this.closeAllActiveConversations();
+    console.log('✅ Nettoyage forcé terminé');
   }
 }
 

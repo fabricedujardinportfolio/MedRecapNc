@@ -141,6 +141,103 @@ export interface RendezVousData {
 }
 
 class PatientService {
+  // 🔧 NOUVELLE MÉTHODE : Récupérer un patient avec TOUTES ses données pour l'IA
+  async getPatientWithCompleteData(patientId: string): Promise<PatientData | null> {
+    try {
+      console.log('🔄 Chargement complet des données patient pour IA:', patientId);
+      
+      // Récupérer le patient
+      const { data: patient, error: patientError } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('id', patientId)
+        .single();
+
+      if (patientError) {
+        console.error('❌ Erreur lors de la récupération du patient:', patientError);
+        throw patientError;
+      }
+
+      if (!patient) {
+        console.log('❌ Patient non trouvé:', patientId);
+        return null;
+      }
+
+      // Récupérer les consultations avec détails
+      const { data: consultations, error: consultationsError } = await supabase
+        .from('consultations')
+        .select(`
+          *,
+          medicaments(*)
+        `)
+        .eq('patient_id', patientId)
+        .order('date', { ascending: false });
+
+      if (consultationsError) {
+        console.error('⚠️ Erreur consultations (non bloquante):', consultationsError);
+      }
+
+      // Récupérer les factures avec détails
+      const { data: factures, error: facturesError } = await supabase
+        .from('factures')
+        .select(`
+          *,
+          facture_details(*)
+        `)
+        .eq('patient_id', patientId)
+        .order('date', { ascending: false });
+
+      if (facturesError) {
+        console.error('⚠️ Erreur factures (non bloquante):', facturesError);
+      }
+
+      // Récupérer les rendez-vous
+      const { data: rendezVous, error: rdvError } = await supabase
+        .from('rendez_vous')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('date', { ascending: false });
+
+      if (rdvError) {
+        console.error('⚠️ Erreur rendez-vous (non bloquante):', rdvError);
+      }
+
+      // Récupérer les traitements
+      const { data: traitements, error: traitementsError } = await supabase
+        .from('traitements')
+        .select('*')
+        .eq('patient_id', patientId)
+        .eq('actif', true)
+        .order('date_debut', { ascending: false });
+
+      if (traitementsError) {
+        console.error('⚠️ Erreur traitements (non bloquante):', traitementsError);
+      }
+
+      // Assembler toutes les données
+      const patientComplet = {
+        ...patient,
+        consultations: consultations || [],
+        factures: factures || [],
+        rendezVous: rendezVous || [],
+        traitements: traitements || []
+      };
+
+      console.log('✅ Données complètes chargées pour IA:', {
+        patient: patient.nom + ' ' + patient.prenom,
+        consultations: consultations?.length || 0,
+        factures: factures?.length || 0,
+        rendezVous: rendezVous?.length || 0,
+        traitements: traitements?.length || 0
+      });
+
+      return patientComplet;
+    } catch (error) {
+      console.error('❌ Erreur service patient complet:', error);
+      throw error;
+    }
+  }
+
   // Récupérer tous les patients avec leurs données complètes
   async getAllPatients(): Promise<PatientData[]> {
     try {
