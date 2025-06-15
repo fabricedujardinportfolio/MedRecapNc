@@ -962,7 +962,7 @@ export const PublicProjectPage: React.FC = () => {
           <div className="border-t border-gray-800 mt-8 pt-6 text-center">
             <p className="text-gray-400 text-sm">
               © 2025 MedRecap+ AI - {t('Nouvelle-Calédonie', 'New Caledonia')} • 
-              {t(' Développé avec', ' Built with')} ❤️ {t('par', 'by')} <strong>Bolt.new</strong>
+              {t(' Développé avec', ' Built with')} ❤️ {t('avec', 'with')} <strong>Bolt.new</strong>
             </p>
           </div>
         </div>
