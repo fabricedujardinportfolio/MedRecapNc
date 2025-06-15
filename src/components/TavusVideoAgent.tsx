@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mic, MicOff, Send, Bot, Video, MessageCircle, Volume2, VolumeX, ExternalLink } from 'lucide-react';
+import { X, Mic, MicOff, Send, Bot, Video, MessageCircle, Volume2, VolumeX, ExternalLink, AlertTriangle } from 'lucide-react';
 import { Patient } from '../types/Patient';
 import { tavusService, TavusVideoSession } from '../services/tavusService';
 import { useLanguage } from '../hooks/useLanguage';
@@ -46,6 +46,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
   
   const { language } = useLanguage();
   
@@ -54,6 +55,7 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
   const speechSynthesisRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isProcessingRef = useRef(false);
+  const initializationRef = useRef(false); // Prévenir les initialisations multiples
 
   // Vérifier le support de la reconnaissance vocale et synthèse vocale
   useEffect(() => {
@@ -66,9 +68,21 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     }
   }, []);
 
-  // Initialiser la session Tavus
+  // 🔧 NOUVEAU : Vérifier les sessions actives au montage
   useEffect(() => {
-    if (isVisible && !session) {
+    if (isVisible) {
+      const activeStatus = tavusService.getActiveConversationsStatus();
+      if (activeStatus.count > 0) {
+        console.log('⚠️ Sessions Tavus actives détectées:', activeStatus);
+        setShowSessionWarning(true);
+      }
+    }
+  }, [isVisible]);
+
+  // Initialiser la session Tavus avec protection anti-doublon
+  useEffect(() => {
+    if (isVisible && !session && !initializationRef.current) {
+      initializationRef.current = true;
       initializeSession();
     }
   }, [isVisible, language]);
@@ -156,12 +170,23 @@ export const TavusVideoAgent: React.FC<TavusVideoAgentProps> = ({
     window.speechSynthesis.speak(utterance);
   };
 
+  // 🔧 NOUVELLE FONCTION : Nettoyer les sessions existantes
+  const cleanupExistingSessions = async () => {
+    try {
+      setShowSessionWarning(false);
+      await tavusService.forceCleanup();
+      console.log('✅ Nettoyage des sessions terminé');
+    } catch (error) {
+      console.error('❌ Erreur lors du nettoyage:', error);
+    }
+  };
+
   const initializeSession = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('🚀 Initialisation de Dr. Léa Martin avec données complètes du patient:', {
+      console.log('🚀 Initialisation UNIQUE de Dr. Léa Martin avec données complètes du patient:', {
         nom: patient.nom,
         prenom: patient.prenom,
         consultations: patient.consultations?.length || 0,
@@ -226,6 +251,7 @@ What would you like to know?`,
       setError(err instanceof Error ? err.message : 'Erreur d\'initialisation');
     } finally {
       setIsLoading(false);
+      initializationRef.current = false;
     }
   };
 
@@ -535,6 +561,7 @@ What would you like to know?`,
     setInterimTranscript('');
     setIsSpeaking(false);
     isProcessingRef.current = false;
+    initializationRef.current = false;
     onClose();
   };
 
@@ -542,6 +569,31 @@ What would you like to know?`,
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+      {/* 🔧 NOUVEAU : Alerte de sessions multiples */}
+      {showSessionWarning && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-[10000] flex items-center gap-3">
+          <AlertTriangle className="w-6 h-6" />
+          <div>
+            <p className="font-semibold">
+              {language === 'fr' 
+                ? 'Sessions Tavus multiples détectées !' 
+                : 'Multiple Tavus sessions detected!'}
+            </p>
+            <p className="text-sm">
+              {language === 'fr' 
+                ? 'Cela peut causer des problèmes de synthèse vocale.' 
+                : 'This may cause voice synthesis issues.'}
+            </p>
+          </div>
+          <button 
+            onClick={cleanupExistingSessions}
+            className="ml-4 px-3 py-1 bg-white text-red-600 rounded-lg font-medium hover:bg-red-100 transition-colors"
+          >
+            {language === 'fr' ? 'Nettoyer' : 'Clean up'}
+          </button>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex overflow-hidden">
         {/* Left Panel - Video Avatar */}
         <div className="w-1/2 bg-gradient-to-br from-purple-50 to-blue-50 flex flex-col">

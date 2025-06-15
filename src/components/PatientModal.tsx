@@ -1,35 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  User, 
-  Calendar, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Heart, 
-  AlertTriangle,
-  FileText,
-  Pill,
-  Activity,
-  Download,
-  Bot,
-  Video,
-  Stethoscope,
-  Euro,
-  Clock,
-  Plus,
-  RefreshCw
-} from 'lucide-react';
-import { Patient } from '../types/Patient';
-import { format } from 'date-fns';
-import { fr, enUS } from 'date-fns/locale';
+import { X, User, Calendar, MapPin, Phone, Heart, FileText, Stethoscope, Euro, Clock, Bot, Video, AlertTriangle, Edit, Plus, Eye } from 'lucide-react';
+import { Patient, Consultation, Facture, RendezVous } from '../types/Patient';
+import { PatientData, ConsultationData, FactureData, RendezVousData, patientService } from '../services/patientService';
 import { TavusVideoAgent } from './TavusVideoAgent';
 import { ConsultationModal } from './ConsultationModal';
 import { FactureModal } from './FactureModal';
 import { RendezVousModal } from './RendezVousModal';
 import { useLanguage } from '../hooks/useLanguage';
-import { patientService, ConsultationData, FactureData, RendezVousData } from '../services/patientService';
-
+import { format } from 'date-fns';
+import { fr, enUS } from 'date-fns/locale';
 
 interface PatientModalProps {
   patient: Patient;
@@ -42,185 +21,276 @@ export const PatientModal: React.FC<PatientModalProps> = ({
   patient, 
   onClose, 
   showCabinetFeatures = false,
-  onPatientUpdated
+  onPatientUpdated 
 }) => {
   const [showTavusAgent, setShowTavusAgent] = useState(false);
   const [showConsultationModal, setShowConsultationModal] = useState(false);
   const [showFactureModal, setShowFactureModal] = useState(false);
   const [showRendezVousModal, setShowRendezVousModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'medical' | 'consultations' | 'factures' | 'rendez-vous'>('medical');
-  const { t, language } = useLanguage();
-  const locale = language === 'fr' ? fr : enUS;
-  
+  const [activeTab, setActiveTab] = useState<'info' | 'consultations' | 'factures' | 'rendez-vous'>('info');
+  const [patientWithCompleteData, setPatientWithCompleteData] = useState<Patient | null>(null);
+  const [isLoadingCompleteData, setIsLoadingCompleteData] = useState(false);
   const [consultations, setConsultations] = useState<ConsultationData[]>([]);
   const [factures, setFactures] = useState<FactureData[]>([]);
   const [rendezVous, setRendezVous] = useState<RendezVousData[]>([]);
-  const [isLoadingConsultations, setIsLoadingConsultations] = useState(false);
-  const [isLoadingFactures, setIsLoadingFactures] = useState(false);
-  const [isLoadingRendezVous, setIsLoadingRendezVous] = useState(false);
+  const { t, language } = useLanguage();
+  const locale = language === 'fr' ? fr : enUS;
 
-const [enrichedPatient, setEnrichedPatient] = useState<Patient | null>(null);
-  
-  // Charger les données du patient quand on change d'onglet
+  // 🔧 NOUVEAU : Charger les données complètes du patient pour l'IA
   useEffect(() => {
-    if (showCabinetFeatures) {
-      if (activeTab === 'consultations') {
-        loadConsultations();
-      } else if (activeTab === 'factures') {
-        loadFactures();
-      } else if (activeTab === 'rendez-vous') {
-        loadRendezVous();
-      }
+    if (patient.id) {
+      loadCompletePatientData();
     }
-  }, [activeTab, patient.id, showCabinetFeatures]);
+  }, [patient.id]);
 
-  useEffect(() => {
-    const enrichPatient = async () => {
-      if (!patient.id || !showTavusAgent) return;
-
-      try {
-        const [consultationsData, facturesData, rendezVousData] = await Promise.all([
-          patientService.getPatientConsultations(patient.id),
-          patientService.getPatientFactures(patient.id),
-          patientService.getPatientRendezVous(patient.id),
-        ]);
-
-        setEnrichedPatient({
-          ...patient,
-          consultations: consultationsData,
-          factures: facturesData,
-          rendezVous: rendezVousData,
+  const loadCompletePatientData = async () => {
+    try {
+      setIsLoadingCompleteData(true);
+      console.log('🔄 Chargement des données complètes pour IA:', patient.nom, patient.prenom);
+      
+      // Charger le patient avec toutes ses données
+      const patientComplet = await patientService.getPatientWithCompleteData(patient.id);
+      
+      if (patientComplet) {
+        // Convertir les données de la DB au format Patient pour l'IA
+        const patientForAI = convertDBPatientToPatientWithData(patientComplet);
+        setPatientWithCompleteData(patientForAI);
+        
+        // Stocker les données séparément pour l'affichage
+        setConsultations(patientComplet.consultations || []);
+        setFactures(patientComplet.factures || []);
+        setRendezVous(patientComplet.rendezVous || []);
+        
+        console.log('✅ Données complètes chargées pour IA:', {
+          consultations: patientComplet.consultations?.length || 0,
+          factures: patientComplet.factures?.length || 0,
+          rendezVous: patientComplet.rendezVous?.length || 0
         });
-
-        console.log("✅ Patient enrichi pour IA:", {
-          consultations: consultationsData.length,
-          factures: facturesData.length,
-          rendezVous: rendezVousData.length,
-        });
-      } catch (error) {
-        console.error("❌ Erreur enrichissement patient pour IA:", error);
-        setEnrichedPatient(patient); // fallback
       }
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des données complètes:', error);
+      // En cas d'erreur, utiliser les données de base
+      setPatientWithCompleteData(patient);
+    } finally {
+      setIsLoadingCompleteData(false);
+    }
+  };
+
+  // 🔧 NOUVELLE FONCTION : Convertir les données DB en format Patient avec toutes les données
+  const convertDBPatientToPatientWithData = (dbPatient: PatientData & {
+    consultations?: ConsultationData[];
+    factures?: FactureData[];
+    rendezVous?: RendezVousData[];
+    traitements?: any[];
+  }): Patient => {
+    // Convertir les consultations
+    const consultationsConverted: Consultation[] = (dbPatient.consultations || []).map(c => ({
+      id: c.id || '',
+      patientId: c.patient_id,
+      date: c.date,
+      motif: c.motif,
+      diagnostic: c.diagnostic,
+      traitement: c.traitement || '',
+      observations: c.observations || '',
+      medecinId: c.medecin_id || '',
+      medecinNom: c.medecin_nom,
+      duree: c.duree || 30,
+      type: c.type,
+      statut: c.statut,
+      tarif: c.tarif,
+      factureId: undefined,
+      ordonnance: {
+        medicaments: (c as any).medicaments?.map((m: any) => ({
+          nom: m.nom,
+          dosage: m.dosage,
+          duree: m.duree || '',
+          instructions: m.instructions
+        })) || [],
+        examens: []
+      },
+      signesVitaux: {
+        tension: c.tension || '',
+        pouls: c.pouls || 0,
+        temperature: c.temperature || 0,
+        poids: c.poids || 0,
+        taille: c.taille || 0
+      }
+    }));
+
+    // Convertir les factures
+    const facturesConverted: Facture[] = (dbPatient.factures || []).map(f => ({
+      id: f.id || '',
+      patientId: f.patient_id,
+      consultationId: f.consultation_id,
+      numero: f.numero,
+      date: f.date,
+      montantTotal: f.montant_total,
+      montantPaye: f.montant_paye,
+      montantRestant: f.montant_restant,
+      statut: f.statut,
+      methodePaiement: f.methode_paiement,
+      dateEcheance: f.date_echeance,
+      datePaiement: f.date_paiement,
+      details: (f as any).facture_details?.map((d: any) => ({
+        description: d.description,
+        quantite: d.quantite,
+        prixUnitaire: d.prix_unitaire,
+        total: d.total
+      })) || [],
+      remboursement: {
+        securiteSociale: f.remboursement_securite_sociale || 0,
+        mutuelle: f.remboursement_mutuelle || 0,
+        restACharge: f.remboursement_reste_a_charge || 0
+      },
+      notes: f.notes
+    }));
+
+    // Convertir les rendez-vous
+    const rendezVousConverted: RendezVous[] = (dbPatient.rendezVous || []).map(r => ({
+      id: r.id || '',
+      patientId: r.patient_id,
+      patientNom: r.patient_nom,
+      date: r.date,
+      heureDebut: r.heure_debut,
+      heureFin: r.heure_fin,
+      motif: r.motif,
+      type: r.type,
+      statut: r.statut,
+      medecinId: r.medecin_id || '',
+      medecinNom: r.medecin_nom,
+      salle: r.salle,
+      notes: r.notes,
+      rappelEnvoye: r.rappel_envoye,
+      consultationId: r.consultation_id
+    }));
+
+    // Convertir les traitements
+    const traitementsConverted = (dbPatient.traitements || []).map(t => ({
+      nom: t.nom,
+      dosage: t.dosage,
+      frequence: t.frequence,
+      dateDebut: t.date_debut
+    }));
+
+    return {
+      id: dbPatient.id || '',
+      nom: dbPatient.nom,
+      prenom: dbPatient.prenom,
+      sexe: dbPatient.sexe,
+      dateNaissance: dbPatient.date_naissance,
+      age: dbPatient.age,
+      lieuNaissance: dbPatient.lieu_naissance,
+      nationalite: dbPatient.nationalite,
+      numeroSecuriteSociale: dbPatient.numero_securite_sociale || '',
+      situationFamiliale: dbPatient.situation_familiale || '',
+      
+      adresse: {
+        rue: dbPatient.adresse_rue,
+        ville: dbPatient.adresse_ville,
+        codePostal: dbPatient.adresse_code_postal,
+        pays: dbPatient.adresse_pays
+      },
+      telephone: {
+        portable: dbPatient.telephone_portable,
+        fixe: dbPatient.telephone_fixe
+      },
+      email: dbPatient.email,
+      contactUrgence: {
+        nom: dbPatient.contact_urgence_nom,
+        lien: dbPatient.contact_urgence_lien,
+        telephone: dbPatient.contact_urgence_telephone
+      },
+      
+      numeroDossier: dbPatient.numero_dossier,
+      dateAdmission: dbPatient.date_admission,
+      service: dbPatient.service,
+      modeAdmission: dbPatient.mode_admission,
+      medecinTraitant: dbPatient.medecin_traitant,
+      medecinReferent: dbPatient.medecin_referent,
+      statutSocial: dbPatient.statut_social || '',
+      mutuelle: dbPatient.mutuelle,
+      prisEnCharge: dbPatient.pris_en_charge || '',
+      
+      antecedents: {
+        personnels: dbPatient.antecedents_personnels || [],
+        familiaux: dbPatient.antecedents_familiaux || []
+      },
+      allergies: dbPatient.allergies || [],
+      traitements: traitementsConverted,
+      biometrie: {
+        poids: dbPatient.biometrie_poids || 0,
+        taille: dbPatient.biometrie_taille || 0,
+        imc: dbPatient.biometrie_imc || 0
+      },
+      groupeSanguin: dbPatient.groupe_sanguin,
+      antecedenChirurgicaux: dbPatient.antecedents_chirurgicaux || [],
+      habitudesVie: {
+        tabac: dbPatient.habitudes_vie_tabac || false,
+        alcool: dbPatient.habitudes_vie_alcool || false,
+        drogues: dbPatient.habitudes_vie_drogues || false,
+        details: dbPatient.habitudes_vie_details || ''
+      },
+      pathologiesConnues: dbPatient.pathologies_connues || [],
+      motifHospitalisation: dbPatient.motif_hospitalisation,
+      diagnostics: dbPatient.diagnostics || [],
+      
+      alerte: dbPatient.alerte_niveau ? {
+        niveau: dbPatient.alerte_niveau,
+        message: dbPatient.alerte_message || ''
+      } : undefined,
+      statut: dbPatient.statut,
+      derniereMaj: new Date().toISOString(),
+      
+      // 🔧 DONNÉES COMPLÈTES POUR L'IA
+      consultations: consultationsConverted,
+      factures: facturesConverted,
+      rendezVous: rendezVousConverted,
+      typePatient: dbPatient.type_patient || 'cabinet',
+      medecinCabinet: dbPatient.medecin_cabinet || '',
+      derniereConsultation: consultationsConverted[0]?.date,
+      prochainRendezVous: rendezVousConverted.find(r => new Date(r.date) > new Date())?.date
     };
+  };
 
-    enrichPatient();
-  }, [showTavusAgent, patient.id]); 
-
-  const loadConsultations = async () => {
-    if (!patient.id) return;
-    
-    try {
-      setIsLoadingConsultations(true);
-      console.log('🔄 Chargement des consultations pour le patient:', patient.id);
-      
-      const consultationsData = await patientService.getPatientConsultations(patient.id);
-      console.log('✅ Consultations chargées:', consultationsData.length);
-      
-      setConsultations(consultationsData);
-    } catch (error) {
-      console.error('❌ Erreur lors du chargement des consultations:', error);
-      setConsultations([]);
-    } finally {
-      setIsLoadingConsultations(false);
+  const handleDataUpdated = () => {
+    console.log('🔄 Mise à jour des données après modification');
+    loadCompletePatientData();
+    if (onPatientUpdated) {
+      onPatientUpdated();
     }
   };
 
-  const loadFactures = async () => {
-    if (!patient.id) return;
-    
-    try {
-      setIsLoadingFactures(true);
-      console.log('🔄 Chargement des factures pour le patient:', patient.id);
-      
-      const facturesData = await patientService.getPatientFactures(patient.id);
-      console.log('✅ Factures chargées:', facturesData.length);
-      
-      setFactures(facturesData);
-    } catch (error) {
-      console.error('❌ Erreur lors du chargement des factures:', error);
-      setFactures([]);
-    } finally {
-      setIsLoadingFactures(false);
+  const handleOpenTavusAgent = () => {
+    if (patientWithCompleteData) {
+      console.log('🤖 Ouverture de l\'IA avec données complètes:', {
+        patient: patientWithCompleteData.nom + ' ' + patientWithCompleteData.prenom,
+        consultations: patientWithCompleteData.consultations?.length || 0,
+        factures: patientWithCompleteData.factures?.length || 0,
+        rendezVous: patientWithCompleteData.rendezVous?.length || 0
+      });
+      setShowTavusAgent(true);
+    } else {
+      console.warn('⚠️ Données complètes non encore chargées, utilisation des données de base');
+      setShowTavusAgent(true);
     }
   };
 
-  const loadRendezVous = async () => {
-    if (!patient.id) return;
-    
-    try {
-      setIsLoadingRendezVous(true);
-      console.log('🔄 Chargement des rendez-vous pour le patient:', patient.id);
-      
-      const rendezVousData = await patientService.getPatientRendezVous(patient.id);
-      console.log('✅ Rendez-vous chargés:', rendezVousData.length);
-      
-      setRendezVous(rendezVousData);
-    } catch (error) {
-      console.error('❌ Erreur lors du chargement des rendez-vous:', error);
-      setRendezVous([]);
-    } finally {
-      setIsLoadingRendezVous(false);
+  const getStatusColor = (statut: string) => {
+    switch (statut) {
+      case 'Urgence': return 'bg-red-100 text-red-800 border-red-200';
+      case 'Actif': return 'bg-green-100 text-green-800 border-green-200';
+      case 'Sorti': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Transfert': return 'bg-blue-100 text-blue-800 border-blue-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
   const getAlertColor = (niveau: string) => {
     switch (niveau) {
-      case 'rouge': return 'text-red-600 bg-red-100 border-red-200';
-      case 'orange': return 'text-orange-600 bg-orange-100 border-orange-200';
-      case 'verte': return 'text-green-600 bg-green-100 border-green-200';
-      default: return 'text-gray-600 bg-gray-100 border-gray-200';
-    }
-  };
-
-  const getFactureStatusColor = (statut: string) => {
-    switch (statut) {
-      case 'payee': return 'bg-green-100 text-green-800';
-      case 'en_attente': return 'bg-orange-100 text-orange-800';
-      case 'partiellement_payee': return 'bg-yellow-100 text-yellow-800';
-      case 'en_retard': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getFactureStatusText = (statut: string) => {
-    switch (statut) {
-      case 'payee': return t('invoice.status.paid');
-      case 'en_attente': return t('invoice.status.pending');
-      case 'partiellement_payee': return t('invoice.status.partial');
-      case 'en_retard': return t('invoice.status.overdue');
-      default: return statut;
-    }
-  };
-
-  const getRdvStatusColor = (statut: string) => {
-    switch (statut) {
-      case 'confirme': return 'bg-green-100 text-green-800';
-      case 'programme': return 'bg-blue-100 text-blue-800';
-      case 'en_cours': return 'bg-orange-100 text-orange-800';
-      case 'termine': return 'bg-gray-100 text-gray-800';
-      case 'annule': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getRdvStatusText = (statut: string) => {
-    switch (statut) {
-      case 'confirme': return t('appointment.status.confirmed');
-      case 'programme': return t('appointment.status.scheduled');
-      case 'en_cours': return t('appointment.status.ongoing');
-      case 'termine': return t('appointment.status.completed');
-      case 'annule': return t('appointment.status.cancelled');
-      default: return statut;
-    }
-  };
-
-  const getConsultationStatusText = (statut: string) => {
-    switch (statut) {
-      case 'terminee': return t('consultation.status.completed');
-      case 'en_cours': return t('consultation.status.ongoing');
-      case 'programmee': return t('consultation.status.scheduled');
-      case 'annulee': return t('consultation.status.cancelled');
-      default: return statut;
+      case 'rouge': return 'bg-red-100 text-red-800 border-red-200';
+      case 'orange': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'verte': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -234,638 +304,74 @@ const [enrichedPatient, setEnrichedPatient] = useState<Patient | null>(null);
     }
   };
 
-  const handleExport = () => {
-    try {
-      // Générer le contenu HTML complet
-      const htmlContent = generateCompleteHTMLDocument();
-      
-      // Créer un blob avec le contenu HTML
-      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-      
-      // Créer un lien de téléchargement
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Dossier_Patient_${patient.nom}_${patient.prenom}_${format(new Date(), 'yyyy-MM-dd')}.html`;
-      
-      // Déclencher le téléchargement
-      document.body.appendChild(link);
-      link.click();
-      
-      // Nettoyer
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      console.log('✅ Export réussi pour:', patient.nom, patient.prenom);
-    } catch (error) {
-      console.error('❌ Erreur lors de l\'export:', error);
-      alert('Erreur lors de l\'export du dossier patient. Veuillez réessayer.');
+  const getFactureStatusColor = (statut: string) => {
+    switch (statut) {
+      case 'payee': return 'bg-green-100 text-green-800';
+      case 'en_attente': return 'bg-orange-100 text-orange-800';
+      case 'partiellement_payee': return 'bg-yellow-100 text-yellow-800';
+      case 'en_retard': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const generateCompleteHTMLDocument = () => {
-    const consultationsHtml = consultations && consultations.length > 0 
-      ? consultations.map(consultation => `
-          <div class="consultation-item">
-            <div class="consultation-header">
-              <strong>${consultation.motif}</strong>
-              <span class="date">${format(new Date(consultation.date), 'dd/MM/yyyy à HH:mm', { locale })}</span>
-            </div>
-            <div class="consultation-details">
-              <p><strong>${t('common.doctor')}:</strong> ${consultation.medecin_nom}</p>
-              <p><strong>${t('common.diagnosis')}:</strong> ${consultation.diagnostic}</p>
-              <p><strong>${t('common.treatment')}:</strong> ${consultation.traitement}</p>
-              <p><strong>${t('common.duration')}:</strong> ${consultation.duree} min | <strong>${t('common.amount')}:</strong> ${consultation.tarif}€</p>
-              ${consultation.observations ? `<p><strong>Observations:</strong> ${consultation.observations}</p>` : ''}
-            </div>
-          </div>
-        `).join('')
-      : `<p class="no-data">${t('patient.modal.no.consultations')}</p>`;
-
-    const facturesHtml = factures && factures.length > 0
-      ? factures.map(facture => `
-          <div class="facture-item">
-            <div class="facture-header">
-              <strong>Facture ${facture.numero}</strong>
-              <span class="status status-${facture.statut}">${getFactureStatusText(facture.statut)}</span>
-            </div>
-            <div class="facture-details">
-              <div class="facture-row">
-                <span>${t('common.date')}: ${format(new Date(facture.date), 'dd/MM/yyyy', { locale })}</span>
-                <span>Échéance: ${format(new Date(facture.date_echeance), 'dd/MM/yyyy', { locale })}</span>
-              </div>
-              <div class="facture-row">
-                <span>${t('common.total')}: ${facture.montant_total}€</span>
-                <span>Payé: ${facture.montant_paye}€</span>
-                <span>Reste: ${facture.montant_restant}€</span>
-              </div>
-            </div>
-          </div>
-        `).join('')
-      : `<p class="no-data">${t('patient.modal.no.invoices')}</p>`;
-
-    const rdvHtml = rendezVous && rendezVous.length > 0
-      ? rendezVous.map(rdv => `
-          <div class="rdv-item">
-            <div class="rdv-header">
-              <strong>${rdv.motif}</strong>
-              <span class="status status-${rdv.statut}">${getRdvStatusText(rdv.statut)}</span>
-            </div>
-            <div class="rdv-details">
-              <div class="rdv-row">
-                <span>${t('common.date')}: ${format(new Date(rdv.date), 'dd/MM/yyyy', { locale })}</span>
-                <span>${t('common.time')}: ${rdv.heure_debut} - ${rdv.heure_fin}</span>
-              </div>
-              <div class="rdv-row">
-                <span>Type: ${rdv.type}</span>
-                <span>${t('common.doctor')}: ${rdv.medecin_nom}</span>
-                <span>Salle: ${rdv.salle}</span>
-              </div>
-            </div>
-          </div>
-        `).join('')
-      : `<p class="no-data">${t('patient.modal.no.appointments')}</p>`;
-
-    return `
-      <!DOCTYPE html>
-      <html lang="${language}">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${t('patient.modal.title')} - ${patient.prenom} ${patient.nom}</title>
-        <style>
-          ${getPrintStyles()}
-        </style>
-      </head>
-      <body>
-        <div class="print-container">
-          <!-- En-tête du document -->
-          <div class="header">
-            <div class="header-left">
-              <h1>${t('patient.modal.title').toUpperCase()}</h1>
-              <h2>${patient.prenom} ${patient.nom}</h2>
-              <p>${t('patient.file')} #${patient.numeroDossier}</p>
-            </div>
-            <div class="header-right">
-              <p>Date d'impression: ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale })}</p>
-              <p>${t('patient.modal.updated')}: ${format(new Date(patient.derniereMaj), 'dd/MM/yyyy à HH:mm', { locale })}</p>
-            </div>
-          </div>
-
-          ${patient.alerte && patient.alerte.niveau !== 'verte' ? `
-            <div class="alert alert-${patient.alerte.niveau}">
-              <strong>⚠️ ALERTE ${patient.alerte.niveau.toUpperCase()}:</strong> ${patient.alerte.message}
-            </div>
-          ` : ''}
-
-          <!-- Informations personnelles -->
-          <section class="section">
-            <h3>${t('patient.modal.personal').toUpperCase()}</h3>
-            <div class="info-grid">
-              <div class="info-item">
-                <strong>Sexe:</strong> ${patient.sexe === 'M' ? t('common.male') : t('common.female')}
-              </div>
-              <div class="info-item">
-                <strong>Âge:</strong> ${patient.age} ${t('patient.years')}
-              </div>
-              <div class="info-item">
-                <strong>Date de naissance:</strong> ${format(new Date(patient.dateNaissance), 'dd/MM/yyyy', { locale })}
-              </div>
-              <div class="info-item">
-                <strong>Lieu de naissance:</strong> ${patient.lieuNaissance}
-              </div>
-              <div class="info-item">
-                <strong>Nationalité:</strong> ${patient.nationalite}
-              </div>
-              <div class="info-item">
-                <strong>Situation familiale:</strong> ${patient.situationFamiliale}
-              </div>
-            </div>
-          </section>
-
-          <!-- Coordonnées -->
-          <section class="section">
-            <h3>${t('patient.modal.contact').toUpperCase()}</h3>
-            <div class="info-grid">
-              <div class="info-item full-width">
-                <strong>Adresse:</strong> ${patient.adresse.rue}, ${patient.adresse.codePostal} ${patient.adresse.ville}, ${patient.adresse.pays}
-              </div>
-              <div class="info-item">
-                <strong>Téléphone:</strong> ${patient.telephone.portable || patient.telephone.fixe}
-              </div>
-              ${patient.email ? `
-                <div class="info-item">
-                  <strong>Email:</strong> ${patient.email}
-                </div>
-              ` : ''}
-              <div class="info-item full-width">
-                <strong>Contact d'urgence:</strong> ${patient.contactUrgence.nom} (${patient.contactUrgence.lien}) - ${patient.contactUrgence.telephone}
-              </div>
-            </div>
-          </section>
-
-          <!-- Informations médicales critiques -->
-          <section class="section medical-critical">
-            <h3>${t('patient.modal.medical').toUpperCase()}</h3>
-            <div class="info-grid">
-              <div class="info-item">
-                <strong>Groupe sanguin:</strong> <span class="highlight">${patient.groupeSanguin}</span>
-              </div>
-              <div class="info-item">
-                <strong>IMC:</strong> ${patient.biometrie.imc}
-              </div>
-              ${patient.allergies.length > 0 ? `
-                <div class="info-item full-width allergies">
-                  <strong>⚠️ ${t('patient.allergies').toUpperCase()}:</strong> ${patient.allergies.join(', ')}
-                </div>
-              ` : ''}
-            </div>
-          </section>
-
-          <!-- Hospitalisation actuelle -->
-          <section class="section">
-            <h3>${t('patient.modal.hospitalization').toUpperCase()}</h3>
-            <div class="info-grid">
-              <div class="info-item">
-                <strong>Service:</strong> ${patient.service}
-              </div>
-              <div class="info-item">
-                <strong>${t('common.status')}:</strong> ${patient.statut}
-              </div>
-              <div class="info-item">
-                <strong>Mode d'admission:</strong> ${patient.modeAdmission}
-              </div>
-              <div class="info-item">
-                <strong>Date d'admission:</strong> ${format(new Date(patient.dateAdmission), 'dd/MM/yyyy', { locale })}
-              </div>
-              <div class="info-item full-width">
-                <strong>Motif d'hospitalisation:</strong> ${patient.motifHospitalisation}
-              </div>
-              <div class="info-item">
-                <strong>Médecin référent:</strong> ${patient.medecinReferent}
-              </div>
-              <div class="info-item full-width">
-                <strong>Diagnostics:</strong> ${patient.diagnostics.join(', ')}
-              </div>
-            </div>
-          </section>
-
-          <!-- Traitements en cours -->
-          <section class="section">
-            <h3>${t('patient.modal.treatments').toUpperCase()}</h3>
-            ${patient.traitements.length > 0 ? `
-              <div class="treatments">
-                ${patient.traitements.map(traitement => `
-                  <div class="treatment-item">
-                    <strong>${traitement.nom}</strong> - ${traitement.dosage} (${traitement.frequence})
-                    <span class="treatment-date">Depuis ${format(new Date(traitement.dateDebut), 'MM/yyyy', { locale })}</span>
-                  </div>
-                `).join('')}
-              </div>
-            ` : `<p class="no-data">Aucun traitement en cours</p>`}
-          </section>
-
-          <!-- Antécédents médicaux -->
-          <section class="section">
-            <h3>${t('patient.modal.history').toUpperCase()}</h3>
-            <div class="antecedents">
-              <div class="antecedent-group">
-                <h4>${t('patient.modal.personal.history')}</h4>
-                ${patient.antecedents.personnels.length > 0 
-                  ? `<ul>${patient.antecedents.personnels.map(a => `<li>${a}</li>`).join('')}</ul>`
-                  : '<p class="no-data">Aucun antécédent personnel notable</p>'
-                }
-              </div>
-              <div class="antecedent-group">
-                <h4>${t('patient.modal.family.history')}</h4>
-                ${patient.antecedents.familiaux.length > 0 
-                  ? `<ul>${patient.antecedents.familiaux.map(a => `<li>${a}</li>`).join('')}</ul>`
-                  : '<p class="no-data">Aucun antécédent familial notable</p>'
-                }
-              </div>
-            </div>
-          </section>
-
-          ${showCabinetFeatures ? `
-            <!-- Consultations -->
-            <section class="section page-break">
-              <h3>${t('patient.modal.consultations').toUpperCase()}</h3>
-              ${consultationsHtml}
-            </section>
-
-            <!-- Factures -->
-            <section class="section">
-              <h3>${t('patient.modal.invoices').toUpperCase()}</h3>
-              ${facturesHtml}
-            </section>
-
-            <!-- Rendez-vous -->
-            <section class="section">
-              <h3>${t('patient.modal.appointments').toUpperCase()}</h3>
-              ${rdvHtml}
-            </section>
-          ` : ''}
-
-          <!-- Pied de page -->
-          <div class="footer">
-            <p>Document généré par MedRecap+ - Système de Gestion Médicale Sécurisé</p>
-            <p>Conforme HDS • ISO 27001 • RGPD</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  };
-
-  const getPrintStyles = () => {
-    return `
-      @page {
-        size: A4;
-        margin: 15mm;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        font-size: 11px;
-        line-height: 1.4;
-        color: #333;
-        margin: 0;
-        padding: 0;
-        background: white;
-      }
-
-      .print-container {
-        max-width: 100%;
-        margin: 0 auto;
-      }
-
-      .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        border-bottom: 2px solid #2563eb;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-      }
-
-      .header h1 {
-        font-size: 18px;
-        font-weight: bold;
-        color: #2563eb;
-        margin: 0 0 5px 0;
-      }
-
-      .header h2 {
-        font-size: 16px;
-        font-weight: bold;
-        color: #1f2937;
-        margin: 0 0 5px 0;
-      }
-
-      .header p {
-        font-size: 10px;
-        color: #6b7280;
-        margin: 2px 0;
-      }
-
-      .header-right {
-        text-align: right;
-      }
-
-      .alert {
-        background-color: #fef2f2;
-        border: 1px solid #fecaca;
-        border-radius: 4px;
-        padding: 10px;
-        margin-bottom: 15px;
-        color: #dc2626;
-      }
-
-      .alert-rouge {
-        background-color: #fef2f2;
-        border-color: #fecaca;
-        color: #dc2626;
-      }
-
-      .alert-orange {
-        background-color: #fffbeb;
-        border-color: #fed7aa;
-        color: #d97706;
-      }
-
-      .section {
-        margin-bottom: 20px;
-        break-inside: avoid;
-      }
-
-      .section h3 {
-        font-size: 14px;
-        font-weight: bold;
-        color: #1f2937;
-        background-color: #f3f4f6;
-        padding: 8px 12px;
-        margin: 0 0 10px 0;
-        border-left: 4px solid #2563eb;
-      }
-
-      .medical-critical h3 {
-        background-color: #fef2f2;
-        border-left-color: #dc2626;
-        color: #dc2626;
-      }
-
-      .info-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-      }
-
-      .info-item {
-        padding: 6px 0;
-        border-bottom: 1px solid #e5e7eb;
-      }
-
-      .info-item.full-width {
-        grid-column: 1 / -1;
-      }
-
-      .info-item strong {
-        color: #374151;
-        font-weight: 600;
-      }
-
-      .highlight {
-        background-color: #fef3c7;
-        padding: 2px 4px;
-        border-radius: 2px;
-        font-weight: bold;
-      }
-
-      .allergies {
-        background-color: #fef2f2;
-        padding: 8px;
-        border-radius: 4px;
-        border: 1px solid #fecaca;
-      }
-
-      .treatments {
-        display: grid;
-        gap: 8px;
-      }
-
-      .treatment-item {
-        background-color: #f8fafc;
-        padding: 8px;
-        border-radius: 4px;
-        border-left: 3px solid #3b82f6;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .treatment-date {
-        font-size: 10px;
-        color: #6b7280;
-      }
-
-      .antecedents {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-      }
-
-      .antecedent-group h4 {
-        font-size: 12px;
-        font-weight: 600;
-        color: #374151;
-        margin: 0 0 8px 0;
-      }
-
-      .antecedent-group ul {
-        margin: 0;
-        padding-left: 15px;
-      }
-
-      .antecedent-group li {
-        margin-bottom: 4px;
-      }
-
-      .consultation-item,
-      .facture-item,
-      .rdv-item {
-        background-color: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        padding: 10px;
-        margin-bottom: 10px;
-        break-inside: avoid;
-      }
-
-      .consultation-header,
-      .facture-header,
-      .rdv-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-        padding-bottom: 6px;
-        border-bottom: 1px solid #e2e8f0;
-      }
-
-      .consultation-details p,
-      .facture-details,
-      .rdv-details {
-        margin: 4px 0;
-        font-size: 10px;
-      }
-
-      .facture-row,
-      .rdv-row {
-        display: flex;
-        justify-content: space-between;
-        margin: 4px 0;
-      }
-
-      .status {
-        padding: 2px 6px;
-        border-radius: 12px;
-        font-size: 9px;
-        font-weight: 600;
-      }
-
-      .status-payee { background-color: #dcfce7; color: #166534; }
-      .status-en_attente { background-color: #fed7aa; color: #9a3412; }
-      .status-partiellement_payee { background-color: #fef3c7; color: #92400e; }
-      .status-en_retard { background-color: #fecaca; color: #991b1b; }
-      .status-confirme { background-color: #dcfce7; color: #166534; }
-      .status-programme { background-color: #dbeafe; color: #1e40af; }
-      .status-termine { background-color: #f3f4f6; color: #374151; }
-      .status-annule { background-color: #fecaca; color: #991b1b; }
-
-      .ordonnance {
-        background-color: #f0f9ff;
-        padding: 6px;
-        border-radius: 4px;
-        margin-top: 6px;
-      }
-
-      .ordonnance ul {
-        margin: 4px 0;
-        padding-left: 15px;
-      }
-
-      .remboursement {
-        background-color: #f0fdf4;
-        padding: 6px;
-        border-radius: 4px;
-        margin-top: 6px;
-        font-size: 10px;
-      }
-
-      .no-data {
-        color: #6b7280;
-        font-style: italic;
-        text-align: center;
-        padding: 15px;
-      }
-
-      .page-break {
-        page-break-before: always;
-      }
-
-      .footer {
-        margin-top: 30px;
-        padding-top: 15px;
-        border-top: 1px solid #e5e7eb;
-        text-align: center;
-        font-size: 9px;
-        color: #6b7280;
-      }
-
-      .footer p {
-        margin: 2px 0;
-      }
-
-      .date {
-        font-size: 10px;
-        color: #6b7280;
-      }
-
-      @media print {
-        .section {
-          break-inside: avoid;
-        }
-        
-        .consultation-item,
-        .facture-item,
-        .rdv-item {
-          break-inside: avoid;
-        }
-      }
-    `;
-  };
-
-  const handleModalClose = (type: 'consultation' | 'facture' | 'rendez-vous') => {
-    switch (type) {
-      case 'consultation':
-        setShowConsultationModal(false);
-        loadConsultations(); // Recharger les consultations
-        break;
-      case 'facture':
-        setShowFactureModal(false);
-        loadFactures(); // Recharger les factures
-        break;
-      case 'rendez-vous':
-        setShowRendezVousModal(false);
-        loadRendezVous(); // Recharger les rendez-vous
-        break;
-    }
-    
-    // Rafraîchir les données du patient si une fonction de callback est fournie
-    if (onPatientUpdated) {
-      onPatientUpdated();
+  const getRdvStatusColor = (statut: string) => {
+    switch (statut) {
+      case 'confirme': return 'bg-green-100 text-green-800';
+      case 'programme': return 'bg-blue-100 text-blue-800';
+      case 'en_cours': return 'bg-orange-100 text-orange-800';
+      case 'termine': return 'bg-gray-100 text-gray-800';
+      case 'annule': return 'bg-red-100 text-red-800';
+      case 'reporte': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className=" bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-auto">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
           {/* Header */}
-          <div className="flex flex-wrap items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-teal-50">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-green-50">
             <div className="flex items-center gap-4">
-              <div className="flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl">
-                <User className="w-8 h-8 text-white" />
+              <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-xl">
+                <User className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">
+                <h2 className="text-xl font-bold text-gray-900">
                   {patient.prenom} {patient.nom}
                 </h2>
-                <p className="text-gray-600">{t('patient.file')} #{patient.numeroDossier}</p>
-                <p className="text-sm text-gray-500">
-                  {t('patient.modal.updated')} {format(new Date(patient.derniereMaj), 'dd/MM/yyyy à HH:mm', { locale })}
+                <p className="text-gray-600">
+                  {t('patient.modal.title')} #{patient.numeroDossier}
                 </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(patient.statut)}`}>
+                    {patient.statut}
+                  </span>
+                  {patient.alerte && patient.alerte.niveau !== 'verte' && (
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getAlertColor(patient.alerte.niveau)}`}>
+                      {patient.alerte.message}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {/* Tavus AI Agent Button */}
               <button
-                onClick={() => setShowTavusAgent(true)}
+                onClick={handleOpenTavusAgent}
                 className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                disabled={isLoadingCompleteData}
               >
-                <Bot className="w-4 h-4" />
-                {t('patient.modal.assistant')}
-              </button>
-              <button
-                onClick={handleExport}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                {t('patient.modal.export')}
+                {isLoadingCompleteData ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>{t('common.loading')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Bot className="w-4 h-4" />
+                    <span>{t('patient.modal.assistant')}</span>
+                  </>
+                )}
               </button>
               <button
                 onClick={onClose}
@@ -876,279 +382,299 @@ const [enrichedPatient, setEnrichedPatient] = useState<Patient | null>(null);
             </div>
           </div>
 
-          {/* Alert Banner */}
-          {patient.alerte && (
-            <div className={`px-6 py-3 border-b ${getAlertColor(patient.alerte.niveau)}`}>
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5" />
-                <span className="font-medium">{patient.alerte.message}</span>
-              </div>
-            </div>
-          )}
-
-          {/* AI Summary Banner */}
-          <div className="px-6 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-purple-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-8 h-8 bg-purple-600 rounded-lg">
-                  <Bot className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-purple-900">
-                    {language === 'fr' ? 'Assistant IA Médical disponible' : 'Medical AI Assistant available'}
-                  </p>
-                  <p className="text-xs text-purple-700">
-                    {language === 'fr' 
-                      ? 'Cliquez pour obtenir un résumé vidéo interactif de ce dossier patient'
-                      : 'Click to get an interactive video summary of this patient file'
-                    }
-                  </p>
-                </div>
-              </div>
+          {/* Tabs */}
+          <div className="border-b border-gray-200">
+            <nav className="flex">
               <button
-                onClick={() => setShowTavusAgent(true)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors"
+                onClick={() => setActiveTab('info')}
+                className={`px-6 py-3 font-medium text-sm border-b-2 ${
+                  activeTab === 'info'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
               >
-                <Video className="w-3 h-3" />
-                {language === 'fr' ? 'Lancer l\'IA' : 'Launch AI'}
+                {t('patient.modal.personal')}
               </button>
-            </div>
+              <button
+                onClick={() => setActiveTab('consultations')}
+                className={`px-6 py-3 font-medium text-sm border-b-2 ${
+                  activeTab === 'consultations'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {t('patient.modal.consultations')}
+              </button>
+              {showCabinetFeatures && (
+                <>
+                  <button
+                    onClick={() => setActiveTab('factures')}
+                    className={`px-6 py-3 font-medium text-sm border-b-2 ${
+                      activeTab === 'factures'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {t('patient.modal.invoices')}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('rendez-vous')}
+                    className={`px-6 py-3 font-medium text-sm border-b-2 ${
+                      activeTab === 'rendez-vous'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {t('patient.modal.appointments')}
+                  </button>
+                </>
+              )}
+            </nav>
           </div>
 
-          {/* Navigation Tabs (for cabinet features) */}
-          {showCabinetFeatures && (
-            <div className="px-6 border-b border-gray-200">
-              <nav className="-mb-px flex flex-wrap justify-center sm:justify-start space-x-8">
-                {[
-                  { id: 'medical', label: t('patient.modal.medical'), icon: Heart },
-                  { id: 'consultations', label: t('patient.modal.consultations'), icon: Stethoscope },
-                  { id: 'factures', label: t('patient.modal.invoices'), icon: Euro },
-                  { id: 'rendez-vous', label: t('patient.modal.appointments'), icon: Calendar }
-                ].map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm ${
-                        activeTab === tab.id
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-          )}
-
           {/* Content */}
-          <div className="p-6 overflow-y-auto max-h-[calc(90vh-250px)]">
-            {(!showCabinetFeatures || activeTab === 'medical') && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Personal Information */}
+          <div className="p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
+            {/* Personal Information Tab */}
+            {activeTab === 'info' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Left Column */}
                 <div className="space-y-6">
-                  <div className="bg-gray-50 rounded-xl p-6">
+                  {/* Personal Information */}
+                  <div className="bg-blue-50 rounded-xl p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <User className="w-5 h-5 text-blue-600" />
                       {t('patient.modal.personal')}
                     </h3>
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Sexe</span>
-                          <p className="text-gray-900">{patient.sexe === 'M' ? t('common.male') : t('common.female')}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Âge</span>
-                          <p className="text-gray-900">{patient.age} {t('patient.years')}</p>
-                        </div>
-                      </div>
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <span className="text-sm font-medium text-gray-500">Date de naissance</span>
-                        <p className="text-gray-900">
-                          {format(new Date(patient.dateNaissance), 'dd MMMM yyyy', { locale })}
+                        <p className="text-sm font-medium text-gray-500">
+                          {t('common.male')}
                         </p>
+                        <p className="text-gray-900">{patient.sexe === 'M' ? t('common.male') : patient.sexe === 'F' ? t('common.female') : t('common.other')}</p>
                       </div>
                       <div>
-                        <span className="text-sm font-medium text-gray-500">Lieu de naissance</span>
-                        <p className="text-gray-900">{patient.lieuNaissance}</p>
+                        <p className="text-sm font-medium text-gray-500">
+                          {t('patient.years')}
+                        </p>
+                        <p className="text-gray-900">{patient.age} {t('patient.years')}</p>
                       </div>
                       <div>
-                        <span className="text-sm font-medium text-gray-500">Nationalité</span>
-                        <p className="text-gray-900">{patient.nationalite}</p>
+                        <p className="text-sm font-medium text-gray-500">
+                          {t('patient.admitted')}
+                        </p>
+                        <p className="text-gray-900">{format(new Date(patient.dateAdmission), 'dd/MM/yyyy', { locale })}</p>
                       </div>
                       <div>
-                        <span className="text-sm font-medium text-gray-500">Situation familiale</span>
-                        <p className="text-gray-900">{patient.situationFamiliale}</p>
+                        <p className="text-sm font-medium text-gray-500">
+                          {t('common.doctor')}
+                        </p>
+                        <p className="text-gray-900">{patient.medecinReferent}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Contact Information */}
-                  <div className="bg-gray-50 rounded-xl p-6">
+                  <div className="bg-green-50 rounded-xl p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <Phone className="w-5 h-5 text-green-600" />
+                      <MapPin className="w-5 h-5 text-green-600" />
                       {t('patient.modal.contact')}
                     </h3>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <div>
-                        <span className="text-sm font-medium text-gray-500">Adresse</span>
-                        <p className="text-gray-900">
-                          {patient.adresse.rue}<br />
-                          {patient.adresse.codePostal} {patient.adresse.ville}<br />
-                          {patient.adresse.pays}
+                        <p className="text-sm font-medium text-gray-500">
+                          {t('common.address')}
                         </p>
+                        <p className="text-gray-900">{patient.adresse.rue}</p>
+                        <p className="text-gray-900">{patient.adresse.codePostal} {patient.adresse.ville}, {patient.adresse.pays}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <span className="text-sm font-medium text-gray-500">Téléphone</span>
-                          <p className="text-gray-900">{patient.telephone.portable || patient.telephone.fixe}</p>
+                          <p className="text-sm font-medium text-gray-500">
+                            {t('common.phone')}
+                          </p>
+                          <p className="text-gray-900">{patient.telephone.portable || patient.telephone.fixe || t('common.none')}</p>
                         </div>
-                        {patient.email && (
-                          <div>
-                            <span className="text-sm font-medium text-gray-500">Email</span>
-                            <p className="text-gray-900">{patient.email}</p>
-                          </div>
-                        )}
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">
+                            {t('common.email')}
+                          </p>
+                          <p className="text-gray-900">{patient.email || t('common.none')}</p>
+                        </div>
                       </div>
                       <div>
-                        <span className="text-sm font-medium text-gray-500">Contact d'urgence</span>
+                        <p className="text-sm font-medium text-gray-500">
+                          {t('common.emergency')}
+                        </p>
+                        <p className="text-gray-900">{patient.contactUrgence.nom} ({patient.contactUrgence.lien})</p>
+                        <p className="text-gray-900">{patient.contactUrgence.telephone}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Medical Information */}
+                  <div className="bg-red-50 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Heart className="w-5 h-5 text-red-600" />
+                      {t('patient.modal.medical')}
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">
+                            {t('common.blood')}
+                          </p>
+                          <p className="text-gray-900">{patient.groupeSanguin}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">
+                            {t('common.service')}
+                          </p>
+                          <p className="text-gray-900">{patient.service}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">
+                          {t('patient.reason')}
+                        </p>
+                        <p className="text-gray-900">{patient.motifHospitalisation}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">
+                          {t('patient.allergies')}
+                        </p>
                         <p className="text-gray-900">
-                          {patient.contactUrgence.nom} ({patient.contactUrgence.lien})<br />
-                          <span className="text-blue-600">{patient.contactUrgence.telephone}</span>
+                          {patient.allergies.length > 0 
+                            ? patient.allergies.join(', ') 
+                            : t('common.none')}
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Medical Information */}
+                {/* Right Column */}
                 <div className="space-y-6">
-                  <div className="bg-red-50 rounded-xl p-6">
+                  {/* Current Treatments */}
+                  <div className="bg-purple-50 rounded-xl p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <Heart className="w-5 h-5 text-red-600" />
-                      {t('patient.modal.medical')}
+                      <FileText className="w-5 h-5 text-purple-600" />
+                      {t('patient.modal.treatments')}
                     </h3>
-                    <div className="space-y-3">
+                    {patient.traitements.length > 0 ? (
+                      <div className="space-y-3">
+                        {patient.traitements.map((traitement, index) => (
+                          <div key={index} className="bg-white p-3 rounded-lg border border-purple-100">
+                            <div className="flex justify-between">
+                              <p className="font-medium text-gray-900">{traitement.nom}</p>
+                              <p className="text-sm text-purple-600">{traitement.dosage}</p>
+                            </div>
+                            <p className="text-sm text-gray-600">{traitement.frequence}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {t('common.since')} {format(new Date(traitement.dateDebut), 'dd/MM/yyyy', { locale })}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 italic">{t('common.no.treatments')}</p>
+                    )}
+                  </div>
+
+                  {/* Current Hospitalization */}
+                  <div className="bg-orange-50 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-orange-600" />
+                      {t('patient.modal.hospitalization')}
+                    </h3>
+                    <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <span className="text-sm font-medium text-gray-500">Groupe sanguin</span>
-                          <p className="text-lg font-bold text-gray-900">{patient.groupeSanguin}</p>
+                          <p className="text-sm font-medium text-gray-500">
+                            {t('common.status')}
+                          </p>
+                          <p className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(patient.statut)}`}>
+                            {patient.statut}
+                          </p>
                         </div>
                         <div>
-                          <span className="text-sm font-medium text-gray-500">IMC</span>
-                          <p className="text-gray-900">{patient.biometrie.imc}</p>
+                          <p className="text-sm font-medium text-gray-500">
+                            {t('common.admission')}
+                          </p>
+                          <p className="text-gray-900">{patient.modeAdmission}</p>
                         </div>
                       </div>
-                      {patient.allergies.length > 0 && (
-                        <div>
-                          <span className="text-sm font-medium text-red-600">{t('patient.allergies')}</span>
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {patient.allergies.map((allergie, index) => (
-                              <span key={index} className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                                {allergie}
-                              </span>
-                            ))}
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">
+                          {t('common.diagnosis')}
+                        </p>
+                        <p className="text-gray-900">
+                          {patient.diagnostics.length > 0 
+                            ? patient.diagnostics.join(', ') 
+                            : t('common.none')}
+                        </p>
+                      </div>
+                      {patient.alerte && (
+                        <div className={`p-3 rounded-lg ${
+                          patient.alerte.niveau === 'rouge' ? 'bg-red-100' :
+                          patient.alerte.niveau === 'orange' ? 'bg-orange-100' :
+                          'bg-green-100'
+                        }`}>
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className={`w-4 h-4 ${
+                              patient.alerte.niveau === 'rouge' ? 'text-red-600' :
+                              patient.alerte.niveau === 'orange' ? 'text-orange-600' :
+                              'text-green-600'
+                            }`} />
+                            <p className={`text-sm font-medium ${
+                              patient.alerte.niveau === 'rouge' ? 'text-red-800' :
+                              patient.alerte.niveau === 'orange' ? 'text-orange-800' :
+                              'text-green-800'
+                            }`}>
+                              {patient.alerte.message}
+                            </p>
                           </div>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Current Treatments */}
+                  {/* Medical History */}
                   <div className="bg-blue-50 rounded-xl p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <Pill className="w-5 h-5 text-blue-600" />
-                      {t('patient.modal.treatments')}
+                      <Clock className="w-5 h-5 text-blue-600" />
+                      {t('patient.modal.history')}
                     </h3>
-                    <div className="space-y-3">
-                      {patient.traitements.map((traitement, index) => (
-                        <div key={index} className="bg-white rounded-lg p-3 border border-blue-200">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-medium text-gray-900">{traitement.nom}</p>
-                              <p className="text-sm text-gray-600">{traitement.dosage} - {traitement.frequence}</p>
-                            </div>
-                            <span className="text-xs text-gray-500">
-                              Depuis {format(new Date(traitement.dateDebut), 'MM/yyyy', { locale })}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Hospitalization Details */}
-                  <div className="bg-teal-50 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <Activity className="w-5 h-5 text-teal-600" />
-                      {t('patient.modal.hospitalization')}
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Service</span>
-                          <p className="text-gray-900">{patient.service}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Mode d'admission</span>
-                          <p className="text-gray-900">{patient.modeAdmission}</p>
-                        </div>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">
+                          {t('patient.modal.personal.history')}
+                        </p>
+                        <p className="text-gray-900">
+                          {patient.antecedents.personnels.length > 0 
+                            ? patient.antecedents.personnels.join(', ') 
+                            : t('common.none')}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-sm font-medium text-gray-500">Motif d'hospitalisation</span>
-                        <p className="text-gray-900">{patient.motifHospitalisation}</p>
+                        <p className="text-sm font-medium text-gray-500">
+                          {t('patient.modal.family.history')}
+                        </p>
+                        <p className="text-gray-900">
+                          {patient.antecedents.familiaux.length > 0 
+                            ? patient.antecedents.familiaux.join(', ') 
+                            : t('common.none')}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-sm font-medium text-gray-500">Médecin référent</span>
-                        <p className="text-gray-900">{patient.medecinReferent}</p>
+                        <p className="text-sm font-medium text-gray-500">
+                          {t('common.surgical.history')}
+                        </p>
+                        <p className="text-gray-900">
+                          {patient.antecedenChirurgicaux.length > 0 
+                            ? patient.antecedenChirurgicaux.join(', ') 
+                            : t('common.none')}
+                        </p>
                       </div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-500">Diagnostics</span>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {patient.diagnostics.map((diagnostic, index) => (
-                            <span key={index} className="px-2 py-1 bg-teal-100 text-teal-800 text-xs rounded-full">
-                              {diagnostic}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Medical History */}
-                <div className="lg:col-span-2 bg-yellow-50 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-yellow-600" />
-                    {t('patient.modal.history')}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <span className="text-sm font-medium text-gray-500">{t('patient.modal.personal.history')}</span>
-                      <ul className="mt-2 space-y-1">
-                        {patient.antecedents.personnels.map((antecedent, index) => (
-                          <li key={index} className="text-sm text-gray-700 flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></div>
-                            {antecedent}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-500">{t('patient.modal.family.history')}</span>
-                      <ul className="mt-2 space-y-1">
-                        {patient.antecedents.familiaux.map((antecedent, index) => (
-                          <li key={index} className="text-sm text-gray-700 flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></div>
-                            {antecedent}
-                          </li>
-                        ))}
-                      </ul>
                     </div>
                   </div>
                 </div>
@@ -1156,69 +682,89 @@ const [enrichedPatient, setEnrichedPatient] = useState<Patient | null>(null);
             )}
 
             {/* Consultations Tab */}
-            {showCabinetFeatures && activeTab === 'consultations' && (
-              <div className="space-y-4">
+            {activeTab === 'consultations' && (
+              <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.consultations')}</h3>
-                    <p className="text-gray-600">
-                      {consultations.length} {t('cabinet.tabs.consultations').toLowerCase()}
-                      {isLoadingConsultations && (
-                        <span className="ml-2 text-blue-600">
-                          <RefreshCw className="w-4 h-4 inline animate-spin mr-1" />
-                          Chargement...
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <button 
+                  <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.consultations')}</h3>
+                  <button
                     onClick={() => setShowConsultationModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                   >
                     <Plus className="w-4 h-4" />
                     {t('patient.modal.new.consultation')}
                   </button>
                 </div>
-                
-                {isLoadingConsultations ? (
-                  <div className="text-center py-8">
-                    <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-                    <p className="text-gray-600">Chargement des consultations...</p>
-                  </div>
-                ) : consultations.length > 0 ? (
+
+                {consultations.length > 0 ? (
                   <div className="space-y-4">
                     {consultations.map((consultation) => (
-                      <div key={consultation.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div key={consultation.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h4 className="font-medium text-gray-900">{consultation.motif}</h4>
-                              <span className={`px-2 py-1 text-xs rounded-full ${getConsultationStatusColor(consultation.statut)}`}>
-                                {getConsultationStatusText(consultation.statut)}
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
+                                <Stethoscope className="w-5 h-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">{consultation.motif}</h4>
+                                <p className="text-sm text-gray-600">
+                                  {format(new Date(consultation.date), 'dd/MM/yyyy', { locale })}
+                                </p>
+                              </div>
+                              <span className={`px-3 py-1 text-xs rounded-full font-medium ${getConsultationStatusColor(consultation.statut)}`}>
+                                {consultation.statut}
                               </span>
-                              {consultation.external_id && (
-                                <span className="text-xs text-blue-600">ID: {consultation.external_id}</span>
-                              )}
                             </div>
-                            <p className="text-sm text-gray-600 mb-2">{consultation.diagnostic}</p>
-                            <div className="grid grid-cols-2 gap-4 text-sm text-gray-500">
-                              <div>{t('common.date')}: {format(new Date(consultation.date), 'dd/MM/yyyy à HH:mm', { locale })}</div>
-                              <div>{t('common.duration')}: {consultation.duree} min</div>
-                              <div>{t('common.doctor')}: {consultation.medecin_nom}</div>
-                              <div>{t('common.amount')}: {consultation.tarif}€</div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-gray-500 mb-1">{t('common.diagnosis')}</p>
+                                <p className="text-sm text-gray-900">{consultation.diagnostic}</p>
+                              </div>
+                              
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-gray-500 mb-1">{t('common.treatment')}</p>
+                                <p className="text-sm text-gray-900">{consultation.traitement || t('common.none')}</p>
+                              </div>
+                              
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-gray-500 mb-1">{t('common.doctor')}</p>
+                                <p className="text-sm text-gray-900">{consultation.medecin_nom}</p>
+                              </div>
                             </div>
+
+                            {consultation.observations && (
+                              <div className="bg-blue-50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-blue-800 mb-1">{t('common.notes')}</p>
+                                <p className="text-sm text-blue-900">{consultation.observations}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 ml-4">
+                            <button className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                              <Edit className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Stethoscope className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>{t('patient.modal.no.consultations')}</p>
-                    <button 
+                  <div className="text-center py-12">
+                    <Stethoscope className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      {t('patient.modal.no.consultations')}
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      {t('patient.modal.no.consultations.subtitle')}
+                    </p>
+                    <button
                       onClick={() => setShowConsultationModal(true)}
-                      className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                     >
                       {t('patient.modal.new.consultation')}
                     </button>
@@ -1228,68 +774,96 @@ const [enrichedPatient, setEnrichedPatient] = useState<Patient | null>(null);
             )}
 
             {/* Factures Tab */}
-            {showCabinetFeatures && activeTab === 'factures' && (
-              <div className="space-y-4">
+            {activeTab === 'factures' && showCabinetFeatures && (
+              <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.invoices')}</h3>
-                    <p className="text-gray-600">
-                      {factures.length} {t('cabinet.tabs.invoices').toLowerCase()}
-                      {isLoadingFactures && (
-                        <span className="ml-2 text-blue-600">
-                          <RefreshCw className="w-4 h-4 inline animate-spin mr-1" />
-                          Chargement...
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <button 
+                  <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.invoices')}</h3>
+                  <button
                     onClick={() => setShowFactureModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
                   >
                     <Plus className="w-4 h-4" />
                     {t('patient.modal.new.invoice')}
                   </button>
                 </div>
-                
-                {isLoadingFactures ? (
-                  <div className="text-center py-8">
-                    <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-purple-600" />
-                    <p className="text-gray-600">Chargement des factures...</p>
-                  </div>
-                ) : factures.length > 0 ? (
+
+                {factures.length > 0 ? (
                   <div className="space-y-4">
                     {factures.map((facture) => (
-                      <div key={facture.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div key={facture.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h4 className="font-medium text-gray-900">Facture {facture.numero}</h4>
-                              <span className={`px-2 py-1 text-xs rounded-full ${getFactureStatusColor(facture.statut)}`}>
-                                {getFactureStatusText(facture.statut)}
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-lg">
+                                <Euro className="w-5 h-5 text-purple-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Facture {facture.numero}</h4>
+                                <p className="text-sm text-gray-600">
+                                  {format(new Date(facture.date), 'dd/MM/yyyy', { locale })}
+                                </p>
+                              </div>
+                              <span className={`px-3 py-1 text-xs rounded-full font-medium ${getFactureStatusColor(facture.statut)}`}>
+                                {facture.statut}
                               </span>
-                              {facture.external_id && (
-                                <span className="text-xs text-purple-600">ID: {facture.external_id}</span>
-                              )}
                             </div>
-                            <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                              <div>{t('common.date')}: {format(new Date(facture.date), 'dd/MM/yyyy', { locale })}</div>
-                              <div>Échéance: {format(new Date(facture.date_echeance), 'dd/MM/yyyy', { locale })}</div>
-                              <div>{t('common.total')}: {facture.montant_total}€</div>
-                              <div>Reste à payer: {facture.montant_restant}€</div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-gray-500 mb-1">{t('common.total')}</p>
+                                <p className="text-sm font-bold text-gray-900">{facture.montant_total}€</p>
+                              </div>
+                              
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-gray-500 mb-1">{t('common.paid')}</p>
+                                <p className="text-sm text-green-600">{facture.montant_paye}€</p>
+                              </div>
+                              
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-gray-500 mb-1">{t('common.remaining')}</p>
+                                <p className={`text-sm font-medium ${facture.montant_restant > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                  {facture.montant_restant}€
+                                </p>
+                              </div>
                             </div>
+
+                            {(facture as any).facture_details && (facture as any).facture_details.length > 0 && (
+                              <div className="bg-purple-50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-purple-800 mb-2">{t('common.details')}</p>
+                                {(facture as any).facture_details.map((detail: any, index: number) => (
+                                  <div key={index} className="flex justify-between text-sm text-purple-900">
+                                    <span>{detail.description} (x{detail.quantite})</span>
+                                    <span className="font-medium">{detail.total}€</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 ml-4">
+                            <button className="p-2 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                              <Edit className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Euro className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>{t('patient.modal.no.invoices')}</p>
-                    <button 
+                  <div className="text-center py-12">
+                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      {t('patient.modal.no.invoices')}
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      {t('patient.modal.no.invoices.subtitle')}
+                    </p>
+                    <button
                       onClick={() => setShowFactureModal(true)}
-                      className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
                     >
                       {t('patient.modal.new.invoice')}
                     </button>
@@ -1299,68 +873,89 @@ const [enrichedPatient, setEnrichedPatient] = useState<Patient | null>(null);
             )}
 
             {/* Rendez-vous Tab */}
-            {showCabinetFeatures && activeTab === 'rendez-vous' && (
-              <div className="space-y-4">
+            {activeTab === 'rendez-vous' && showCabinetFeatures && (
+              <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.appointments')}</h3>
-                    <p className="text-gray-600">
-                      {rendezVous.length} {t('cabinet.tabs.appointments').toLowerCase()}
-                      {isLoadingRendezVous && (
-                        <span className="ml-2 text-blue-600">
-                          <RefreshCw className="w-4 h-4 inline animate-spin mr-1" />
-                          Chargement...
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <button 
+                  <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.appointments')}</h3>
+                  <button
                     onClick={() => setShowRendezVousModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
                   >
                     <Plus className="w-4 h-4" />
                     {t('patient.modal.new.appointment')}
                   </button>
                 </div>
-                
-                {isLoadingRendezVous ? (
-                  <div className="text-center py-8">
-                    <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-orange-600" />
-                    <p className="text-gray-600">Chargement des rendez-vous...</p>
-                  </div>
-                ) : rendezVous.length > 0 ? (
+
+                {rendezVous.length > 0 ? (
                   <div className="space-y-4">
                     {rendezVous.map((rdv) => (
-                      <div key={rdv.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div key={rdv.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h4 className="font-medium text-gray-900">{rdv.motif}</h4>
-                              <span className={`px-2 py-1 text-xs rounded-full ${getRdvStatusColor(rdv.statut)}`}>
-                                {getRdvStatusText(rdv.statut)}
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="flex items-center justify-center w-10 h-10 bg-orange-100 rounded-lg">
+                                <Calendar className="w-5 h-5 text-orange-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">{rdv.motif}</h4>
+                                <p className="text-sm text-gray-600">
+                                  {format(new Date(rdv.date), 'dd/MM/yyyy', { locale })}
+                                </p>
+                              </div>
+                              <span className={`px-3 py-1 text-xs rounded-full font-medium ${getRdvStatusColor(rdv.statut)}`}>
+                                {rdv.statut}
                               </span>
-                              {rdv.external_id && (
-                                <span className="text-xs text-orange-600">ID: {rdv.external_id}</span>
-                              )}
                             </div>
-                            <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                              <div>{t('common.date')}: {format(new Date(rdv.date), 'dd/MM/yyyy', { locale })}</div>
-                              <div>{t('common.time')}: {rdv.heure_debut} - {rdv.heure_fin}</div>
-                              <div>Type: {rdv.type}</div>
-                              <div>Salle: {rdv.salle}</div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-gray-500 mb-1">{t('common.time')}</p>
+                                <p className="text-sm text-gray-900">{rdv.heure_debut} - {rdv.heure_fin}</p>
+                              </div>
+                              
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-gray-500 mb-1">{t('common.type')}</p>
+                                <p className="text-sm text-gray-900">{rdv.type}</p>
+                              </div>
+                              
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-gray-500 mb-1">{t('common.doctor')}</p>
+                                <p className="text-sm text-gray-900">{rdv.medecinNom}</p>
+                              </div>
                             </div>
+
+                            {rdv.notes && (
+                              <div className="bg-orange-50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-orange-800 mb-1">{t('common.notes')}</p>
+                                <p className="text-sm text-orange-900">{rdv.notes}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 ml-4">
+                            <button className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                              <Edit className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>{t('patient.modal.no.appointments')}</p>
-                    <button 
+                  <div className="text-center py-12">
+                    <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      {t('patient.modal.no.appointments')}
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      {t('patient.modal.no.appointments.subtitle')}
+                    </p>
+                    <button
                       onClick={() => setShowRendezVousModal(true)}
-                      className="mt-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                      className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
                     >
                       {t('patient.modal.new.appointment')}
                     </button>
@@ -1372,35 +967,43 @@ const [enrichedPatient, setEnrichedPatient] = useState<Patient | null>(null);
         </div>
       </div>
 
+      {/* Tavus Video Agent Modal */}
       {showTavusAgent && (
         <TavusVideoAgent
-          patient={patient}
-          isVisible={true}
+          patient={patientWithCompleteData || patient}
+          isVisible={showTavusAgent}
           onClose={() => setShowTavusAgent(false)}
         />
       )}
 
-      {/* Consultation Modal */}
+      {/* Modals */}
       {showConsultationModal && (
         <ConsultationModal
+          onClose={() => {
+            setShowConsultationModal(false);
+            handleDataUpdated();
+          }}
           patientId={patient.id}
-          onClose={() => handleModalClose('consultation')}
         />
       )}
 
-      {/* Facture Modal */}
       {showFactureModal && (
         <FactureModal
+          onClose={() => {
+            setShowFactureModal(false);
+            handleDataUpdated();
+          }}
           patientId={patient.id}
-          onClose={() => handleModalClose('facture')}
         />
       )}
 
-      {/* Rendez-vous Modal */}
       {showRendezVousModal && (
         <RendezVousModal
+          onClose={() => {
+            setShowRendezVousModal(false);
+            handleDataUpdated();
+          }}
           patientId={patient.id}
-          onClose={() => handleModalClose('rendez-vous')}
         />
       )}
     </>
