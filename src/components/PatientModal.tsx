@@ -1374,7 +1374,7 @@ const [enrichedPatient, setEnrichedPatient] = useState<Patient | null>(null);
 
       {showTavusAgent && (
         <TavusVideoAgent
-          patient={enrichedPatient || patient}
+          patient={patient}
           isVisible={true}
           onClose={() => setShowTavusAgent(false)}
         />
