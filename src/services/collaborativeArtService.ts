@@ -390,7 +390,7 @@ class CollaborativeArtService {
   }
 
   // 🔒 NOUVELLE MÉTHODE : Récupérer un pixel par IP hash
-  private async getPixelByIpHash(ipHash: string): Promise<PixelData | null> {
+  async getPixelByIpHash(ipHash: string): Promise<PixelData | null> {
     try {
       console.log('🔍 Recherche de pixel pour IP hash:', ipHash?.substring(0, 8) + '...');
       
