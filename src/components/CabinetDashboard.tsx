@@ -1022,12 +1022,6 @@ export const CabinetDashboard: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2 ml-4">
-                      <button className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                        <Edit className="w-4 h-4" />
-                      </button>
                       {rdv.statut === 'programme' && (
                         <button className="p-2 text-green-600 hover: bg-green-100 rounded-lg transition-colors">
                           <CheckCircle className="w-4 h-4" />
