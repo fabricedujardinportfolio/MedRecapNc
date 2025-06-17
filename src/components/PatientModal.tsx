@@ -384,7 +384,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
 
           {/* Tabs */}
           <div className="border-b border-gray-200">
-            <nav className="flex">
+            <nav className="flex overflow-y-auto">
               <button
                 onClick={() => setActiveTab('info')}
                 className={`px-6 py-3 font-medium text-sm border-b-2 ${
