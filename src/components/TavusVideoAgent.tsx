@@ -594,9 +594,9 @@ What would you like to know?`,
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-wrap overflow-hidden">
         {/* Left Panel - Video Avatar */}
-        <div className="w-1/2 bg-gradient-to-br from-purple-50 to-blue-50 flex flex-col">
+        <div className="w-full md:w-1/2 bg-gradient-to-br from-purple-50 to-blue-50 flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-purple-200">
             <div className="flex items-center gap-3">
@@ -803,7 +803,7 @@ What would you like to know?`,
         </div>
 
         {/* Right Panel - Chat */}
-        <div className="w-1/2 flex flex-col border-l border-gray-200">
+        <div className="w-full md:w-1/2 flex flex-col border-l border-gray-200">
           {/* Chat Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div className="flex items-center gap-3">
