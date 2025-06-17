@@ -343,7 +343,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                 <p className="text-gray-600">
                   {t('patient.modal.title')} #{patient.numeroDossier}
                 </p>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex flex-wrap items-center gap-2 mt-1">
                   <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(patient.statut)}`}>
                     {patient.statut}
                   </span>
