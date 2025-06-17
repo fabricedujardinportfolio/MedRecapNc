@@ -741,14 +741,6 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                             )}
                           </div>
 
-                          <div className="flex items-center gap-2 ml-4">
-                            <button className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors">
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                              <Edit className="w-4 h-4" />
-                            </button>
-                          </div>
                         </div>
                       </div>
                     ))}
