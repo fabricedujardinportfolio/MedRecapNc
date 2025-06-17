@@ -699,7 +699,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                   <div className="space-y-4">
                     {consultations.map((consultation) => (
                       <div key={consultation.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between">
+                        <div className="flex flex-wrap flex-col-reverse md:flex-nowrap md:flex-row items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-3">
                               <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
