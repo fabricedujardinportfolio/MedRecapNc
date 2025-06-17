@@ -799,14 +799,16 @@ export const PublicProjectPage: React.FC = () => {
                 >
                   <Github className="w-5 h-5" />
                   {t('Voir le code', 'View code')}
-                </a>                
+                </a>   
+              </div>              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">                             
                 <a
                   href="/"
                   className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white rounded-lg font-bold transition-colors shadow-lg"
                 >
                   🚀 {t('Accéder à l\'Application', 'Access the Application')}
                 </a>
-              </div>
+              </div>div>
             </div>
           </div>
         </div>
