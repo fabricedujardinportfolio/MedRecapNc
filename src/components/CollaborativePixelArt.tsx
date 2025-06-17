@@ -497,11 +497,7 @@ export const CollaborativePixelArt: React.FC = () => {
   };
 
   const handleGoBack = () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
       window.location.href = '/';
-    }
   };
 
   const shareProject = () => {
