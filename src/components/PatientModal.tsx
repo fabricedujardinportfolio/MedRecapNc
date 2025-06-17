@@ -684,7 +684,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             {/* Consultations Tab */}
             {activeTab === 'consultations' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.consultations')}</h3>
                   <button
                     onClick={() => setShowConsultationModal(true)}
@@ -768,7 +768,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             {/* Factures Tab */}
             {activeTab === 'factures' && showCabinetFeatures && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.invoices')}</h3>
                   <button
                     onClick={() => setShowFactureModal(true)}
@@ -858,7 +858,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             {/* Rendez-vous Tab */}
             {activeTab === 'rendez-vous' && showCabinetFeatures && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900">{t('patient.modal.appointments')}</h3>
                   <button
                     onClick={() => setShowRendezVousModal(true)}
