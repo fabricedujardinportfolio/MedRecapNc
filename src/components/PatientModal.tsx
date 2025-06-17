@@ -487,7 +487,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                         <p className="text-gray-900">{patient.adresse.rue}</p>
                         <p className="text-gray-900">{patient.adresse.codePostal} {patient.adresse.ville}, {patient.adresse.pays}</p>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-wrap grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm font-medium text-gray-500">
                             {t('common.phone')}
