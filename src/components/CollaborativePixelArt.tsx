@@ -1096,7 +1096,7 @@ export const CollaborativePixelArt: React.FC = () => {
                 <div className="text-purple-700">{t('pixel.art.storage.secure.desc')}</div>
               </div>
             </div>
-            <div className="flex items-center justify-center gap-6 mt-6 text-sm text-gray-500">
+            <div className="flex flex-wrap items-center justify-center gap-6 mt-6 text-sm text-gray-500">
               <div className="flex items-center gap-2">
                 <Globe className="w-4 h-4" />
                 <span>{t('pixel.art.location')}</span>
