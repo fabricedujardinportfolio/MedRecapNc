@@ -594,7 +594,7 @@ What would you like to know?`,
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-wrap overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-wrap overflow-x-auto">
         {/* Left Panel - Video Avatar */}
         <div className="w-full md:w-1/2 bg-gradient-to-br from-purple-50 to-blue-50 flex flex-col">
           {/* Header */}
