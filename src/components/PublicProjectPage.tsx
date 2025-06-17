@@ -808,7 +808,8 @@ export const PublicProjectPage: React.FC = () => {
                 >
                   🚀 {t('Accéder à l\'Application', 'Access the Application')}
                 </a>
-              </div>div>
+              </div>
+              </div>
             </div>
           </div>
         </div>
