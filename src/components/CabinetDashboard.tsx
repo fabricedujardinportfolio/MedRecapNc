@@ -958,7 +958,7 @@ export const CabinetDashboard: React.FC = () => {
             <div className="grid gap-4">
               {rendezVousFromDB.map((rdv) => (
                 <div key={rdv.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between">
+                  <div className="flex flex-wrap flex-col-reverse md:flex-nowrap md:flex-row items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="flex items-center justify-center w-10 h-10 bg-orange-100 rounded-lg">
