@@ -153,23 +153,23 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, isLoading }) => {
             
             {/* Type descriptions */}
             <div className="mt-4 pt-3 border-t border-gray-100">
-              <p className="text-xs text-gray-500 mb-2 font-medium">Types de comptes :</p>
+              <p className="text-xs text-gray-500 mb-2 font-medium">{t('login.types.title')}</p>
               <div className="space-y-1 text-xs text-gray-500">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                  <span><strong>Super Admin:</strong> Accès complet système hospitalier</span>
+                  <span><strong>{t('login.types.superadmin')}</strong> {t('login.types.description.superadmin')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                  <span><strong>Admin Tech:</strong> Gestion technique hospitalière</span>
+                  <span><strong>{t('login.types.admin')}</strong> {t('login.types.description.admin')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  <span><strong>Auditeur:</strong> Consultation logs et rapports</span>
+                  <span><strong>{t('login.types.auditor')}</strong> {t('login.types.description.auditor')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                  <span><strong>Médecin Cabinet:</strong> Gestion cabinet médical complet</span>
+                  <span><strong>{t('login.types.cabinet')}</strong> {t('login.types.description.cabinet')}</span>
                 </div>
               </div>
             </div>
