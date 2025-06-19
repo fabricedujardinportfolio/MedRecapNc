@@ -45,6 +45,8 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
     deleteNotification,
     clearAllNotifications
   } = useNotifications();
+  
+  const { t } = useLanguage();
 
   const [showFilters, setShowFilters] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<AppNotification | null>(null);
