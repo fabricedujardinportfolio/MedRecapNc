@@ -186,63 +186,75 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
         {showFilters && (
           <div className="p-4 border-b border-gray-200 bg-gray-50 space-y-3">
             <div className="grid grid-cols-2 gap-2">
+              {/* Type */}
               <select
                 value={filters.type || ''}
                 onChange={(e) => setFilters({ ...filters, type: e.target.value || undefined })}
                 className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">Tous les types</option>
-                <option value="urgent">Urgent</option>
-                <option value="alert">Alerte</option>
-                <option value="warning">Attention</option>
-                <option value="success">Succès</option>
-                <option value="info">Information</option>
+                <option value="">{t('notifications.filters.type.all')}</option>
+                <option value="urgent">{t('notifications.filters.type.urgent')}</option>
+                <option value="alert">{t('notifications.filters.type.alert')}</option>
+                <option value="warning">{t('notifications.filters.type.warning')}</option>
+                <option value="success">{t('notifications.filters.type.success')}</option>
+                <option value="info">{t('notifications.filters.type.info')}</option>
               </select>
+        
+              {/* Priority */}
               <select
                 value={filters.priority || ''}
                 onChange={(e) => setFilters({ ...filters, priority: e.target.value || undefined })}
                 className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">Toutes priorités</option>
-                <option value="critical">Critique</option>
-                <option value="high">Haute</option>
-                <option value="medium">Moyenne</option>
-                <option value="low">Basse</option>
+                <option value="">{t('notifications.filters.priority.all')}</option>
+                <option value="critical">{t('notifications.filters.priority.critical')}</option>
+                <option value="high">{t('notifications.filters.priority.high')}</option>
+                <option value="medium">{t('notifications.filters.priority.medium')}</option>
+                <option value="low">{t('notifications.filters.priority.low')}</option>
               </select>
             </div>
+        
             <div className="grid grid-cols-2 gap-2">
+              {/* Category */}
               <select
                 value={filters.category || ''}
                 onChange={(e) => setFilters({ ...filters, category: e.target.value || undefined })}
                 className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">Toutes catégories</option>
-                <option value="medical">Médical</option>
-                <option value="administrative">Administratif</option>
-                <option value="system">Système</option>
-                <option value="security">Sécurité</option>
+                <option value="">{t('notifications.filters.category.all')}</option>
+                <option value="medical">{t('notifications.filters.category.medical')}</option>
+                <option value="administrative">{t('notifications.filters.category.administrative')}</option>
+                <option value="system">{t('notifications.filters.category.system')}</option>
+                <option value="security">{t('notifications.filters.category.security')}</option>
               </select>
+        
+              {/* Read status */}
               <select
                 value={filters.isRead === undefined ? '' : filters.isRead.toString()}
-                onChange={(e) => setFilters({ 
-                  ...filters, 
-                  isRead: e.target.value === '' ? undefined : e.target.value === 'true' 
-                })}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    isRead: e.target.value === '' ? undefined : e.target.value === 'true',
+                  })
+                }
                 className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">Toutes</option>
-                <option value="false">Non lues</option>
-                <option value="true">Lues</option>
+                <option value="">{t('notifications.filters.read.all')}</option>
+                <option value="false">{t('notifications.filters.read.false')}</option>
+                <option value="true">{t('notifications.filters.read.true')}</option>
               </select>
             </div>
+        
+            {/* Reset button */}
             <button
               onClick={() => setFilters({})}
               className="w-full px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
             >
-              Réinitialiser les filtres
+              {t('notifications.filters.reset')}
             </button>
           </div>
         )}
+
 
         {/* Notifications List */}
         <div className="flex-1 overflow-y-auto">
