@@ -174,6 +174,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
           >
             <Trash2 className="w-4 h-4" />
             Effacer
+            {t('notifications.clear')}
           </button>
         </div>
 
