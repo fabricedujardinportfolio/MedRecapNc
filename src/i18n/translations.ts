@@ -24,6 +24,15 @@ export const translations = {
     'login.footer.built': 'Développé avec ❤️ par',
     'login.footer.copyright': '© 2025 MedRecap+ - Nouvelle-Calédonie',
     'login.language.label': 'Langue / Language',
+    'login.types.title': 'Types de comptes :',
+    'login.types.superadmin': 'Super Admin:',
+    'login.types.admin': 'Admin Tech:',
+    'login.types.auditor': 'Auditeur:',
+    'login.types.cabinet': 'Médecin Cabinet:',
+    'login.types.description.superadmin': 'Accès complet système hospitalier',
+    'login.types.description.admin': 'Gestion technique hospitalière',
+    'login.types.description.auditor': 'Consultation logs et rapports',
+    'login.types.description.cabinet': 'Gestion cabinet médical complet',
 
     // Header
     'header.title': 'MedRecap+',
@@ -334,6 +343,16 @@ export const translations = {
     'login.footer.built': 'Built with ❤️ with',
     'login.footer.copyright': '© 2025 MedRecap+ - New Caledonia',
     'login.language.label': 'Language / Langue',
+    'login.types.title': 'Account Types:',
+    'login.types.superadmin': 'Super Admin:',
+    'login.types.admin': 'Tech Admin:',
+    'login.types.auditor': 'Auditor:',
+    'login.types.cabinet': 'Practice Doctor:',
+    'login.types.description.superadmin': 'Full hospital system access',
+    'login.types.description.admin': 'Hospital technical management',
+    'login.types.description.auditor': 'Logs and reports consultation',
+    'login.types.description.cabinet': 'Complete medical practice management',
+
 
     // Header
     'header.title': 'MedRecap+',
