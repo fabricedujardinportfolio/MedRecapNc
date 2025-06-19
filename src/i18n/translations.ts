@@ -184,6 +184,32 @@ export const translations = {
     'notifications.clear': 'Effacer',
     'notifications.empty.title': 'Aucune notification',
     'notifications.empty.subtitle': 'Vous êtes à jour !',
+    //Notif filtre
+    'notifications.filters.type.all': 'Tous les types',
+    'notifications.filters.type.urgent': 'Urgent',
+    'notifications.filters.type.alert': 'Alerte',
+    'notifications.filters.type.warning': 'Attention',
+    'notifications.filters.type.success': 'Succès',
+    'notifications.filters.type.info': 'Information',
+    
+    'notifications.filters.priority.all': 'Toutes priorités',
+    'notifications.filters.priority.critical': 'Critique',
+    'notifications.filters.priority.high': 'Haute',
+    'notifications.filters.priority.medium': 'Moyenne',
+    'notifications.filters.priority.low': 'Basse',
+    
+    'notifications.filters.category.all': 'Toutes catégories',
+    'notifications.filters.category.medical': 'Médical',
+    'notifications.filters.category.administrative': 'Administratif',
+    'notifications.filters.category.system': 'Système',
+    'notifications.filters.category.security': 'Sécurité',
+    
+    'notifications.filters.read.all': 'Toutes',
+    'notifications.filters.read.true': 'Lues',
+    'notifications.filters.read.false': 'Non lues',
+    
+    'notifications.filters.reset': 'Réinitialiser les filtres',
+
 
     // Footer
     'footer.description': 'Système professionnel de gestion des dossiers patients pour la Nouvelle-Calédonie.',
@@ -504,6 +530,33 @@ export const translations = {
     'notifications.clear': 'Clear',
     'notifications.empty.title': 'No notifications',
     'notifications.empty.subtitle': 'You\'re all caught up!',
+
+    // Filter notif
+    'notifications.filters.type.all': 'All types',
+    'notifications.filters.type.urgent': 'Urgent',
+    'notifications.filters.type.alert': 'Alert',
+    'notifications.filters.type.warning': 'Warning',
+    'notifications.filters.type.success': 'Success',
+    'notifications.filters.type.info': 'Information',
+    
+    'notifications.filters.priority.all': 'All priorities',
+    'notifications.filters.priority.critical': 'Critical',
+    'notifications.filters.priority.high': 'High',
+    'notifications.filters.priority.medium': 'Medium',
+    'notifications.filters.priority.low': 'Low',
+    
+    'notifications.filters.category.all': 'All categories',
+    'notifications.filters.category.medical': 'Medical',
+    'notifications.filters.category.administrative': 'Administrative',
+    'notifications.filters.category.system': 'System',
+    'notifications.filters.category.security': 'Security',
+    
+    'notifications.filters.read.all': 'All',
+    'notifications.filters.read.true': 'Read',
+    'notifications.filters.read.false': 'Unread',
+    
+    'notifications.filters.reset': 'Reset filters',
+
 
     // Footer
     'footer.description': 'Professional patient record management system for New Caledonia.',
