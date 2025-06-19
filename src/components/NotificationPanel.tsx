@@ -116,9 +116,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
               <Bell className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Notifications</h2>
+              <h2 className="text-lg font-semibold text-gray-900"> 
+                  {t('notifications.title')}</h2>
               <p className="text-sm text-gray-600">
-                {stats.unread} non lues sur {stats.total}
+                {stats.unread} {t('notifications.unread')} {stats.total}
               </p>
             </div>
           </div>
@@ -136,14 +137,14 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
             <div className="bg-white rounded-lg p-3 border">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-red-600" />
-                <span className="text-sm font-medium text-gray-700">Critiques</span>
+                <span className="text-sm font-medium text-gray-700">{t('notifications.critical')}</span>
               </div>
               <p className="text-xl font-bold text-red-600">{stats.critical}</p>
             </div>
             <div className="bg-white rounded-lg p-3 border">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-orange-600" />
-                <span className="text-sm font-medium text-gray-700">Actions</span>
+                <span className="text-sm font-medium text-gray-700">{t('notifications.actions')}</span>
               </div>
               <p className="text-xl font-bold text-orange-600">{stats.actionRequired}</p>
             </div>
@@ -160,7 +161,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
               }`}
             >
               <Filter className="w-4 h-4" />
-              Filtres
+                {t('notifications.filters')}
             </button>
             {stats.unread > 0 && (
               <button
@@ -168,7 +169,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                 className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors"
               >
                 <CheckCheck className="w-4 h-4" />
-                Tout lire
+                  {t('notifications.read.all')}
               </button>
             )}
           </div>
@@ -177,7 +178,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
             className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition-colors"
           >
             <Trash2 className="w-4 h-4" />
-            {t('notifications.clear')}
+              {t('notifications.clear')}
           </button>
         </div>
 
@@ -248,8 +249,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-500">
               <Bell className="w-12 h-12 mb-4 text-gray-300" />
-              <p className="text-lg font-medium">Aucune notification</p>
-              <p className="text-sm">Vous êtes à jour !</p>
+              <p className="text-lg font-medium">
+               {t('notifications.empty.title')}
+              </p>
+              <p className="text-sm">{t('notifications.empty.subtitle')}</p>
             </div>
           ) : (
             <div className="space-y-1 p-2">
