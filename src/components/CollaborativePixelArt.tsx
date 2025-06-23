@@ -620,7 +620,7 @@ export const CollaborativePixelArt: React.FC = () => {
               </button>
               
                 {/* Logo Bolt */}
-                <div className="mt-4 flex justify-center">
+                <div className="flex justify-center">
                   <a
                     href="https://bolt.new"
                     target="_blank"
