@@ -222,6 +222,9 @@ export const translations = {
     'footer.updated': 'Dernière mise à jour du système: 15 janvier 2025',
     'footer.status': 'Système opérationnel',
     'footer.latency': 'Latence: <150ms',
+    'footer.hds': 'Hébergeur Données de Santé',
+    'footer.ISO': 'Sécurité de l\'information',
+    'footer.GDPR': 'Protection des données',
 
     // Collaborative Pixel Art
     'pixel.art.title': 'Art Collaboratif',
@@ -570,6 +573,9 @@ export const translations = {
     'footer.updated': 'Last system update: January 15, 2025',
     'footer.status': 'System operational',
     'footer.latency': 'Latency: <150ms',
+    'footer.hds': 'Health Data Hosting Provider',
+    'footer.ISO': 'Information Security',
+    'footer.GDPR': 'Data Protection',
 
     // Collaborative Pixel Art - NOUVELLES TRADUCTIONS COMPLÈTES
     'pixel.art.title': 'Collaborative Art',
