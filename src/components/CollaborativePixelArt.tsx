@@ -618,6 +618,18 @@ export const CollaborativePixelArt: React.FC = () => {
               >
                 <Download className="w-5 h-5" />
               </button>
+              
+                {/* Logo Bolt */}
+                <div className="mt-4 flex justify-center">
+                  <a
+                    href="https://bolt.new"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Powered by Bolt"
+                  >
+                    <img src="/bolt.png" alt="Bolt Logo" className="max-h-10 w-auto" />
+                  </a>
+                </div>
             </div>
           </div>
         </div>
