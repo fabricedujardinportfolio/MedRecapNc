@@ -57,7 +57,6 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
                 <h1 className="text-xl font-bold text-gray-900">{t('header.title')}</h1>
                 <p className="text-xs text-gray-500">{t('header.subtitle')}</p>
               </div>
-            </div>
             
           {/* Logo Bolt */}
           <div className="mt-4 flex justify-center">
@@ -65,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
               <img src="/bolt.png" alt="Bolt Logo" className="h-10" />
             </a>
           </div>
+            </div>
 
             {/* User Info and Actions */}
             <div className="flex items-center gap-4">
