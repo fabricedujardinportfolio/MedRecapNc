@@ -44,13 +44,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, isLoading }) => {
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('login.title')}</h1>
           <p className="text-gray-600">{t('login.subtitle')}</p>
+          {/* Logo Bolt */}
+          <div className="mt-4 flex justify-center">
+            <a href="https://bolt.new" target="_blank" rel="noopener noreferrer" title="Powered by Bolt">
+              <img src="/bolt-logo.png" alt="Bolt Logo" className="h-6" />
+            </a>
+          </div>
           <div className="flex items-center justify-center gap-2 mt-2 text-xs text-gray-500">
             <div className="w-2 h-2 bg-green-500 rounded-full"></div>
             <span>{t('login.compliance')}</span>
           </div>
         </div>
-
-        <a id="bolt-button" href="https://bolt.new" target="_blank" title="Powered By Bolt"></a>
         
         {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
