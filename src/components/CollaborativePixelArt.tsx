@@ -800,7 +800,7 @@ export const CollaborativePixelArt: React.FC = () => {
                   ✅ {t('pixel.art.realtime.stored')} • {pixels.length} pixels chargés
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
-                  🔧 <strong>Pixels cohérents</strong> - Taille fixe 2px pour tous !
+                  {t('pixel.art.realtime.sizepixels')}
                 </p>
               </div>
             </div>
