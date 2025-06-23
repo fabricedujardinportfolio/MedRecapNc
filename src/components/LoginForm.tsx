@@ -46,8 +46,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, isLoading }) => {
           <p className="text-gray-600">{t('login.subtitle')}</p>
           {/* Logo Bolt */}
           <div className="mt-4 flex justify-center">
-            <a href="https://bolt.new" target="_blank" rel="noopener noreferrer" title="Powered by Bolt">
-              <img src="/bolt.png" alt="Bolt Logo" className="h-10" />
+            <a
+              href="https://bolt.new"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Powered by Bolt"
+            >
+              <img src="/bolt.png" alt="Bolt Logo" className="max-h-10 w-auto" />
             </a>
           </div>
           <div className="flex items-center justify-center gap-2 mt-2 text-xs text-gray-500">
