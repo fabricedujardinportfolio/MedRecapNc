@@ -60,7 +60,7 @@ export const Footer: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-sm font-medium">HDS</p>
-                    <p className="text-xs text-gray-400">Hébergeur Données de Santé</p>
+                    <p className="text-xs text-gray-400">{t('footer.hds')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -69,7 +69,7 @@ export const Footer: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-sm font-medium">ISO 27001/27017</p>
-                    <p className="text-xs text-gray-400">Sécurité de l'information</p>
+                    <p className="text-xs text-gray-400">{t('footer.ISO')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -78,7 +78,7 @@ export const Footer: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-sm font-medium">RGPD</p>
-                    <p className="text-xs text-gray-400">Protection des données</p>
+                    <p className="text-xs text-gray-400">{t('footer.GDPR')}</p>
                   </div>
                 </div>
               </div>
