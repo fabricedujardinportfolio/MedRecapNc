@@ -56,13 +56,6 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
               <div>
                 <h1 className="text-xl font-bold text-gray-900">{t('header.title')}</h1>
                 <p className="text-xs text-gray-500">{t('header.subtitle')}</p>
-                
-          {/* Logo Bolt */}
-          <div className="mt-4 flex justify-center">
-            <a href="https://bolt.new" target="_blank" rel="noopener noreferrer" title="Powered by Bolt">
-              <img src="/bolt.png" alt="Bolt Logo" className="h-10" />
-            </a>
-          </div>  
               </div>
             </div>
 
@@ -155,6 +148,13 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
                 <LogOut className="w-4 h-4" />
                 {t('header.logout')}
               </button>
+              
+          {/* Logo Bolt */}
+          <div className="mt-4 flex justify-center">
+            <a href="https://bolt.new" target="_blank" rel="noopener noreferrer" title="Powered by Bolt">
+              <img src="/bolt.png" alt="Bolt Logo" className="h-10" />
+            </a>
+          </div>
             </div>
           </div>
         </div>
