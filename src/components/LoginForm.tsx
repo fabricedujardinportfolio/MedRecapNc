@@ -50,6 +50,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, isLoading }) => {
           </div>
         </div>
 
+        <a id="bolt-button" href="https://bolt.new" target="_blank" title="Powered By Bolt"></a>
+        
         {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
