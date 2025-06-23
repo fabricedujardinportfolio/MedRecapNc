@@ -151,8 +151,13 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
               
               {/* Logo Bolt */}
               <div className="flex justify-center">
-                <a href="https://bolt.new" target="_blank" rel="noopener noreferrer" title="Powered by Bolt">
-                  <img src="/bolt.png" alt="Bolt Logo" className="h-10" />
+                <a
+                  href="https://bolt.new"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Powered by Bolt"
+                >
+                  <img src="/bolt.png" alt="Bolt Logo" className="max-h-10 w-auto" />
                 </a>
               </div>
             </div>
