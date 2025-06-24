@@ -983,19 +983,18 @@ export const CabinetDashboard: React.FC = () => {
                             {format(new Date(rdv.date), 'dd/MM/yyyy', { locale })}
                           </p>
                         </div>
-                        
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-xs font-medium text-gray-500 mb-1">Horaire</p>
+                          <p className="text-xs font-medium text-gray-500 mb-1">{t('appointment.time')}</p>
                           <p className="text-sm font-medium text-gray-900">{rdv.heure_debut} - {rdv.heure_fin}</p>
                         </div>
                         
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-xs font-medium text-gray-500 mb-1">Type</p>
+                          <p className="text-xs font-medium text-gray-500 mb-1">{t('appointment.type')}</p>
                           <p className="text-sm text-gray-900 capitalize">{rdv.type}</p>
                         </div>
                         
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-xs font-medium text-gray-500 mb-1">Lieu</p>
+                          <p className="text-xs font-medium text-gray-500 mb-1">{t('appointment.location')}</p>
                           <p className="text-sm text-gray-900">{rdv.salle}</p>
                         </div>
                       </div>
