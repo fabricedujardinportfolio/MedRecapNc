@@ -182,7 +182,7 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Patient *
+                    {t('invoice.patient')}
                   </label>
                   <select
                     value={formData.patient_id}
