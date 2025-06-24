@@ -935,6 +935,8 @@ export const CabinetDashboard: React.FC = () => {
                 {isLoadingRendezVous && (
                   <span className="ml-2 text-blue-600">
                     <RefreshCw className="w-4 h-4 inline animate-spin mr-1" />
+                    
+                    {t('appointments.load')}
                     Chargement...
                   </span>
                 )}
