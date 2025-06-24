@@ -254,7 +254,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Diagnostic
+                    {t('consultation.diagnosis')}
                   </label>
                   <textarea
                     value={formData.diagnostic}
