@@ -402,7 +402,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  Sauvegarder
+                  {t('common.save')}
                 </>
               )}
             </button>
