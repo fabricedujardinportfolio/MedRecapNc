@@ -567,6 +567,11 @@ export const translations = {
     'consultation.status_in_progress': 'In progress',
     'consultation.status_finished': 'Finished',
     'consultation.status_cancelled': 'Cancelled',
+    'consultation.reason_and_diagnosis': 'Reason and diagnosis',
+    'consultation.reason': 'Reason for consultation',
+    'consultation.diagnosis': 'Diagnosis',
+    'consultation.treatment': 'Treatment',
+    'consultation.observations': 'Observations',
 
     // Invoice Status
     'invoice': 'Invoice',
