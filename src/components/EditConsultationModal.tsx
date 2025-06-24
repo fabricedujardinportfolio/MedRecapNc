@@ -312,7 +312,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Pouls (bpm)
+                    {t('consultation.pulse')}
                   </label>
                   <input
                     type="number"
