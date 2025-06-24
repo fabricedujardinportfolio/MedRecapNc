@@ -208,15 +208,15 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="consultation">{t('consultation.type_consultation')}</option>
-                    <option value="visite">Visite</option>
-                    <option value="urgence">Urgence</option>
-                    <option value="suivi">Suivi</option>
+                    <option value="visite">{t('consultation.type_visit')}</option>
+                    <option value="urgence">{t('consultation.type_emergency')}</option>
+                    <option value="suivi">{t('consultation.type_followup')}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Statut
+                    {t('consultation.status')}
                   </label>
                   <select
                     value={formData.statut}
