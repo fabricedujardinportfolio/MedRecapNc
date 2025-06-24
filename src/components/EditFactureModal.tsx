@@ -218,7 +218,7 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date d'échéance
+                    {t('invoice.due_date')}
                   </label>
                   <input
                     type="date"
