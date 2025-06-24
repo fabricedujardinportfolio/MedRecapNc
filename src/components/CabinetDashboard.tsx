@@ -937,7 +937,6 @@ export const CabinetDashboard: React.FC = () => {
                     <RefreshCw className="w-4 h-4 inline animate-spin mr-1" />
                     
                     {t('appointments.load')}
-                    Chargement...
                   </span>
                 )}
               </p>
