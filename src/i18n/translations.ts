@@ -177,6 +177,11 @@ export const translations = {
     'consultation.status_in_progress': 'En cours',
     'consultation.status_finished': 'Terminée',
     'consultation.status_cancelled': 'Annulée',
+    'consultation.reason_and_diagnosis': 'Motif et diagnostic',
+    'consultation.reason': 'Motif de consultation',
+    'consultation.diagnosis': 'Diagnostic',
+    'consultation.treatment': 'Traitement',
+    'consultation.observations': 'Observations',
 
     // Invoice Status
     'invoice': 'Facture',
