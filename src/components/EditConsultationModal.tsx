@@ -137,7 +137,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Patient
+                    {t('consultation.patient')}
                   </label>
                   <select
                     value={formData.patient_id}
