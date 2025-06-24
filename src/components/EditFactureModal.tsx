@@ -190,9 +190,9 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     required
                   >
-                    <option value="">Sélectionner un patient</option>
+                    <option value="">{t('invoice.select_patient')}</option>
                     {isLoadingPatients ? (
-                      <option value="" disabled>Chargement des patients...</option>
+                      <option value="" disabled>{t('invoice.loading_patients')}</option>
                     ) : (
                       patients.map(patient => (
                         <option key={patient.id} value={patient.id}>
@@ -205,7 +205,7 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date de facture
+                    {t('invoice.date')}
                   </label>
                   <input
                     type="date"
