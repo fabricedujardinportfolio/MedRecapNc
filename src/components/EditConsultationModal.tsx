@@ -173,7 +173,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date et Heure
+                    {t('consultation.date_time')}
                   </label>
                   <input
                     type="datetime-local"
