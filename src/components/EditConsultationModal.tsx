@@ -241,7 +241,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Motif de consultation
+                    {t('consultation.reason')}
                   </label>
                   <input
                     type="text"
