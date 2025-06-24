@@ -331,7 +331,7 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Montant payé (€)
+                    {t('invoice.amount_paid')}
                   </label>
                   <input
                     type="number"
@@ -346,7 +346,7 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Reste à payer (€)
+                    {t('invoice.amount_due')}
                   </label>
                   <input
                     type="number"
@@ -358,18 +358,18 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Statut
+                    {t('invoice.status')}
                   </label>
                   <select
                     value={formData.statut}
                     onChange={(e) => setFormData(prev => ({ ...prev, statut: e.target.value as any }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
-                    <option value="en_attente">En attente</option>
-                    <option value="partiellement_payee">Partiellement payée</option>
-                    <option value="payee">Payée</option>
-                    <option value="en_retard">En retard</option>
-                    <option value="annulee">Annulée</option>
+                    <option value="en_attente">{t('invoice.status_pending')}</option>
+                    <option value="partiellement_payee">{t('invoice.status_partial')}</option>
+                    <option value="payee">{t('invoice.status_paid')}</option>
+                    <option value="en_retard">{t('invoice.status_late')}</option>
+                    <option value="annulee">{t('invoice.status_cancelled')}</option>
                   </select>
                 </div>
                 
