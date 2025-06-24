@@ -383,11 +383,11 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
                     <option value="">Sélectionner</option>
-                    <option value="especes">Espèces</option>
-                    <option value="carte">Carte bancaire</option>
-                    <option value="cheque">Chèque</option>
-                    <option value="virement">Virement</option>
-                    <option value="securite_sociale">Sécurité sociale</option>
+                    <option value="especes">{t('invoice.method_cash')}</option>
+                    <option value="carte">{t('invoice.method_card')}</option>
+                    <option value="cheque">{t('invoice.method_cheque')}</option>
+                    <option value="virement">{t('invoice.method_transfer')}</option>
+                    <option value="securite_sociale">{t('invoice.method_social_security')}</option>
                   </select>
                 </div>
               </div>
