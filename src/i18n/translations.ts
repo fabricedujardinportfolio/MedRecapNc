@@ -213,6 +213,57 @@ export const translations = {
     'invoice.out_of_pocket': 'Reste à charge',
     'invoice.none_found': 'Aucune facture trouvée',
     'invoice.start_create': 'Commencez par créer votre première facture',
+     // En-tête
+    'invoice.edit': 'Modifier la Facture',
+    'invoice.number': 'Numéro de facture',
+    'invoice.patient': 'Patient *',
+    'invoice.select_patient': 'Sélectionner un patient',
+    'invoice.loading_patients': 'Chargement des patients...',
+    'invoice.date': 'Date de facture',
+    'invoice.due_date': "Date d'échéance",
+  
+    // Détails de facturation
+    'invoice.billing_details': 'Détails de facturation',
+    'invoice.add_line': '+ Ajouter une ligne',
+    'invoice.description': 'Description',
+    'invoice.quantity': 'Qté',
+    'invoice.unit_price': 'Prix',
+    'invoice.total': 'Total',
+    'invoice.delete_line': 'Supprimer la ligne',
+  
+    // Paiement et remboursement
+    'invoice.payment_and_reimbursement': 'Paiement et remboursement',
+    'invoice.amount_paid': 'Montant payé (€)',
+    'invoice.amount_due': 'Reste à payer (€)',
+    'invoice.status': 'Statut',
+    'invoice.status_pending': 'En attente',
+    'invoice.status_partial': 'Partiellement payée',
+    'invoice.status_paid': 'Payée',
+    'invoice.status_late': 'En retard',
+    'invoice.status_cancelled': 'Annulée',
+    'invoice.payment_method': 'Méthode de paiement',
+    'invoice.method_cash': 'Espèces',
+    'invoice.method_card': 'Carte bancaire',
+    'invoice.method_cheque': 'Chèque',
+    'invoice.method_transfer': 'Virement',
+    'invoice.method_social_security': 'Sécurité sociale',
+    'invoice.reimbursement': 'Remboursement',
+    'invoice.social_security': 'Sécurité Sociale (€)',
+    'invoice.mutual_insurance': 'Mutuelle (€)',
+    'invoice.out_of_pocket': 'Reste à charge (€)',
+  
+    // Notes
+    'common.notes_optional': 'Notes (optionnel)',
+    'common.notes_placeholder': 'Notes additionnelles...',
+  
+    // Actions et erreurs
+    'common.cancel': 'Annuler',
+    'common.save': 'Sauvegarder',
+    'common.updating': 'Mise à jour...',
+    'common.error': 'Erreur',
+  
+    // Autres
+    'invoice.invoice': 'Facture',
 
     // Appointment Status
     'appointment.status.confirmed': 'Confirmé',
