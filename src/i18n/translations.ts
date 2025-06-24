@@ -514,6 +514,7 @@ export const translations = {
     'consultation.status.cancelled': 'Cancelled',
 
     // Invoice Status
+    'invoice': 'Invoice',
     'invoice.status.paid': 'Paid',
     'invoice.status.pending': 'Pending',
     'invoice.status.partial': 'Partially Paid',
