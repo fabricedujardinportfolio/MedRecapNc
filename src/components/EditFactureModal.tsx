@@ -271,7 +271,7 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
                     <div className="col-span-2">
                       <input
                         type="number"
-                        placeholder="Prix"
+                        placeholder={t('invoice.unit_price')}
                         value={detail.prix_unitaire}
                         onChange={(e) => updateDetail(index, 'prix_unitaire', parseFloat(e.target.value) || 0)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
