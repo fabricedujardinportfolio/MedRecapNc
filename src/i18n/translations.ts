@@ -521,6 +521,13 @@ export const translations = {
     'invoice.status.overdue': 'Overdue',
     'invoice.load': 'Loading...',
     'invoice.load.facture': 'Loading invoices...',
+    'invoice.details': 'Billing details',
+    'invoice.amount_due': 'Amount due',
+    'invoice.paid': 'Paid',
+    'invoice.reimbursement': 'Reimbursement',
+    'invoice.social_security': 'Social Security',
+    'invoice.mutual_insurance': 'Mutual insurance',
+    'invoice.out_of_pocket': 'Out-of-pocket',
 
     // Appointment Status
     'appointment.status.confirmed': 'Confirmed',
