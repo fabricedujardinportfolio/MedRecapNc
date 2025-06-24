@@ -132,7 +132,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
             <div className="bg-gray-50 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <User className="w-5 h-5 text-blue-600" />
-                Informations générales
+                {t('consultation.general_info')}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
