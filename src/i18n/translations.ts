@@ -262,7 +262,8 @@ export const translations = {
     'common.save': 'Sauvegarder',
     'common.updating': 'Mise à jour...',
     'common.error': 'Erreur',
-  
+    'common.select': 'Sélectionner',
+    
     // Autres
     'invoice.invoice': 'Facture',
 
