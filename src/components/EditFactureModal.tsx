@@ -375,7 +375,7 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Méthode de paiement
+                    {t('invoice.payment_method')}
                   </label>
                   <select
                     value={formData.methode_paiement || ''}
