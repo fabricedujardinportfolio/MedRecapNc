@@ -300,7 +300,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tension
+                    {t('consultation.blood_pressure')}
                   </label>
                   <input
                     type="text"
