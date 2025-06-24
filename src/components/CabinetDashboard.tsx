@@ -833,19 +833,18 @@ export const CabinetDashboard: React.FC = () => {
                             {format(new Date(facture.date), 'dd/MM/yyyy', { locale })}
                           </p>
                         </div>
-                        
                         <div className="bg-gray-50 rounded-lg p-3">
                           <p className="text-xs font-medium text-gray-500 mb-1">{t('common.total')}</p>
                           <p className="text-sm font-bold text-gray-900">{facture.montant_total}€</p>
                         </div>
                         
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-xs font-medium text-gray-500 mb-1">Payé</p>
+                          <p className="text-xs font-medium text-gray-500 mb-1">{t('invoice.paid')}</p>
                           <p className="text-sm font-medium text-green-600">{facture.montant_paye}€</p>
                         </div>
                         
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-xs font-medium text-gray-500 mb-1">Reste à payer</p>
+                          <p className="text-xs font-medium text-gray-500 mb-1">{t('invoice.amount_due')}</p>
                           <p className={`text-sm font-bold ${facture.montant_restant > 0 ? 'text-red-600' : 'text-green-600'}`}>
                             {facture.montant_restant}€
                           </p>
@@ -854,7 +853,7 @@ export const CabinetDashboard: React.FC = () => {
 
                       {(facture as any).facture_details && (facture as any).facture_details.length > 0 && (
                         <div className="bg-blue-50 rounded-lg p-3 mb-4">
-                          <p className="text-xs font-medium text-blue-800 mb-2">Détails de facturation</p>
+                          <p className="text-xs font-medium text-blue-800 mb-2">{t('invoice.details')}</p>
                           {(facture as any).facture_details.map((detail: any, index: number) => (
                             <div key={index} className="flex justify-between text-sm text-blue-900">
                               <span>{detail.description} (x{detail.quantite})</span>
@@ -863,21 +862,21 @@ export const CabinetDashboard: React.FC = () => {
                           ))}
                         </div>
                       )}
-
+                      
                       {facture.remboursement_securite_sociale > 0 && (
                         <div className="bg-green-50 rounded-lg p-3">
-                          <p className="text-xs font-medium text-green-800 mb-2">Remboursement</p>
+                          <p className="text-xs font-medium text-green-800 mb-2">{t('invoice.reimbursement')}</p>
                           <div className="grid grid-cols-3 gap-4 text-sm text-green-900">
                             <div>
-                              <span className="text-xs text-green-600">Sécurité Sociale</span>
+                              <span className="text-xs text-green-600">{t('invoice.social_security')}</span>
                               <p className="font-medium">{facture.remboursement_securite_sociale}€</p>
                             </div>
                             <div>
-                              <span className="text-xs text-green-600">Mutuelle</span>
+                              <span className="text-xs text-green-600">{t('invoice.mutual_insurance')}</span>
                               <p className="font-medium">{facture.remboursement_mutuelle}€</p>
                             </div>
                             <div>
-                              <span className="text-xs text-green-600">Reste à charge</span>
+                              <span className="text-xs text-green-600">{t('invoice.out_of_pocket')}</span>
                               <p className="font-medium">{facture.remboursement_reste_a_charge}€</p>
                             </div>
                           </div>
