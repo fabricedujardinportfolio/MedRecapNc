@@ -382,7 +382,7 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
                     onChange={(e) => setFormData(prev => ({ ...prev, methode_paiement: e.target.value || undefined }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
-                    <option value="">Sélectionner</option>
+                    <option value="">{t('common.select')}</option>
                     <option value="especes">{t('invoice.method_cash')}</option>
                     <option value="carte">{t('invoice.method_card')}</option>
                     <option value="cheque">{t('invoice.method_cheque')}</option>
