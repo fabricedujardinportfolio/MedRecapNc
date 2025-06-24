@@ -193,6 +193,8 @@ export const translations = {
     'appointment.available': 'disponibles',
     'appointment.none_found': 'Aucun rendez-vous trouvé',
     'appointment.start_create': 'Commencez par créer votre premier rendez-vous',
+    'appointment.reminder_sent': 'Rappel envoyé',
+    'appointment.reminder_not_sent': 'Rappel non envoyé',
 
     // Notifications
     'notifications.title': 'Notifications',
@@ -563,6 +565,8 @@ export const translations = {
     'appointment.available': 'available',
     'appointment.none_found': 'No appointments found',
     'appointment.start_create': 'Start by creating your first appointment',
+    'appointment.reminder_sent': 'Reminder sent',
+    'appointment.reminder_not_sent': 'Reminder not sent',
 
     // Notifications
     'notifications.title': 'Notifications',
