@@ -190,7 +190,7 @@ export const translations = {
     'appointment.time': 'Horaire',
     'appointment.type': 'Type',
     'appointment.location': 'Lieu',
-    
+    'appointment.available': 'disponibles',
 
     // Notifications
     'notifications.title': 'Notifications',
@@ -558,6 +558,7 @@ export const translations = {
     'appointment.time': 'Time',
     'appointment.type': 'Type',
     'appointment.location': 'Location',
+    'appointment.available': 'available',
 
     // Notifications
     'notifications.title': 'Notifications',
