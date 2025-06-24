@@ -165,8 +165,8 @@ export const translations = {
     'invoice.status.pending': 'En attente',
     'invoice.status.partial': 'Partiellement payée',
     'invoice.status.overdue': 'En retard',
-    'invoice.load': 'Chargement...'
-    'invoice.load.facture': 'Chargement des factures...'
+    'invoice.load': 'Chargement...',
+    'invoice.load.facture': 'Chargement des factures...',
 
     // Appointment Status
     'appointment.status.confirmed': 'Confirmé',
@@ -517,8 +517,8 @@ export const translations = {
     'invoice.status.pending': 'Pending',
     'invoice.status.partial': 'Partially Paid',
     'invoice.status.overdue': 'Overdue',
-    'invoice.load': 'Chargement...'
-    'invoice.load.facture': 'Chargement des factures...'
+    'invoice.load': 'Chargement...',
+    'invoice.load.facture': 'Chargement des factures...',
 
     // Appointment Status
     'appointment.status.confirmed': 'Confirmed',
