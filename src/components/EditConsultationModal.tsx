@@ -147,7 +147,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
                   >
                     <option value="">{t('consultation.select_patient')}</option>
                     {isLoadingPatients ? (
-                      <option value="" disabled>Chargement des patients...</option>
+                      <option value="" disabled>{t('consultation.loading_patients')}</option>
                     ) : (
                       patients.map(patient => (
                         <option key={patient.id} value={patient.id}>
