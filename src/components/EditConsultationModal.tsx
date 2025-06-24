@@ -207,7 +207,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
                     onChange={(e) => handleInputChange('type', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="consultation">Consultation</option>
+                    <option value="consultation">{t('consultation.type_consultation')}</option>
                     <option value="visite">Visite</option>
                     <option value="urgence">Urgence</option>
                     <option value="suivi">Suivi</option>
