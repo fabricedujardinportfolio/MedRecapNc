@@ -186,6 +186,8 @@ export const translations = {
     'appointment.status.cancelled': 'Annulé',
     'appointment.status.postponed': 'Reporté',
     'appointment.load': 'Chargement...',
+    'appointment.loading': 'Chargement des rendez-vous...',
+    
 
     // Notifications
     'notifications.title': 'Notifications',
@@ -549,6 +551,7 @@ export const translations = {
     'appointment.status.cancelled': 'Cancelled',
     'appointment.status.postponed': 'Postponed',
     'appointment.load': 'Loading...',
+    'appointment.loading': 'Loading appointments...',
 
     // Notifications
     'notifications.title': 'Notifications',
