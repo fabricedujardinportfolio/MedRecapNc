@@ -784,7 +784,7 @@ export const CabinetDashboard: React.FC = () => {
                 {isLoadingFactures && (
                   <span className="ml-2 text-blue-600">
                     <RefreshCw className="w-4 h-4 inline animate-spin mr-1" />
-                    Chargement...
+                    {t('invoice.load')}
                   </span>
                 )}
               </p>
@@ -800,7 +800,7 @@ export const CabinetDashboard: React.FC = () => {
           {isLoadingFactures ? (
             <div className="text-center py-8">
               <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-purple-600" />
-              <p className="text-gray-600">Chargement des factures...</p>
+              <p className="text-gray-600">{t('invoice.load.facture')}</p>
             </div>
           ) : facturesFromDB.length > 0 ? (
             <div className="grid gap-4">
