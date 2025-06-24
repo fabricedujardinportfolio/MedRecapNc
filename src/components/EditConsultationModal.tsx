@@ -236,7 +236,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
             <div className="bg-blue-50 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-blue-600" />
-                Motif et diagnostic
+                {t('consultation.reason_and_diagnosis')}
               </h3>
               <div className="space-y-4">
                 <div>
