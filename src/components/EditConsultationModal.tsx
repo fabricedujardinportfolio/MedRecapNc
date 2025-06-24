@@ -387,7 +387,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
               className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               disabled={isLoading}
             >
-              Annuler
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
