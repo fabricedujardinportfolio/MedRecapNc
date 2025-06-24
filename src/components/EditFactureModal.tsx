@@ -450,7 +450,7 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
             {/* Notes */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notes (optionnel)
+                {t('common.notes_optional')}
               </label>
               <textarea
                 value={formData.notes || ''}
