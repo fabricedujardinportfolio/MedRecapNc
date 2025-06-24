@@ -145,7 +145,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   >
-                    <option value="">Sélectionner un patient</option>
+                    <option value="">{t('consultation.select_patient')}</option>
                     {isLoadingPatients ? (
                       <option value="" disabled>Chargement des patients...</option>
                     ) : (
