@@ -323,7 +323,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Température (°C)
+                    {t('consultation.temperature')}
                   </label>
                   <input
                     type="number"
