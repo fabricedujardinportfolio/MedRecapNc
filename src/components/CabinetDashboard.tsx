@@ -813,7 +813,7 @@ export const CabinetDashboard: React.FC = () => {
                           <FileText className="w-5 h-5 text-purple-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900">Facture {facture.numero}</h3>
+                          <h3 className="font-semibold text-gray-900">{t('invoice')}Facture {facture.numero}</h3>
                           <p className="text-sm text-gray-600">
                             {t('common.patient')}: {(facture as any).patients?.prenom} {(facture as any).patients?.nom}
                           </p>
