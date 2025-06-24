@@ -487,12 +487,12 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
               {isLoading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Mise à jour...
+                  {t('common.updating')}
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  Sauvegarder
+                  {t('common.save')}
                 </>
               )}
             </button>
