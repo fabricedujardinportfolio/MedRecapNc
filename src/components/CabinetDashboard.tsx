@@ -952,7 +952,7 @@ export const CabinetDashboard: React.FC = () => {
           {isLoadingRendezVous ? (
             <div className="text-center py-8">
               <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-orange-600" />
-              <p className="text-gray-600">Chargement des rendez-vous...</p>
+              <p className="text-gray-600">{t('appointment.loading')}</p>
             </div>
           ) : rendezVousFromDB.length > 0 ? (
             <div className="grid gap-4">
