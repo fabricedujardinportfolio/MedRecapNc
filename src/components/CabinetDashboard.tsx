@@ -1014,7 +1014,7 @@ export const CabinetDashboard: React.FC = () => {
                         {rdv.notes && (
                           <div className="flex items-center gap-2 text-gray-600">
                             <AlertCircle className="w-4 h-4" />
-                            <span>{t('common.notes')} disponibles</span>
+                            <span>{t('common.notes')} {t('appointment.available')}</span>
                           </div>
                         )}
                       </div>
