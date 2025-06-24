@@ -168,6 +168,13 @@ export const translations = {
     'invoice.status.overdue': 'En retard',
     'invoice.load': 'Chargement...',
     'invoice.load.facture': 'Chargement des factures...',
+    'invoice.details': 'Détails de facturation',
+    'invoice.amount_due': 'Reste à payer',
+    'invoice.paid': 'Payé',
+    'invoice.reimbursement': 'Remboursement',
+    'invoice.social_security': 'Sécurité Sociale',
+    'invoice.mutual_insurance': 'Mutuelle',
+    'invoice.out_of_pocket': 'Reste à charge',
 
     // Appointment Status
     'appointment.status.confirmed': 'Confirmé',
