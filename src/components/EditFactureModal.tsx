@@ -326,7 +326,7 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
             <div className="bg-green-50 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-green-600" />
-                Paiement et remboursement
+                {t('invoice.payment_and_reimbursement')}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
