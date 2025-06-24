@@ -517,8 +517,8 @@ export const translations = {
     'invoice.status.pending': 'Pending',
     'invoice.status.partial': 'Partially Paid',
     'invoice.status.overdue': 'Overdue',
-    'invoice.load': 'Chargement...',
-    'invoice.load.facture': 'Chargement des factures...',
+    'invoice.load': 'Loading...',
+    'invoice.load.facture': 'Loading invoices...',
 
     // Appointment Status
     'appointment.status.confirmed': 'Confirmed',
