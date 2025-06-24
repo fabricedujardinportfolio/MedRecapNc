@@ -223,10 +223,10 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
                     onChange={(e) => handleInputChange('statut', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="programmee">Programmée</option>
-                    <option value="en_cours">En cours</option>
-                    <option value="terminee">Terminée</option>
-                    <option value="annulee">Annulée</option>
+                    <option value="programmee">{t('consultation.status_scheduled')}</option>
+                    <option value="en_cours">{t('consultation.status_in_progress')}</option>
+                    <option value="terminee">{t('consultation.status_finished')}</option>
+                    <option value="annulee">{t('consultation.status_cancelled')}</option>
                   </select>
                 </div>
               </div>
