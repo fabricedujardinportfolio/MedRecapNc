@@ -182,6 +182,19 @@ export const translations = {
     'consultation.diagnosis': 'Diagnostic',
     'consultation.treatment': 'Traitement',
     'consultation.observations': 'Observations',
+    'consultation.vital_signs': 'Signes vitaux',
+    'consultation.blood_pressure': 'Tension',
+    'consultation.pulse': 'Pouls (bpm)',
+    'consultation.temperature': 'Température (°C)',
+    'consultation.weight': 'Poids (kg)',
+    'consultation.pricing': 'Tarification',
+    'consultation.fee': 'Tarif (€)',
+    'common.cancel': 'Annuler',
+    'common.save': 'Sauvegarder',
+    'common.updating': 'Mise à jour...',
+    // Pour les erreurs génériques
+    'common.error': 'Erreur',
+    
 
     // Invoice Status
     'invoice': 'Facture',
