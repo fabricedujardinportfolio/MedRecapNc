@@ -590,6 +590,18 @@ export const translations = {
     'consultation.diagnosis': 'Diagnosis',
     'consultation.treatment': 'Treatment',
     'consultation.observations': 'Observations',
+    'consultation.vital_signs': 'Vital signs',
+    'consultation.blood_pressure': 'Blood pressure',
+    'consultation.pulse': 'Pulse (bpm)',
+    'consultation.temperature': 'Temperature (°C)',
+    'consultation.weight': 'Weight (kg)',
+    'consultation.pricing': 'Pricing',
+    'consultation.fee': 'Fee (€)',
+    'common.cancel': 'Cancel',
+    'common.save': 'Save',
+    'common.updating': 'Updating...',
+    // For generic errors
+    'common.error': 'Error',
 
     // Invoice Status
     'invoice': 'Invoice',
