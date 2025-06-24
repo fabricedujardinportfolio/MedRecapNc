@@ -145,7 +145,8 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
               <h2 className="text-xl font-bold text-gray-900">
                 {t('invoice.edit')}
               </h2>
-              <p className="text-gray-600">Facture {formData.numero}</p>
+              <p className="text-gray-600">
+                {t('invoice')} {formData.numero}</p>
             </div>
           </div>
           <button
