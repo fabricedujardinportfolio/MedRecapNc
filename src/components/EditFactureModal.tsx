@@ -392,11 +392,11 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
                 </div>
               </div>
               
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Remboursement</h4>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">{t('invoice.reimbursement')}</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">
-                    Sécurité Sociale (€)
+                    {t('invoice.social_security')}
                   </label>
                   <input
                     type="number"
@@ -413,7 +413,7 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
                 
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">
-                    Mutuelle (€)
+                    {t('invoice.mutual_insurance')}
                   </label>
                   <input
                     type="number"
@@ -430,7 +430,7 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
 
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">
-                    Reste à charge (€)
+                    {t('invoice.out_of_pocket')}
                   </label>
                   <input
                     type="number"
