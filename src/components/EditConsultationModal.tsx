@@ -111,7 +111,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
               <Stethoscope className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Modifier la Consultation</h2>
+              <h2 className="text-xl font-bold text-gray-900">{t('consultation.edit')}</h2>
               <p className="text-gray-600">
                 {formData.external_id && `ID: ${formData.external_id}`}
               </p>
