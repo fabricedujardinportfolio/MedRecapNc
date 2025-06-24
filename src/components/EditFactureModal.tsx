@@ -236,14 +236,13 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <Euro className="w-5 h-5 text-blue-600" />
-                  Détails de facturation
+                  {t('invoice.billing_details')}
                 </h3>
                 <button
                   type="button"
                   onClick={addDetail}
                   className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  + Ajouter une ligne
+                >{t('invoice.add_line')}
                 </button>
               </div>
               
@@ -253,7 +252,7 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
                     <div className="col-span-5">
                       <input
                         type="text"
-                        placeholder="Description"
+                        placeholder={t('invoice.description')}
                         value={detail.description}
                         onChange={(e) => updateDetail(index, 'description', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
