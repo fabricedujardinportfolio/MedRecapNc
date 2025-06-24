@@ -191,6 +191,8 @@ export const translations = {
     'appointment.type': 'Type',
     'appointment.location': 'Lieu',
     'appointment.available': 'disponibles',
+    'appointment.none_found': 'Aucun rendez-vous trouvé',
+    'appointment.start_create': 'Commencez par créer votre premier rendez-vous',
 
     // Notifications
     'notifications.title': 'Notifications',
@@ -559,6 +561,8 @@ export const translations = {
     'appointment.type': 'Type',
     'appointment.location': 'Location',
     'appointment.available': 'available',
+    'appointment.none_found': 'No appointments found',
+    'appointment.start_create': 'Start by creating your first appointment',
 
     // Notifications
     'notifications.title': 'Notifications',
