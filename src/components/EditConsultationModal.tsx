@@ -200,7 +200,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Type de consultation
+                    {t('consultation.type')}
                   </label>
                   <select
                     value={formData.type}
