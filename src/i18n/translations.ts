@@ -255,6 +255,7 @@ export const translations = {
     // Notes
     'common.notes_optional': 'Notes (optionnel)',
     'common.notes_placeholder': 'Notes additionnelles...',
+    'common.general_info': 'Informations générales',
   
     // Actions et erreurs
     'common.cancel': 'Annuler',
@@ -713,6 +714,7 @@ export const translations = {
     // Notes
     'common.notes_optional': 'Notes (optional)',
     'common.notes_placeholder': 'Additional notes...',
+    'common.general_info': 'General information',
   
     // Actions and errors
     'common.cancel': 'Cancel',
