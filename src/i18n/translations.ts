@@ -620,6 +620,57 @@ export const translations = {
     'invoice.out_of_pocket': 'Out-of-pocket',
     'invoice.none_found': 'No invoices found',
     'invoice.start_create': 'Start by creating your first invoice',
+    // Header
+    'invoice.edit': 'Edit Invoice',
+    'invoice.number': 'Invoice number',
+    'invoice.patient': 'Patient *',
+    'invoice.select_patient': 'Select a patient',
+    'invoice.loading_patients': 'Loading patients...',
+    'invoice.date': 'Invoice date',
+    'invoice.due_date': 'Due date',
+  
+    // Billing details
+    'invoice.billing_details': 'Billing details',
+    'invoice.add_line': '+ Add a line',
+    'invoice.description': 'Description',
+    'invoice.quantity': 'Qty',
+    'invoice.unit_price': 'Unit price',
+    'invoice.total': 'Total',
+    'invoice.delete_line': 'Delete line',
+  
+    // Payment and reimbursement
+    'invoice.payment_and_reimbursement': 'Payment and reimbursement',
+    'invoice.amount_paid': 'Amount paid (€)',
+    'invoice.amount_due': 'Amount due (€)',
+    'invoice.status': 'Status',
+    'invoice.status_pending': 'Pending',
+    'invoice.status_partial': 'Partially paid',
+    'invoice.status_paid': 'Paid',
+    'invoice.status_late': 'Late',
+    'invoice.status_cancelled': 'Cancelled',
+    'invoice.payment_method': 'Payment method',
+    'invoice.method_cash': 'Cash',
+    'invoice.method_card': 'Credit card',
+    'invoice.method_cheque': 'Cheque',
+    'invoice.method_transfer': 'Bank transfer',
+    'invoice.method_social_security': 'Social Security',
+    'invoice.reimbursement': 'Reimbursement',
+    'invoice.social_security': 'Social Security (€)',
+    'invoice.mutual_insurance': 'Mutual insurance (€)',
+    'invoice.out_of_pocket': 'Out-of-pocket (€)',
+  
+    // Notes
+    'common.notes_optional': 'Notes (optional)',
+    'common.notes_placeholder': 'Additional notes...',
+  
+    // Actions and errors
+    'common.cancel': 'Cancel',
+    'common.save': 'Save',
+    'common.updating': 'Updating...',
+    'common.error': 'Error',
+  
+    // Other
+    'invoice.invoice': 'Invoice',
 
     // Appointment Status
     'appointment.status.confirmed': 'Confirmed',
