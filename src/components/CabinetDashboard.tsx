@@ -1007,7 +1007,10 @@ export const CabinetDashboard: React.FC = () => {
                             <XCircle className="w-4 h-4 text-red-600" />
                           )}
                           <span className={rdv.rappel_envoye ? 'text-green-600' : 'text-red-600'}>
-                            {rdv.rappel_envoye ? 'Rappel envoyé' : 'Rappel non envoyé'}
+                            {rdv.rappel_envoye
+                              ? t('appointment.reminder_sent')
+                              : t('appointment.reminder_not_sent')
+                            }
                           </span>
                         </div>
                         
