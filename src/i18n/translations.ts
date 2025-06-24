@@ -175,6 +175,8 @@ export const translations = {
     'invoice.social_security': 'Sécurité Sociale',
     'invoice.mutual_insurance': 'Mutuelle',
     'invoice.out_of_pocket': 'Reste à charge',
+    'invoice.none_found': 'Aucune facture trouvée',
+    'invoice.start_create': 'Commencez par créer votre première facture',
 
     // Appointment Status
     'appointment.status.confirmed': 'Confirmé',
@@ -535,6 +537,8 @@ export const translations = {
     'invoice.social_security': 'Social Security',
     'invoice.mutual_insurance': 'Mutual insurance',
     'invoice.out_of_pocket': 'Out-of-pocket',
+    'invoice.none_found': 'No invoices found',
+    'invoice.start_create': 'Start by creating your first invoice',
 
     // Appointment Status
     'appointment.status.confirmed': 'Confirmed',
