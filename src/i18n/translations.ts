@@ -187,6 +187,9 @@ export const translations = {
     'appointment.status.postponed': 'Reporté',
     'appointment.load': 'Chargement...',
     'appointment.loading': 'Chargement des rendez-vous...',
+    'appointment.time': 'Horaire',
+    'appointment.type': 'Type',
+    'appointment.location': 'Lieu',
     
 
     // Notifications
