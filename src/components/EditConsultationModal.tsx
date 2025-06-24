@@ -279,7 +279,7 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Observations
+                    {t('consultation.observations')}
                   </label>
                   <textarea
                     value={formData.observations}
