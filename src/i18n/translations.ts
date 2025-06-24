@@ -552,6 +552,9 @@ export const translations = {
     'appointment.status.postponed': 'Postponed',
     'appointment.load': 'Loading...',
     'appointment.loading': 'Loading appointments...',
+    'appointment.time': 'Time',
+    'appointment.type': 'Type',
+    'appointment.location': 'Location',
 
     // Notifications
     'notifications.title': 'Notifications',
