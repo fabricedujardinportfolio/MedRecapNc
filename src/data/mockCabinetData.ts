@@ -264,23 +264,23 @@ export const mockRendezVous: RendezVous[] = [
 
 export const mockCabinetStats: CabinetStats = {
   patients: {
-    total: 156,
-    nouveaux: 8,
-    actifs: 142
+    total: 0,
+    nouveaux: 0,
+    actifs: 0
   },
   consultations: {
     aujourdhui: 12,
-    semaine: 67,
+    semaine: 0,
     mois: 284
   },
   rendezVous: {
     aujourdhui: 8,
     semaine: 45,
-    enAttente: 23
+    enAttente: 0
   },
   finances: {
-    chiffreAffaireMois: 7100,
-    facturenAttente: 1250,
+    chiffreAffaireMois: 0,
+    facturenAttente: 0,
     tauxRecouvrement: 94.2
   }
 };
