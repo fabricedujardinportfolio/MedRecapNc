@@ -715,6 +715,7 @@ export const translations = {
     'common.notes_optional': 'Notes (optional)',
     'common.notes_placeholder': 'Additional notes...',
     'common.general_info': 'General information',
+    'common.select': 'Select',
   
     // Actions and errors
     'common.cancel': 'Cancel',
