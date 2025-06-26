@@ -241,6 +241,17 @@ export const PublicProjectPage: React.FC = () => {
                   <Rocket className="w-4 h-4 flex-shrink-0" />
                   {t('Prochaines étapes', 'Next Steps')}
                 </button>
+                {/* Logo Bolt */}
+                <div className="flex justify-center">
+                  <a
+                    href="https://bolt.new"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Powered by Bolt"
+                  >
+                    <img src="/bolt.png" alt="Bolt Logo" className="max-h-10 w-auto" />
+                  </a>
+                </div>
               </nav>
             </div>
           )}
