@@ -57,6 +57,7 @@ export const CollaborativePixelArt: React.FC = () => {
   const [hoveredPixel, setHoveredPixel] = useState<PixelData | null>(null);
   const [tooltipMode, setTooltipMode] = useState<'none' | 'hover' | 'all'>('hover');
   const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [canvasBackgroundColor, setCanvasBackgroundColor] = useState('#FFFFFF');
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pixelSize = 10; // Increased pixel size for better visibility
@@ -114,7 +115,7 @@ export const CollaborativePixelArt: React.FC = () => {
     if (pixels.length > 0 && canvasRef.current) {
       drawAllPixels();
     }
-  }, [pixels, pixelSize]);
+  }, [pixels, pixelSize, canvasBackgroundColor]);
   
   // Check if art is complete based on stats
   useEffect(() => {
@@ -254,8 +255,8 @@ export const CollaborativePixelArt: React.FC = () => {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Set canvas background to white for better visibility
-    ctx.fillStyle = '#FFFFFF';
+    // Set canvas background
+    ctx.fillStyle = canvasBackgroundColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // Draw all pixels
@@ -264,6 +265,12 @@ export const CollaborativePixelArt: React.FC = () => {
       if (pixel && typeof pixel.x === 'number' && typeof pixel.y === 'number' && pixel.color) {
         ctx.fillStyle = pixel.color;
         ctx.fillRect(pixel.x, pixel.y, pixelSize, pixelSize);
+        
+        // Add a border to each pixel for better visibility
+        ctx.strokeStyle = canvasBackgroundColor === '#000000' ? '#FFFFFF' : '#000000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(pixel.x, pixel.y, pixelSize, pixelSize);
+        
         validPixelsCount++;
       } else {
         console.warn('⚠️ Pixel invalide ignoré:', pixel);
@@ -282,6 +289,11 @@ export const CollaborativePixelArt: React.FC = () => {
       // Draw the pixel itself
       ctx.fillStyle = userPixel.color;
       ctx.fillRect(userPixel.x, userPixel.y, pixelSize, pixelSize);
+      
+      // Add a second contrasting border
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(userPixel.x, userPixel.y, pixelSize, pixelSize);
     }
   };
   
@@ -295,6 +307,12 @@ export const CollaborativePixelArt: React.FC = () => {
     if (pixel && typeof pixel.x === 'number' && typeof pixel.y === 'number' && pixel.color) {
       ctx.fillStyle = pixel.color;
       ctx.fillRect(pixel.x, pixel.y, pixelSize, pixelSize);
+      
+      // Add a border for better visibility
+      ctx.strokeStyle = canvasBackgroundColor === '#000000' ? '#FFFFFF' : '#000000';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(pixel.x, pixel.y, pixelSize, pixelSize);
+      
       console.log(`✅ Pixel dessiné à (${pixel.x}, ${pixel.y}) avec couleur ${pixel.color}`);
     } else {
       console.warn('⚠️ Tentative de dessiner un pixel invalide:', pixel);
@@ -400,6 +418,10 @@ export const CollaborativePixelArt: React.FC = () => {
     if (e.target.value !== 'hover') {
       setHoveredPixel(null);
     }
+  };
+
+  const toggleCanvasBackground = () => {
+    setCanvasBackgroundColor(prev => prev === '#FFFFFF' ? '#000000' : '#FFFFFF');
   };
   
   return (
@@ -569,6 +591,12 @@ export const CollaborativePixelArt: React.FC = () => {
                 {t('pixel.art.realtime.title')}
               </h3>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleCanvasBackground}
+                  className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  {canvasBackgroundColor === '#FFFFFF' ? 'Black Background' : 'White Background'}
+                </button>
                 <div className="text-xs text-gray-500">
                   {tooltipMode === 'hover' ? t('pixel.art.hover.instruction') : 
                    tooltipMode === 'all' ? 'Showing all tooltips' : 'Tooltips disabled'}
@@ -595,7 +623,8 @@ export const CollaborativePixelArt: React.FC = () => {
                   ref={canvasRef} 
                   width={1200} 
                   height={1250}
-                  className="w-full h-auto border border-gray-200 rounded-lg bg-gray-50"
+                  className="w-full h-auto border border-gray-200 rounded-lg"
+                  style={{ background: canvasBackgroundColor }}
                   onMouseMove={handleCanvasMouseMove}
                   onMouseLeave={handleCanvasMouseLeave}
                 />
@@ -683,6 +712,7 @@ export const CollaborativePixelArt: React.FC = () => {
                 <p>Pixel size: {pixelSize}px</p>
                 <p>Hover detection: {hoverDetectionSize}px</p>
                 <p>Tooltip mode: {tooltipMode}</p>
+                <p>Background color: {canvasBackgroundColor}</p>
                 <p>User pixel: {userPixel ? `(${userPixel.x}, ${userPixel.y}) - ${userPixel.color}` : 'None'}</p>
                 <p>Session ID: {collaborativeArtService.getCurrentSessionId().substring(0, 10)}...</p>
                 <button 
