@@ -430,6 +430,11 @@ export const translations = {
     'pixel.art.completed.modal.download': 'Télécharger l\'Œuvre',
     'pixel.art.completed.modal.share': 'Partager la Réussite',
     'pixel.art.completed.modal.continue': 'Continuer à Explorer',
+    
+    // Nouvelles traductions pour les options de tooltips
+    'pixel.art.tooltip.mode.all': 'Afficher tous les tooltips',
+    'pixel.art.tooltip.mode.circles': 'Cercles uniquement',
+    'pixel.art.tooltip.mode.none': 'Tout masquer',
 
     // Common
     'common.loading': 'Chargement...',
@@ -891,6 +896,11 @@ export const translations = {
     'pixel.art.completed.modal.download': 'Download Artwork',
     'pixel.art.completed.modal.share': 'Share Success',
     'pixel.art.completed.modal.continue': 'Continue Exploring',
+    
+    // Nouvelles traductions pour les options de tooltips
+    'pixel.art.tooltip.mode.all': 'Show all tooltips',
+    'pixel.art.tooltip.mode.circles': 'Circles only',
+    'pixel.art.tooltip.mode.none': 'Hide all',
 
     // Common
     'common.loading': 'Loading...',

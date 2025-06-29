@@ -672,9 +672,9 @@ export const CollaborativePixelArt: React.FC = () => {
                   onChange={handleTooltipModeChange}
                   className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
-                  <option value="all">Show All Tooltips</option>
-                  <option value="circles-only">Circles Only</option>
-                  <option value="none">Hide All</option>
+                  <option value="all">{t('pixel.art.tooltip.mode.all')}</option>
+                  <option value="circles-only">{t('pixel.art.tooltip.mode.circles')}</option>
+                  <option value="none">{t('pixel.art.tooltip.mode.none')}</option>
                 </select>
               </div>
             </div>
