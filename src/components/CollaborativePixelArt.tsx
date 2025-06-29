@@ -201,7 +201,7 @@ export const CollaborativePixelArt: React.FC = () => {
     try {
       const newPixel = await collaborativeArtService.createPixelForCurrentSession(
         selectedColor,
-        contributorName || undefined
+        contributorName || 'Contributeur MedRecap+'
       );
       
       if (newPixel) {
@@ -218,7 +218,7 @@ export const CollaborativePixelArt: React.FC = () => {
           y: newPixel.y,
           color: newPixel.color,
           session_id: collaborativeArtService.getCurrentSessionId(),
-          contributor_name: contributorName || 'Anonyme',
+          contributor_name: contributorName || 'Contributeur MedRecap+',
           created_at: newPixel.created_at
         };
         
