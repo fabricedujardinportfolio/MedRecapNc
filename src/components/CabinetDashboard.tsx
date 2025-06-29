@@ -59,25 +59,40 @@ export const CabinetDashboard: React.FC = () => {
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
 
-  // Charger les patients depuis la base de données
+  // Charger toutes les données au montage du composant
   useEffect(() => {
-    loadPatientsFromDB();
+    loadAllData();
   }, []);
 
-  // Charger les consultations quand on change d'onglet
-  useEffect(() => {
-    if (activeTab === 'consultations') {
-      loadConsultationsFromDB();
-    } else if (activeTab === 'factures') {
-      loadFacturesFromDB();
-    } else if (activeTab === 'rendez-vous') {
-      loadRendezVousFromDB();
+  // Fonction pour charger toutes les données en une seule fois
+  const loadAllData = async () => {
+    setIsLoadingPatients(true);
+    try {
+      console.log('🔄 Chargement complet des données...');
+      
+      // Charger les patients
+      await loadPatientsFromDB();
+      
+      // Charger les consultations
+      await loadConsultationsFromDB();
+      
+      // Charger les factures
+      await loadFacturesFromDB();
+      
+      // Charger les rendez-vous
+      await loadRendezVousFromDB();
+      
+      console.log('✅ Toutes les données chargées avec succès');
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des données:', error);
+    } finally {
+      setIsLoadingPatients(false);
     }
-  }, [activeTab]);
+  };
 
+  // Charger les patients depuis la base de données
   const loadPatientsFromDB = async () => {
     try {
-      setIsLoadingPatients(true);
       console.log('🔄 Chargement des patients depuis Supabase...');
       
       const patients = await patientService.getAllPatients();
@@ -86,36 +101,70 @@ export const CabinetDashboard: React.FC = () => {
       setPatientsFromDB(patients);
       
       // Charger les statistiques
-      const cabinetStats = await patientService.getCabinetStats();
-      setStats({
-        patients: {
-          total: cabinetStats.totalPatients,
-          nouveaux: Math.floor(cabinetStats.totalPatients * 0.1), // 10% de nouveaux
-          actifs: cabinetStats.patientsActifs
-        },
-        consultations: {
-          aujourdhui: cabinetStats.consultationsAujourdhui,
-          semaine: cabinetStats.consultationsAujourdhui * 7,
-          mois: cabinetStats.consultationsAujourdhui * 30
-        },
-        rendezVous: {
-          aujourdhui: cabinetStats.rdvAujourdhui,
-          semaine: cabinetStats.rdvAujourdhui * 7,
-          enAttente: Math.floor(cabinetStats.rdvAujourdhui * 1.5)
-        },
-        finances: {
-          chiffreAffaireMois: cabinetStats.totalPatients * 25 * 2, // Estimation
-          facturenAttente: cabinetStats.facturesEnAttente * 25,
-          tauxRecouvrement: 94.2
-        }
-      });
+      await loadStats();
       
+      return patients;
     } catch (error) {
       console.error('❌ Erreur lors du chargement des patients:', error);
       // En cas d'erreur, utiliser un tableau vide
       setPatientsFromDB([]);
-    } finally {
-      setIsLoadingPatients(false);
+      return [];
+    }
+  };
+
+  // Charger les statistiques
+  const loadStats = async () => {
+    try {
+      const cabinetStats = await patientService.getCabinetStats();
+      
+      // Calculer les statistiques basées sur les données réelles
+      const totalPatients = cabinetStats.totalPatients;
+      const nouveauxPatients = Math.floor(totalPatients * 0.1); // 10% de nouveaux
+      const patientsActifs = cabinetStats.patientsActifs;
+      
+      const consultationsAujourdhui = cabinetStats.consultationsAujourdhui;
+      const consultationsSemaine = consultationsAujourdhui * 7;
+      const consultationsMois = consultationsAujourdhui * 30;
+      
+      const rdvAujourdhui = cabinetStats.rdvAujourdhui;
+      const rdvSemaine = rdvAujourdhui * 7;
+      const rdvEnAttente = Math.floor(rdvAujourdhui * 1.5);
+      
+      const chiffreAffaireMois = totalPatients * 25 * 2; // Estimation
+      const facturesEnAttente = cabinetStats.facturesEnAttente * 25;
+      const tauxRecouvrement = 94.2;
+      
+      setStats({
+        patients: {
+          total: totalPatients,
+          nouveaux: nouveauxPatients,
+          actifs: patientsActifs
+        },
+        consultations: {
+          aujourdhui: consultationsAujourdhui,
+          semaine: consultationsSemaine,
+          mois: consultationsMois
+        },
+        rendezVous: {
+          aujourdhui: rdvAujourdhui,
+          semaine: rdvSemaine,
+          enAttente: rdvEnAttente
+        },
+        finances: {
+          chiffreAffaireMois: chiffreAffaireMois,
+          facturenAttente: facturesEnAttente,
+          tauxRecouvrement: tauxRecouvrement
+        }
+      });
+      
+      console.log('✅ Statistiques chargées:', {
+        totalPatients,
+        consultationsAujourdhui,
+        rdvAujourdhui,
+        facturesEnAttente
+      });
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des statistiques:', error);
     }
   };
 
@@ -140,10 +189,11 @@ export const CabinetDashboard: React.FC = () => {
 
       console.log('✅ Consultations chargées:', data?.length || 0);
       setConsultationsFromDB(data || []);
-      
+      return data || [];
     } catch (error) {
       console.error('❌ Erreur lors du chargement des consultations:', error);
       setConsultationsFromDB([]);
+      return [];
     } finally {
       setIsLoadingConsultations(false);
     }
@@ -171,10 +221,11 @@ export const CabinetDashboard: React.FC = () => {
 
       console.log('✅ Factures chargées:', data?.length || 0);
       setFacturesFromDB(data || []);
-      
+      return data || [];
     } catch (error) {
       console.error('❌ Erreur lors du chargement des factures:', error);
       setFacturesFromDB([]);
+      return [];
     } finally {
       setIsLoadingFactures(false);
     }
@@ -198,10 +249,11 @@ export const CabinetDashboard: React.FC = () => {
 
       console.log('✅ Rendez-vous chargés:', data?.length || 0);
       setRendezVousFromDB(data || []);
-      
+      return data || [];
     } catch (error) {
       console.error('❌ Erreur lors du chargement des rendez-vous:', error);
       setRendezVousFromDB([]);
+      return [];
     } finally {
       setIsLoadingRendezVous(false);
     }
@@ -361,21 +413,13 @@ export const CabinetDashboard: React.FC = () => {
   const handlePatientAdded = (newPatient: PatientData) => {
     console.log('✅ Nouveau patient ajouté:', newPatient);
     // Recharger les patients depuis la DB
-    loadPatientsFromDB();
+    loadAllData();
   };
 
   // Gérer la mise à jour des données après ajout de consultation, facture ou RDV
   const handleDataUpdated = () => {
     console.log('🔄 Mise à jour des données après modification');
-    loadPatientsFromDB();
-    // Recharger aussi les données de l'onglet actuel
-    if (activeTab === 'consultations') {
-      loadConsultationsFromDB();
-    } else if (activeTab === 'factures') {
-      loadFacturesFromDB();
-    } else if (activeTab === 'rendez-vous') {
-      loadRendezVousFromDB();
-    }
+    loadAllData();
   };
 
   // Gérer l'édition d'une facture
@@ -569,7 +613,7 @@ export const CabinetDashboard: React.FC = () => {
           </button>
           
           <button
-            onClick={loadPatientsFromDB}
+            onClick={loadAllData}
             disabled={isLoadingPatients}
             className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
           >
