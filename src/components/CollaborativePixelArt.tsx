@@ -19,7 +19,9 @@ import {
   Rocket,
   Database,
   MapPin,
-  Heart
+  Heart,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { collaborativeArtService, PixelData, ArtProjectStats } from '../services/collaborativeArtService';
@@ -52,10 +54,11 @@ export const CollaborativePixelArt: React.FC = () => {
   const [isArtComplete, setIsArtComplete] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [hoveredPixel, setHoveredPixel] = useState<PixelData | null>(null);
+  const [showAllTooltips, setShowAllTooltips] = useState(false);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const pixelSize = 2; // Fixed size for all pixels
-  const hoverDetectionSize = 8; // Larger detection area for hover
+  const pixelSize = 4; // Increased size for better visibility
+  const hoverDetectionSize = 12; // Larger detection area for hover
   
   // Load all pixels and stats on mount
   useEffect(() => {
@@ -109,7 +112,7 @@ export const CollaborativePixelArt: React.FC = () => {
     if (pixels.length > 0 && canvasRef.current) {
       drawAllPixels();
     }
-  }, [pixels]);
+  }, [pixels, pixelSize]);
   
   // Check if art is complete based on stats
   useEffect(() => {
@@ -125,6 +128,7 @@ export const CollaborativePixelArt: React.FC = () => {
     try {
       // Load pixels
       const allPixels = await collaborativeArtService.getAllPixels();
+      console.log('🔄 Pixels chargés:', allPixels.length);
       setPixels(allPixels);
       
       // Load stats
@@ -249,14 +253,18 @@ export const CollaborativePixelArt: React.FC = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Draw all pixels
+    let validPixelsCount = 0;
     pixels.forEach(pixel => {
       if (pixel && typeof pixel.x === 'number' && typeof pixel.y === 'number' && pixel.color) {
         ctx.fillStyle = pixel.color;
         ctx.fillRect(pixel.x, pixel.y, pixelSize, pixelSize);
+        validPixelsCount++;
+      } else {
+        console.warn('⚠️ Pixel invalide ignoré:', pixel);
       }
     });
     
-    console.log(`✅ ${pixels.length} pixels dessinés sur le canvas`);
+    console.log(`✅ ${validPixelsCount}/${pixels.length} pixels valides dessinés sur le canvas`);
   };
   
   const drawPixel = (pixel: PixelData) => {
@@ -276,6 +284,8 @@ export const CollaborativePixelArt: React.FC = () => {
   };
   
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (showAllTooltips) return; // Ne pas changer le pixel survolé si tous les tooltips sont affichés
+    
     const canvas = canvasRef.current;
     if (!canvas) return;
     
@@ -297,7 +307,9 @@ export const CollaborativePixelArt: React.FC = () => {
   };
   
   const handleCanvasMouseLeave = () => {
-    setHoveredPixel(null);
+    if (!showAllTooltips) {
+      setHoveredPixel(null);
+    }
   };
   
   const handleRefresh = async () => {
@@ -363,6 +375,10 @@ export const CollaborativePixelArt: React.FC = () => {
     return luminance > 0.5 ? 'text-gray-900' : 'text-white';
   };
   
+  const toggleAllTooltips = () => {
+    setShowAllTooltips(!showAllTooltips);
+  };
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       {/* Header */}
@@ -388,6 +404,19 @@ export const CollaborativePixelArt: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-3 mt-3 sm:mt-0">
+              <button
+                onClick={toggleAllTooltips}
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm ${
+                  showAllTooltips 
+                    ? 'bg-purple-100 text-purple-700' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                } rounded-lg transition-colors`}
+                title={showAllTooltips ? "Hide all tooltips" : "Show all tooltips"}
+              >
+                {showAllTooltips ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <span>{showAllTooltips ? "Hide Tooltips" : "Show Tooltips"}</span>
+              </button>
+              
               <button
                 onClick={handleShareClick}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
@@ -558,6 +587,28 @@ export const CollaborativePixelArt: React.FC = () => {
                     </div>
                   </div>
                 )}
+                
+                {/* Show All Tooltips */}
+                {showAllTooltips && pixels.map((pixel, index) => (
+                  <div 
+                    key={index}
+                    className="absolute bg-black bg-opacity-80 text-white px-2 py-1 rounded text-xs pointer-events-none z-10"
+                    style={{
+                      left: `${(pixel.x / 1200) * 100}%`,
+                      top: `${(pixel.y / 1250) * 100}%`,
+                      transform: 'translate(-50%, -130%)',
+                      maxWidth: '120px'
+                    }}
+                  >
+                    <div className="flex items-center gap-1">
+                      <div 
+                        className="w-2 h-2 rounded-full" 
+                        style={{ backgroundColor: pixel.color }}
+                      ></div>
+                      <span className="truncate">{pixel.contributor_name || t('pixel.art.contributor.name')}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
             
