@@ -250,8 +250,13 @@ export const CollaborativePixelArt: React.FC = () => {
     
     // Draw all pixels
     pixels.forEach(pixel => {
-      drawPixel(pixel);
+      if (pixel && typeof pixel.x === 'number' && typeof pixel.y === 'number' && pixel.color) {
+        ctx.fillStyle = pixel.color;
+        ctx.fillRect(pixel.x, pixel.y, pixelSize, pixelSize);
+      }
     });
+    
+    console.log(`✅ ${pixels.length} pixels dessinés sur le canvas`);
   };
   
   const drawPixel = (pixel: PixelData) => {
@@ -261,8 +266,13 @@ export const CollaborativePixelArt: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    ctx.fillStyle = pixel.color;
-    ctx.fillRect(pixel.x, pixel.y, pixelSize, pixelSize);
+    if (pixel && typeof pixel.x === 'number' && typeof pixel.y === 'number' && pixel.color) {
+      ctx.fillStyle = pixel.color;
+      ctx.fillRect(pixel.x, pixel.y, pixelSize, pixelSize);
+      console.log(`✅ Pixel dessiné à (${pixel.x}, ${pixel.y}) avec couleur ${pixel.color}`);
+    } else {
+      console.warn('⚠️ Tentative de dessiner un pixel invalide:', pixel);
+    }
   };
   
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
