@@ -17,7 +17,9 @@ import {
   Lock,
   Award,
   Rocket,
-  Database
+  Database,
+  MapPin,
+  Heart
 } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { collaborativeArtService, PixelData, ArtProjectStats } from '../services/collaborativeArtService';
