@@ -8,6 +8,7 @@ import { RendezVousModal } from './RendezVousModal';
 import { AddPatientModal } from './AddPatientModal';
 import { EditFactureModal } from './EditFactureModal';
 import { EditConsultationModal } from './EditConsultationModal';
+import { EditRendezVousModal } from './EditRendezVousModal';
 import { mockCabinetStats } from '../data/mockCabinetData';
 import { Patient, SearchFilters as SearchFiltersType, CabinetStats, Consultation, Facture, RendezVous } from '../types/Patient';
 import { PatientData, patientService, ConsultationData, FactureData, RendezVousData, supabase } from '../services/patientService';
@@ -44,8 +45,10 @@ export const CabinetDashboard: React.FC = () => {
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
   const [showEditFactureModal, setShowEditFactureModal] = useState(false);
   const [showEditConsultationModal, setShowEditConsultationModal] = useState(false);
+  const [showEditRendezVousModal, setShowEditRendezVousModal] = useState(false);
   const [selectedFacture, setSelectedFacture] = useState<FactureData | null>(null);
   const [selectedConsultation, setSelectedConsultation] = useState<ConsultationData | null>(null);
+  const [selectedRendezVous, setSelectedRendezVous] = useState<RendezVousData | null>(null);
   const [activeTab, setActiveTab] = useState<'patients' | 'consultations' | 'factures' | 'rendez-vous'>('patients');
   const [patientsFromDB, setPatientsFromDB] = useState<PatientData[]>([]);
   const [consultationsFromDB, setConsultationsFromDB] = useState<ConsultationData[]>([]);
@@ -432,6 +435,12 @@ export const CabinetDashboard: React.FC = () => {
   const handleEditConsultation = (consultation: ConsultationData) => {
     setSelectedConsultation(consultation);
     setShowEditConsultationModal(true);
+  };
+
+  // Gérer l'édition d'un rendez-vous
+  const handleEditRendezVous = (rendezVous: RendezVousData) => {
+    setSelectedRendezVous(rendezVous);
+    setShowEditRendezVousModal(true);
   };
 
   // Fonctions utilitaires pour les statuts
@@ -1068,8 +1077,17 @@ export const CabinetDashboard: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2 ml-4">
+                      <button className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleEditRendezVous(rdv)}
+                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
                       {rdv.statut === 'programme' && (
-                        <button className="p-2 text-green-600 hover: bg-green-100 rounded-lg transition-colors">
+                        <button className="p-2 text-green-600 hover:bg-green-100 rounded-lg transition-colors">
                           <CheckCircle className="w-4 h-4" />
                         </button>
                       )}
@@ -1171,6 +1189,22 @@ export const CabinetDashboard: React.FC = () => {
             handleDataUpdated();
             setShowEditConsultationModal(false);
             setSelectedConsultation(null);
+          }}
+        />
+      )}
+
+      {showEditRendezVousModal && selectedRendezVous && (
+        <EditRendezVousModal
+          rendezVous={selectedRendezVous}
+          isOpen={showEditRendezVousModal}
+          onClose={() => {
+            setShowEditRendezVousModal(false);
+            setSelectedRendezVous(null);
+          }}
+          onRendezVousUpdated={() => {
+            handleDataUpdated();
+            setShowEditRendezVousModal(false);
+            setSelectedRendezVous(null);
           }}
         />
       )}
