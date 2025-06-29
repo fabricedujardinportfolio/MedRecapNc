@@ -55,9 +55,9 @@ export const CollaborativePixelArt: React.FC = () => {
   const [isArtComplete, setIsArtComplete] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [hoveredPixel, setHoveredPixel] = useState<PixelData | null>(null);
-  const [tooltipMode, setTooltipMode] = useState<'none' | 'hover' | 'all'>('hover');
+  const [tooltipMode, setTooltipMode] = useState<'none' | 'hover' | 'all' | 'circles-only'>('all');
   const [showDebugInfo, setShowDebugInfo] = useState(false);
-  const [canvasBackgroundColor, setCanvasBackgroundColor] = useState('#FFFFFF');
+  const [canvasBackgroundColor, setCanvasBackgroundColor] = useState('#000000');
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pixelSize = 10; // Increased pixel size for better visibility
@@ -318,6 +318,10 @@ export const CollaborativePixelArt: React.FC = () => {
       console.warn('⚠️ Tentative de dessiner un pixel invalide:', pixel);
     }
   };
+
+  const toggleCanvasBackground = () => {
+    setCanvasBackgroundColor(prev => prev === '#FFFFFF' ? '#000000' : '#FFFFFF');
+  };
   
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (tooltipMode !== 'hover') return; // Ne pas changer le pixel survolé si les tooltips sont désactivés ou tous affichés
@@ -412,16 +416,12 @@ export const CollaborativePixelArt: React.FC = () => {
   };
   
   const handleTooltipModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setTooltipMode(e.target.value as 'none' | 'hover' | 'all');
+    setTooltipMode(e.target.value as 'none' | 'hover' | 'all' | 'circles-only');
     
     // Reset hovered pixel when changing modes
     if (e.target.value !== 'hover') {
       setHoveredPixel(null);
     }
-  };
-
-  const toggleCanvasBackground = () => {
-    setCanvasBackgroundColor(prev => prev === '#FFFFFF' ? '#000000' : '#FFFFFF');
   };
   
   return (
@@ -458,6 +458,7 @@ export const CollaborativePixelArt: React.FC = () => {
                   <option value="none">No Tooltips</option>
                   <option value="hover">Hover Tooltips</option>
                   <option value="all">Show All Tooltips</option>
+                  <option value="circles-only">Circles Only</option>
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                   <ChevronDown className="w-4 h-4" />
@@ -599,7 +600,9 @@ export const CollaborativePixelArt: React.FC = () => {
                 </button>
                 <div className="text-xs text-gray-500">
                   {tooltipMode === 'hover' ? t('pixel.art.hover.instruction') : 
-                   tooltipMode === 'all' ? 'Showing all tooltips' : 'Tooltips disabled'}
+                   tooltipMode === 'all' ? 'Showing all tooltips' : 
+                   tooltipMode === 'circles-only' ? 'Showing circles only' : 
+                   'Tooltips disabled'}
                 </div>
                 <button 
                   onClick={() => setShowDebugInfo(!showDebugInfo)}
@@ -674,11 +677,11 @@ export const CollaborativePixelArt: React.FC = () => {
                   </div>
                 ))}
                 
-                {/* Visual Markers for Pixels */}
-                {tooltipMode === 'all' && pixels.map((pixel, index) => (
+                {/* Visual Markers for Pixels - Circles Only Mode */}
+                {(tooltipMode === 'all' || tooltipMode === 'circles-only') && pixels.map((pixel, index) => (
                   <div 
                     key={`marker-${index}`}
-                    className="absolute w-3 h-3 rounded-full border-2 border-white pointer-events-none"
+                    className="absolute w-4 h-4 rounded-full border-2 border-white pointer-events-none"
                     style={{
                       left: `${(pixel.x / 1200) * 100}%`,
                       top: `${(pixel.y / 1250) * 100}%`,
