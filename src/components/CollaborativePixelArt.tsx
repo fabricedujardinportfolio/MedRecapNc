@@ -546,21 +546,6 @@ export const CollaborativePixelArt: React.FC = () => {
                 </p>
               </div>
             </div>
-            
-            {/* Progress Estimate */}
-            <div className="mt-6 text-center">
-              {isArtComplete ? (
-                <p className="text-white font-medium">
-                  {t('pixel.art.completed.progress.complete')}
-                </p>
-              ) : (
-                <p className="text-purple-100">
-                  {t('pixel.art.progress.estimated', { 
-                    days: detailedStats?.estimatedDaysRemaining.toLocaleString() || '?' 
-                  })}
-                </p>
-              )}
-            </div>
           </div>
         </div>
         
