@@ -55,6 +55,7 @@ export const CollaborativePixelArt: React.FC = () => {
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pixelSize = 2; // Fixed size for all pixels
+  const hoverDetectionSize = 8; // Larger detection area for hover
   
   // Load all pixels and stats on mount
   useEffect(() => {
@@ -272,10 +273,10 @@ export const CollaborativePixelArt: React.FC = () => {
     const x = Math.floor((e.clientX - rect.left) / (canvas.width / 1200));
     const y = Math.floor((e.clientY - rect.top) / (canvas.height / 1250));
     
-    // Find pixel at this position
+    // Find pixel at this position with larger detection area
     const pixelAtPosition = pixels.find(p => 
-      p.x <= x && p.x + pixelSize > x && 
-      p.y <= y && p.y + pixelSize > y
+      Math.abs(p.x - x) <= hoverDetectionSize/2 && 
+      Math.abs(p.y - y) <= hoverDetectionSize/2
     );
     
     if (pixelAtPosition) {
