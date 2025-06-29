@@ -994,27 +994,7 @@ export const CollaborativePixelArt: React.FC = () => {
           <h3 className="text-2xl font-bold text-gray-900 mb-4">{t('pixel.art.cta.title')}</h3>
           <p className="text-gray-600 max-w-2xl mx-auto mb-6">{t('pixel.art.cta.description')}</p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {!userPixel && !isArtComplete && (
-              <button
-                onClick={createPixel}
-                disabled={isCreatingPixel}
-                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                {isCreatingPixel ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                    <span>{t('pixel.art.contribution.creating')}</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    <span>{t('pixel.art.contribution.generate')}</span>
-                  </>
-                )}
-              </button>
-            )}
-            
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">           
             <a
               href="/"
               className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition-colors flex items-center justify-center gap-2"
