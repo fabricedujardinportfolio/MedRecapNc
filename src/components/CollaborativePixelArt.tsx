@@ -22,13 +22,14 @@ import {
   Heart,
   Eye,
   EyeOff,
-  ChevronDown
+  ChevronDown,
+  Globe
 } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { collaborativeArtService, PixelData, ArtProjectStats } from '../services/collaborativeArtService';
 
 export const CollaborativePixelArt: React.FC = () => {
-  const { t, language } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const [pixels, setPixels] = useState<PixelData[]>([]);
   const [stats, setStats] = useState<ArtProjectStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -421,6 +422,10 @@ export const CollaborativePixelArt: React.FC = () => {
   const handleTooltipModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setTooltipMode(e.target.value as 'all' | 'circles-only' | 'none');
   };
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'fr' ? 'en' : 'fr');
+  };
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
@@ -447,6 +452,15 @@ export const CollaborativePixelArt: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-3 mt-3 sm:mt-0">
+              {/* Language Selector */}
+              <button
+                onClick={toggleLanguage}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                <Globe className="w-4 h-4" />
+                <span>{language === 'fr' ? 'English' : 'Français'}</span>
+              </button>
+              
               <button
                 onClick={handleShareClick}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
@@ -1033,6 +1047,15 @@ export const CollaborativePixelArt: React.FC = () => {
                 <Rocket className="w-4 h-4 text-blue-400" />
                 <span>{t('pixel.art.innovation')}</span>
               </div>
+              
+              {/* Language Selector in Footer */}
+              <button
+                onClick={toggleLanguage}
+                className="flex items-center gap-2 px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <Globe className="w-4 h-4" />
+                <span>{language === 'fr' ? 'English' : 'Français'}</span>
+              </button>
             </div>
           </div>
           
