@@ -58,6 +58,7 @@ export const CollaborativePixelArt: React.FC = () => {
   const [tooltipMode, setTooltipMode] = useState<'all' | 'circles-only'>('all');
   const [showDebugInfo, setShowDebugInfo] = useState(false);
   const [canvasBackgroundColor, setCanvasBackgroundColor] = useState('#FFFFFF');
+  const [showExistingPixelAlert, setShowExistingPixelAlert] = useState(false);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pixelSize = 10; // Increased pixel size for better visibility
@@ -183,6 +184,10 @@ export const CollaborativePixelArt: React.FC = () => {
       if (existingPixel) {
         console.log('✅ Pixel existant trouvé pour cette session:', existingPixel);
         setUserPixel(existingPixel);
+        // Show alert if user already has a pixel
+        setShowExistingPixelAlert(true);
+        // Hide alert after 5 seconds
+        setTimeout(() => setShowExistingPixelAlert(false), 5000);
       }
     } catch (error) {
       console.error('❌ Erreur lors de la vérification du pixel existant:', error);
@@ -209,6 +214,8 @@ export const CollaborativePixelArt: React.FC = () => {
         
         if (!newPixel.is_new_session) {
           console.log('⚠️ Pixel existant retourné - pas de nouvelle session');
+          setShowExistingPixelAlert(true);
+          setTimeout(() => setShowExistingPixelAlert(false), 5000);
         }
         
         // Convertir le résultat en PixelData
@@ -716,6 +723,16 @@ export const CollaborativePixelArt: React.FC = () => {
                 <Sparkles className="w-5 h-5 text-purple-600" />
                 {t('pixel.art.contribution.title')}
               </h3>
+              
+              {/* Alert for existing pixel */}
+              {showExistingPixelAlert && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Info className="w-5 h-5 text-yellow-600" />
+                    <p className="font-medium text-yellow-800">{t('pixel.art.existing.pixel.alert')}</p>
+                  </div>
+                </div>
+              )}
               
               {userPixel ? (
                 <div className="space-y-4">
