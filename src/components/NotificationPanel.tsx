@@ -361,7 +361,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
               <div className="flex items-center gap-3">
                 {getNotificationIcon(selectedNotification.type)}
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Détails de la notification
+                  {t('notifications.details.title')}
                 </h3>
               </div>
               <button
@@ -383,19 +383,15 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
               
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-gray-500">Priorité:</span>
+                  <span className="font-medium text-gray-500">{t('notifications.details.priority')}</span>
                   <span className={`ml-2 px-2 py-1 rounded-full text-xs ${getPriorityColor(selectedNotification.priority)}`}>
-                    {selectedNotification.priority === 'critical' ? 'Critique' :
-                     selectedNotification.priority === 'high' ? 'Haute' :
-                     selectedNotification.priority === 'medium' ? 'Moyenne' : 'Basse'}
+                    {t(`notifications.priority.${selectedNotification.priority}`)}
                   </span>
                 </div>
                 <div>
-                  <span className="font-medium text-gray-500">Catégorie:</span>
+                  <span className="font-medium text-gray-500">{t('notifications.details.category')}</span>
                   <span className="ml-2 text-gray-900">
-                    {selectedNotification.category === 'medical' ? 'Médical' :
-                     selectedNotification.category === 'administrative' ? 'Administratif' :
-                     selectedNotification.category === 'system' ? 'Système' : 'Sécurité'}
+                    {t(`notifications.category.${selectedNotification.category}`)}
                   </span>
                 </div>
               </div>
@@ -404,7 +400,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                 <div className="bg-blue-50 rounded-lg p-3">
                   <div className="flex items-center gap-2 text-blue-800">
                     <User className="w-4 h-4" />
-                    <span className="font-medium">Patient concerné</span>
+                    <span className="font-medium">{t('notifications.details.patient')}</span>
                   </div>
                   <p className="text-blue-700 mt-1">
                     {selectedNotification.patientName}
@@ -426,10 +422,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                   <div className="flex items-center gap-2 text-orange-800">
                     <Clock className="w-4 h-4" />
-                    <span className="font-medium">Action requise</span>
+                    <span className="font-medium">{t('notifications.details.action_required')}</span>
                   </div>
                   <p className="text-orange-700 text-sm mt-1">
-                    Cette notification nécessite une action de votre part.
+                    {t('notifications.details.action_message')}
                   </p>
                 </div>
               )}
@@ -439,7 +435,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                 onClick={() => setSelectedNotification(null)}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                Fermer
+                {t('notifications.details.close')}
               </button>
               {!selectedNotification.isRead && (
                 <button
@@ -449,7 +445,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                   }}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                 >
-                  Marquer comme lu
+                  {t('notifications.details.mark_read')}
                 </button>
               )}
             </div>
