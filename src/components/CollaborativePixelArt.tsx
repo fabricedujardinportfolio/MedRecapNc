@@ -724,16 +724,6 @@ export const CollaborativePixelArt: React.FC = () => {
                 {t('pixel.art.contribution.title')}
               </h3>
               
-              {/* Alert for existing pixel */}
-              {showExistingPixelAlert && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Info className="w-5 h-5 text-yellow-600" />
-                    <p className="font-medium text-yellow-800">{t('pixel.art.existing.pixel.alert')}</p>
-                  </div>
-                </div>
-              )}
-              
               {userPixel ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
@@ -773,6 +763,16 @@ export const CollaborativePixelArt: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
+                  {/* Alert for existing pixel */}
+                  {showExistingPixelAlert && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Info className="w-5 h-5 text-yellow-600" />
+                        <p className="font-medium text-yellow-800">{t('pixel.art.existing.pixel.alert')}</p>
+                      </div>
+                    </div>
+                  )}
+                  
                   <p className="text-gray-600">{t('pixel.art.contribution.choose')}</p>
                   
                   {/* Color Picker */}
