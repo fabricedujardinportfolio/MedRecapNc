@@ -59,8 +59,8 @@ export const CollaborativePixelArt: React.FC = () => {
   const [showDebugInfo, setShowDebugInfo] = useState(false);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const pixelSize = 2; // Smaller size for better visibility of the overall image
-  const hoverDetectionSize = 12; // Larger detection area for hover
+  const pixelSize = 10; // Increased pixel size for better visibility
+  const hoverDetectionSize = 20; // Larger detection area for hover
   
   // Load all pixels and stats on mount
   useEffect(() => {
@@ -276,8 +276,8 @@ export const CollaborativePixelArt: React.FC = () => {
     if (userPixel) {
       // Draw a highlight around the user's pixel
       ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(userPixel.x - 1, userPixel.y - 1, pixelSize + 2, pixelSize + 2);
+      ctx.lineWidth = 2;
+      ctx.strokeRect(userPixel.x - 2, userPixel.y - 2, pixelSize + 4, pixelSize + 4);
       
       // Draw the pixel itself
       ctx.fillStyle = userPixel.color;
