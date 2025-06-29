@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Euro, Calendar, User, Save } from 'lucide-react';
-import { FactureData, patientService } from '../services/patientService';
+import { FactureData, patientService, supabase } from '../services/patientService';
 import { useLanguage } from '../hooks/useLanguage';
 
 interface EditFactureModalProps {
@@ -64,19 +64,62 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
       }
       
       // Mettre à jour la facture
-      const updatedFacture = {
-        ...formData,
-        // Convertir les valeurs numériques
-        montant_total: typeof formData.montant_total === 'string' ? parseFloat(formData.montant_total) : formData.montant_total,
-        montant_paye: typeof formData.montant_paye === 'string' ? parseFloat(formData.montant_paye) : formData.montant_paye,
-        montant_restant: typeof formData.montant_restant === 'string' ? parseFloat(formData.montant_restant) : formData.montant_restant,
-        remboursement_securite_sociale: typeof formData.remboursement_securite_sociale === 'string' ? parseFloat(formData.remboursement_securite_sociale) : formData.remboursement_securite_sociale,
-        remboursement_mutuelle: typeof formData.remboursement_mutuelle === 'string' ? parseFloat(formData.remboursement_mutuelle) : formData.remboursement_mutuelle,
-        remboursement_reste_a_charge: typeof formData.remboursement_reste_a_charge === 'string' ? parseFloat(formData.remboursement_reste_a_charge) : formData.remboursement_reste_a_charge,
-      };
+      const { data, error } = await supabase
+        .from('factures')
+        .update({
+          patient_id: formData.patient_id,
+          numero: formData.numero,
+          date: formData.date,
+          montant_total: typeof formData.montant_total === 'string' ? parseFloat(formData.montant_total) : formData.montant_total,
+          montant_paye: typeof formData.montant_paye === 'string' ? parseFloat(formData.montant_paye) : formData.montant_paye,
+          montant_restant: typeof formData.montant_restant === 'string' ? parseFloat(formData.montant_restant) : formData.montant_restant,
+          statut: formData.statut,
+          methode_paiement: formData.methode_paiement,
+          date_echeance: formData.date_echeance,
+          date_paiement: formData.date_paiement,
+          remboursement_securite_sociale: typeof formData.remboursement_securite_sociale === 'string' ? parseFloat(formData.remboursement_securite_sociale) : formData.remboursement_securite_sociale,
+          remboursement_mutuelle: typeof formData.remboursement_mutuelle === 'string' ? parseFloat(formData.remboursement_mutuelle) : formData.remboursement_mutuelle,
+          remboursement_reste_a_charge: typeof formData.remboursement_reste_a_charge === 'string' ? parseFloat(formData.remboursement_reste_a_charge) : formData.remboursement_reste_a_charge,
+          notes: formData.notes
+        })
+        .eq('id', facture.id)
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      // Mettre à jour les détails de la facture
+      if (formData.details && formData.details.length > 0) {
+        // D'abord supprimer tous les détails existants
+        const { error: deleteError } = await supabase
+          .from('facture_details')
+          .delete()
+          .eq('facture_id', facture.id);
+
+        if (deleteError) {
+          console.error('Erreur lors de la suppression des détails:', deleteError);
+        }
+
+        // Ensuite insérer les nouveaux détails
+        const detailsToInsert = formData.details.map(detail => ({
+          facture_id: facture.id,
+          description: detail.description,
+          quantite: detail.quantite,
+          prix_unitaire: detail.prix_unitaire,
+          total: detail.total
+        }));
+
+        const { error: insertError } = await supabase
+          .from('facture_details')
+          .insert(detailsToInsert);
+
+        if (insertError) {
+          console.error('Erreur lors de l\'insertion des nouveaux détails:', insertError);
+        }
+      }
       
-      // Appeler le service de mise à jour (à implémenter)
-      console.log('✅ Facture mise à jour:', updatedFacture);
+      console.log('✅ Facture mise à jour:', data);
       
       // Notifier la mise à jour
       onFactureUpdated();

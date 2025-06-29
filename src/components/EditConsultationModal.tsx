@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Stethoscope, User, Calendar, Clock, FileText, Pill, Save } from 'lucide-react';
-import { ConsultationData, patientService } from '../services/patientService';
+import { ConsultationData, patientService, supabase } from '../services/patientService';
 import { useLanguage } from '../hooks/useLanguage';
 
 interface EditConsultationModalProps {
@@ -64,8 +64,35 @@ export const EditConsultationModal: React.FC<EditConsultationModalProps> = ({
         throw new Error('Veuillez remplir tous les champs obligatoires');
       }
 
-      // Mettre à jour la consultation (fonction à implémenter dans le service)
-      console.log('✅ Consultation mise à jour:', formData);
+      // Mettre à jour la consultation
+      const { data, error } = await supabase
+        .from('consultations')
+        .update({
+          patient_id: formData.patient_id,
+          date: formData.date,
+          motif: formData.motif,
+          diagnostic: formData.diagnostic,
+          traitement: formData.traitement,
+          observations: formData.observations,
+          medecin_nom: formData.medecin_nom,
+          duree: formData.duree,
+          type: formData.type,
+          statut: formData.statut,
+          tarif: formData.tarif,
+          tension: formData.tension,
+          pouls: formData.pouls,
+          temperature: formData.temperature,
+          poids: formData.poids,
+          taille: formData.taille
+        })
+        .eq('id', consultation.id)
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('✅ Consultation mise à jour:', data);
       
       // Notifier la mise à jour
       onConsultationUpdated();
