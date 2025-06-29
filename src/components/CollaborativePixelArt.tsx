@@ -1,1213 +1,1122 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   ArrowLeft, 
+  RefreshCw, 
+  Share2, 
+  Download, 
   Users, 
-  Image as ImageIcon, 
-  Palette, 
+  Calendar, 
+  Clock, 
   Target, 
-  TrendingUp,
-  Share2,
-  Download,
-  RefreshCw,
-  Eye,
-  Heart,
-  Zap,
-  Globe,
+  BarChart3, 
+  Palette, 
+  Sparkles,
+  Info,
+  Check,
+  Copy,
+  Lock,
   Award,
-  Clock,
+  Rocket,
+  Database,
   MapPin,
-  Loader,
-  CheckCircle,
-  AlertCircle,
-  X,
-  Shield
+  Heart,
+  Eye,
+  EyeOff,
+  ChevronDown,
+  Globe
 } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
-import { LanguageSelector } from './LanguageSelector';
-import { 
-  collaborativeArtService, 
-  PixelData, 
-  ArtProjectStats,
-  CreatePixelResponse 
-} from '../services/collaborativeArtService';
-
-interface DetailedStats {
-  totalPixels: number;
-  completedPixels: number;
-  percentage: number;
-  sessionsToday: number;
-  pixelsThisWeek: number;
-  averagePixelsPerDay: number;
-  estimatedDaysRemaining: number;
-}
+import { collaborativeArtService, PixelData, ArtProjectStats } from '../services/collaborativeArtService';
 
 export const CollaborativePixelArt: React.FC = () => {
-  const { t, language } = useLanguage();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { t, language, setLanguage } = useLanguage();
   const [pixels, setPixels] = useState<PixelData[]>([]);
-  const [stats, setStats] = useState<DetailedStats | null>(null);
-  const [currentUserPixel, setCurrentUserPixel] = useState<PixelData | null>(null);
+  const [stats, setStats] = useState<ArtProjectStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingPixel, setIsCreatingPixel] = useState(false);
-  const [selectedColor, setSelectedColor] = useState('#3B82F6');
   const [error, setError] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState('#3B82F6'); // Blue default
+  const [userPixel, setUserPixel] = useState<PixelData | null>(null);
   const [recentContributors, setRecentContributors] = useState<Array<{
     contributor_name: string;
     created_at: string;
     color: string;
   }>>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [loadingStep, setLoadingStep] = useState<string>('');
-  const [canvasReady, setCanvasReady] = useState(false);
-  const [ipLimitReached, setIpLimitReached] = useState(false);
+  const [detailedStats, setDetailedStats] = useState<{
+    totalPixels: number;
+    completedPixels: number;
+    percentage: number;
+    sessionsToday: number;
+    pixelsThisWeek: number;
+    averagePixelsPerDay: number;
+    estimatedDaysRemaining: number;
+  } | null>(null);
+  const [contributorName, setContributorName] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [isArtComplete, setIsArtComplete] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
-
-  // Couleurs prédéfinies pour l'art collaboratif
-  const predefinedColors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-    '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
-    '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2'
-  ];
-
-  // Charger les données initiales
+  const [hoveredPixel, setHoveredPixel] = useState<PixelData | null>(null);
+  const [tooltipMode, setTooltipMode] = useState<'all' | 'circles-only' | 'none'>('all');
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [canvasBackgroundColor, setCanvasBackgroundColor] = useState('#FFFFFF');
+  const [showExistingPixelAlert, setShowExistingPixelAlert] = useState(false);
+  
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pixelSize = 10; // Increased pixel size for better visibility
+  const hoverDetectionSize = 20; // Larger detection area for hover
+  
+  // Load all pixels and stats on mount
   useEffect(() => {
-    console.log('🚀 Initialisation du composant CollaborativePixelArt');
-    loadInitialData();
+    loadData();
     
-    // Nettoyer les souscriptions au démontage du composant
+    // Check if the user already has a pixel
+    checkExistingUserPixel();
+    
+    // Load recent contributors
+    loadRecentContributors();
+    
+    // Load detailed stats
+    loadDetailedStats();
+    
+    // Subscribe to real-time updates
+    const pixelChannel = collaborativeArtService.subscribeToPixelUpdates((payload) => {
+      console.log('🔄 Nouveau pixel reçu:', payload);
+      // Add the new pixel to the state and redraw
+      if (payload.new) {
+        setPixels(prevPixels => [...prevPixels, payload.new]);
+        drawPixel(payload.new);
+        
+        // Refresh stats
+        loadStats();
+        
+        // Refresh recent contributors
+        loadRecentContributors();
+      }
+    });
+    
+    const statsChannel = collaborativeArtService.subscribeToStatsUpdates((payload) => {
+      console.log('🔄 Statistiques mises à jour:', payload);
+      if (payload.new) {
+        setStats(payload.new);
+        
+        // Check if art is complete
+        if (payload.new.percentage >= 100) {
+          setIsArtComplete(true);
+        }
+      }
+    });
+    
+    // Cleanup subscriptions
     return () => {
-      console.log('🧹 Nettoyage des souscriptions au démontage du composant');
       collaborativeArtService.unsubscribeAll();
     };
   }, []);
-
-  // Configurer les souscriptions temps réel après le chargement initial
+  
+  // Draw pixels whenever they change
   useEffect(() => {
-    if (!isLoading && pixels.length >= 0) {
-      console.log('📡 Configuration des souscriptions temps réel');
-      setupRealtimeSubscriptions();
+    if (pixels.length > 0 && canvasRef.current) {
+      drawAllPixels();
     }
-  }, [isLoading]);
-
-  // Vérifier l'achèvement de l'œuvre
+  }, [pixels, pixelSize, canvasBackgroundColor]);
+  
+  // Check if art is complete based on stats
   useEffect(() => {
-    if (stats && stats.percentage >= 100 && !isCompleted) {
-      console.log('🎉 ŒUVRE TERMINÉE ! Déclenchement de la célébration');
-      setIsCompleted(true);
-      setShowCompletionModal(true);
+    if (stats && stats.percentage >= 100) {
+      setIsArtComplete(true);
     }
-  }, [stats, isCompleted]);
-
-  // 🎯 EFFET CORRIGÉ : Rendu du canvas avec vérification canvasReady ET taille cohérente
-  useEffect(() => {
-    if (!canvasRef.current) {
-      console.log('⛔️ Canvas ref non prêt, attente...');
-      return;
-    }
-
-    if (!canvasReady) {
-      console.log('⛔️ Canvas pas prêt pour le rendu, attente...');
-      return;
-    }
-
-    if (isLoading) {
-      console.log('⏳ Chargement en cours, rendu différé');
-      return;
-    }
-
-    console.log('✅ Canvas prêt, déclenchement du rendu avec', pixels.length, 'pixels');
-    renderCanvas();
-  }, [pixels, currentUserPixel, canvasReady, isLoading, language]);
-
-  const loadInitialData = async () => {
+  }, [stats]);
+  
+  const loadData = async () => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      setIsLoading(true);
-      setError(null);
-      setLoadingStep('Initialisation...');
-      setCanvasReady(false); // 🔧 Reset du canvas ready
-
-      console.log('🚀 Chargement initial des données...');
-
-      // 1. Charger les pixels en premier (le plus important)
-      setLoadingStep('Chargement des pixels...');
-      const allPixels = await collaborativeArtService.getAllPixels(true); // Force refresh
-      console.log('🎨 Pixels chargés:', allPixels.length, 'pixels');
+      // Load pixels
+      const allPixels = await collaborativeArtService.getAllPixels();
+      console.log('🔄 Pixels chargés:', allPixels.length);
+      setPixels(allPixels);
       
-      // Validation et filtrage des pixels
-      const validPixels = allPixels.filter(pixel => {
-        const isValid = pixel &&
-          typeof pixel.x === 'number' &&
-          typeof pixel.y === 'number' &&
-          typeof pixel.color === 'string' &&
-          pixel.color.match(/^#[0-9A-Fa-f]{6}$/) &&
-          pixel.x >= 0 && pixel.x < 1200 &&
-          pixel.y >= 0 && pixel.y < 1250;
-
-        if (!isValid) {
-          console.warn('⚠️ Pixel invalide filtré:', pixel);
-        }
-        return isValid;
-      });
-
-      console.log('✅ Pixels valides:', validPixels.length, '/', allPixels.length);
-      setPixels(validPixels);
-
-      // 2. Charger les statistiques
-      setLoadingStep('Chargement des statistiques...');
-      const detailedStats = await collaborativeArtService.getDetailedStats();
-      if (detailedStats) {
-        setStats(detailedStats);
-        console.log('📊 Statistiques chargées:', detailedStats);
-        
-        // Vérifier si l'œuvre est terminée
-        if (detailedStats.percentage >= 100) {
-          setIsCompleted(true);
-        }
-      }
-
-      // 3. 🔒 Vérifier si l'utilisateur a déjà un pixel (par IP ET session)
-      setLoadingStep('Vérification du pixel utilisateur...');
-      const existingPixel = await collaborativeArtService.getCurrentSessionPixel();
-      if (existingPixel) {
-        setCurrentUserPixel(existingPixel);
-        setIpLimitReached(true); // Cette IP a déjà un pixel
-        console.log('👤 Pixel utilisateur existant trouvé:', existingPixel);
-        console.log('🔒 Limite IP atteinte, création bloquée');
-      } else {
-        console.log('📝 Aucun pixel trouvé pour cette session/IP');
-        setIpLimitReached(false);
-      }
-
-      // 4. Charger les contributeurs récents
-      setLoadingStep('Chargement des contributeurs...');
-      const contributors = await collaborativeArtService.getRecentContributors(5);
-      setRecentContributors(contributors);
-      console.log('👥 Contributeurs récents chargés:', contributors.length);
-
-      setLoadingStep('Finalisation...');
+      // Load stats
+      await loadStats();
       
-      // 🎯 CORRECTION CRITIQUE : Attendre que le canvas soit dans le DOM
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      setCanvasReady(true); // ✅ Canvas maintenant prêt pour le rendu
-      console.log('✅ Chargement initial terminé avec succès, canvas prêt');
-
+      setIsLoading(false);
     } catch (error) {
       console.error('❌ Erreur lors du chargement des données:', error);
-      setError(t('common.error') + ': ' + (error instanceof Error ? error.message : 'Erreur inconnue'));
-    } finally {
+      setError('Erreur lors du chargement des données. Veuillez réessayer.');
       setIsLoading(false);
-      setLoadingStep('');
     }
   };
-
-  const setupRealtimeSubscriptions = () => {
-    try {
-      console.log('🔄 Configuration des souscriptions temps réel');
-      
-      // Écouter les nouveaux pixels
-      const pixelSubscription = collaborativeArtService.subscribeToPixelUpdates((payload) => {
-        console.log('🎨 Nouveau pixel reçu:', payload);
-        if (payload.new) {
-          setPixels(prev => {
-            // Vérifier si le pixel n'existe pas déjà pour éviter les doublons
-            const exists = prev.some(p => p.id === payload.new.id);
-            if (!exists) {
-              console.log('➕ Ajout du nouveau pixel à la liste');
-              return [...prev, payload.new];
-            }
-            return prev;
-          });
-          // Recharger les stats
-          loadStats();
-        }
-      });
-
-      // Écouter les mises à jour de statistiques
-      const statsSubscription = collaborativeArtService.subscribeToStatsUpdates((payload) => {
-        console.log('📊 Statistiques mises à jour:', payload);
-        loadStats();
-      });
-
-      console.log('✅ Souscriptions configurées avec succès');
-      
-    } catch (error) {
-      console.error('❌ Erreur lors de la configuration des souscriptions:', error);
-      setError('Erreur lors de la configuration des mises à jour temps réel.');
-    }
-  };
-
+  
   const loadStats = async () => {
     try {
-      const detailedStats = await collaborativeArtService.getDetailedStats();
-      if (detailedStats) {
-        setStats(detailedStats);
-        
-        // Vérifier si l'œuvre vient d'être terminée
-        if (detailedStats.percentage >= 100 && !isCompleted) {
-          setIsCompleted(true);
-          setShowCompletionModal(true);
-        }
+      const projectStats = await collaborativeArtService.getProjectStats();
+      setStats(projectStats);
+      
+      // Check if art is complete
+      if (projectStats && projectStats.percentage >= 100) {
+        setIsArtComplete(true);
       }
     } catch (error) {
-      console.error('Erreur lors du rechargement des stats:', error);
+      console.error('❌ Erreur lors du chargement des statistiques:', error);
     }
   };
-
-  // Fonction pour forcer le rechargement des données
-  const handleForceRefresh = async () => {
-    setIsRefreshing(true);
+  
+  const loadRecentContributors = async () => {
     try {
-      console.log('🔄 Rechargement forcé des données...');
-      
-      // Forcer le rechargement des pixels
-      await collaborativeArtService.forceRefresh();
-      
-      // Recharger toutes les données
-      await loadInitialData();
-      
-      console.log('✅ Rechargement terminé');
+      const contributors = await collaborativeArtService.getRecentContributors(10);
+      setRecentContributors(contributors);
     } catch (error) {
-      console.error('❌ Erreur lors du rechargement:', error);
-      setError('Erreur lors du rechargement des données');
-    } finally {
-      setIsRefreshing(false);
+      console.error('❌ Erreur lors du chargement des contributeurs récents:', error);
     }
   };
-
-  // 🎯 FONCTION DE RENDU CORRIGÉE avec taille de pixel COHÉRENTE
-  const renderCanvas = () => {
-    if (!canvasRef.current) {
-      console.log('⚠️ Canvas ref non disponible pour le rendu');
-      return;
-    }
-
-    if (!canvasReady) {
-      console.log('⚠️ Canvas pas encore prêt pour le rendu');
-      return;
-    }
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      console.log('⚠️ Contexte 2D non disponible');
-      return;
-    }
-
-    console.log('🖼️ Début du rendu canvas avec', pixels.length, 'pixels (TAILLE COHÉRENTE)');
-
+  
+  const loadDetailedStats = async () => {
     try {
-      // 🎯 CONFIGURATION FIXE : Taille de canvas et pixels TOUJOURS identique
-      const CANVAS_WIDTH = 800;
-      const CANVAS_HEIGHT = 833;
-      const PIXEL_SIZE = 2; // 🔧 TAILLE FIXE pour tous les pixels
-      
-      canvas.width = CANVAS_WIDTH;
-      canvas.height = CANVAS_HEIGHT;
-
-      // Fond gris pour les pixels non remplis
-      ctx.fillStyle = '#F3F4F6';
-      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-      // Dessiner les pixels existants avec TAILLE FIXE
-      if (pixels.length > 0) {
-        console.log('🎨 Début du rendu des pixels avec TAILLE FIXE:', PIXEL_SIZE + 'px');
-
-        let renderedCount = 0;
-        pixels.forEach((pixel, index) => {
-          try {
-            // Validation des données du pixel
-            if (!pixel || typeof pixel.x !== 'number' || typeof pixel.y !== 'number' || !pixel.color) {
-              console.warn(`⚠️ Pixel ${index} invalide:`, pixel);
-              return;
-            }
-
-            // Vérifier que les coordonnées sont dans les limites
-            if (pixel.x < 0 || pixel.x >= 1200 || pixel.y < 0 || pixel.y >= 1250) {
-              console.warn(`⚠️ Pixel ${index} hors limites:`, { x: pixel.x, y: pixel.y });
-              return;
-            }
-
-            // Vérifier le format de la couleur
-            if (!pixel.color.match(/^#[0-9A-Fa-f]{6}$/)) {
-              console.warn(`⚠️ Couleur invalide pour le pixel ${index}:`, pixel.color);
-              return;
-            }
-
-            ctx.fillStyle = pixel.color;
-            
-            // 🎯 CALCUL COHÉRENT : Même logique pour TOUS les pixels
-            const scaleX = CANVAS_WIDTH / 1200;
-            const scaleY = CANVAS_HEIGHT / 1250;
-            
-            const pixelX = Math.floor(pixel.x * scaleX);
-            const pixelY = Math.floor(pixel.y * scaleY);
-            
-            // 🔧 TAILLE FIXE : Tous les pixels ont la même taille
-            ctx.fillRect(pixelX, pixelY, PIXEL_SIZE, PIXEL_SIZE);
-            renderedCount++;
-
-            // Log pour les premiers pixels pour debug
-            if (index < 3) {
-              console.log(`🎨 Pixel ${index} (TAILLE FIXE ${PIXEL_SIZE}px):`, {
-                original: { x: pixel.x, y: pixel.y, color: pixel.color },
-                rendered: { x: pixelX, y: pixelY, size: PIXEL_SIZE }
-              });
-            }
-          } catch (error) {
-            console.warn(`❌ Erreur lors du rendu du pixel ${index}:`, error);
-          }
-        });
-
-        console.log(`✅ ${renderedCount}/${pixels.length} pixels rendus avec TAILLE FIXE ${PIXEL_SIZE}px`);
-
-        // Dessiner le pixel de l'utilisateur actuel avec un contour
-        if (currentUserPixel) {
-          try {
-            ctx.fillStyle = currentUserPixel.color;
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 2;
-            
-            const scaleX = CANVAS_WIDTH / 1200;
-            const scaleY = CANVAS_HEIGHT / 1250;
-            
-            const x = Math.floor(currentUserPixel.x * scaleX);
-            const y = Math.floor(currentUserPixel.y * scaleY);
-            
-            // 🔧 MÊME TAILLE pour le pixel utilisateur
-            ctx.fillRect(x, y, PIXEL_SIZE, PIXEL_SIZE);
-            ctx.strokeRect(x, y, PIXEL_SIZE, PIXEL_SIZE);
-            
-            console.log('👤 Pixel utilisateur rendu avec TAILLE FIXE:', {
-              x: currentUserPixel.x,
-              y: currentUserPixel.y,
-              color: currentUserPixel.color,
-              rendered: { x, y, size: PIXEL_SIZE }
-            });
-          } catch (error) {
-            console.warn('❌ Erreur lors du rendu du pixel utilisateur:', error);
-          }
-        }
-
-        console.log('✅ Canvas rendu avec PIXELS COHÉRENTS -', renderedCount, 'pixels affichés');
-      } else {
-        console.log('⚠️ Aucun pixel à afficher');
+      const stats = await collaborativeArtService.getDetailedStats();
+      setDetailedStats(stats);
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des statistiques détaillées:', error);
+    }
+  };
+  
+  const checkExistingUserPixel = async () => {
+    try {
+      const existingPixel = await collaborativeArtService.getCurrentSessionPixel();
+      if (existingPixel) {
+        console.log('✅ Pixel existant trouvé pour cette session:', existingPixel);
+        setUserPixel(existingPixel);
+        // Show alert if user already has a pixel
+        setShowExistingPixelAlert(true);
+        // Hide alert after 5 seconds
+        setTimeout(() => setShowExistingPixelAlert(false), 5000);
       }
     } catch (error) {
-      console.error('❌ Erreur lors du rendu du canvas:', error);
+      console.error('❌ Erreur lors de la vérification du pixel existant:', error);
     }
   };
-
-  // 🔒 FONCTION CORRIGÉE : Générer un pixel avec vérification IP stricte
-  const generateUserPixel = async () => {
-    if (isCreatingPixel) {
-      console.log('🚫 Création déjà en cours, ignoré');
+  
+  const createPixel = async () => {
+    if (isArtComplete) {
+      setShowCompletionModal(true);
       return;
     }
-
-    // 🔒 Vérification préalable : Cette IP a-t-elle déjà un pixel ?
-    if (ipLimitReached || currentUserPixel) {
-      console.log('🚫 Limite IP atteinte ou pixel déjà existant');
-      setError(t('pixel.art.existing.pixel.alert'));
-      return;
-    }
-
-    // 🎉 Vérification : L'œuvre est-elle terminée ?
-    if (isCompleted) {
-      console.log('🚫 Œuvre terminée, création de pixel bloquée');
-      setError(t('pixel.art.completed.no.more.pixels'));
-      return;
-    }
-
+    
+    setIsCreatingPixel(true);
+    setError(null);
+    
     try {
-      setIsCreatingPixel(true);
-      setError(null);
-
-      console.log('🎨 Tentative de création d\'un pixel...');
-      console.log('🔒 IP Hash actuel:', collaborativeArtService.getCurrentIpHash()?.substring(0, 8) + '...');
-
-      const result = await collaborativeArtService.createPixelForCurrentSession(
+      const newPixel = await collaborativeArtService.createPixelForCurrentSession(
         selectedColor,
-        t('pixel.art.contributor.name') || 'Contributeur MedRecap+'
+        contributorName || 'Contributeur MedRecap+'
       );
-
-      if (result) {
-        if (result.is_new_session) {
-          // Nouveau pixel créé avec succès
-          const newPixel: PixelData = {
-            id: result.pixel_id,
-            x: result.x,
-            y: result.y,
-            color: result.color,
-            session_id: collaborativeArtService.getCurrentSessionId(),
-            contributor_name: t('pixel.art.contributor.you') || 'Vous',
-            created_at: result.created_at
-          };
-
-          setCurrentUserPixel(newPixel);
-          setPixels(prev => [...prev, newPixel]);
-          setIpLimitReached(true); // Marquer la limite comme atteinte
-          
-          console.log('✅ Nouveau pixel créé avec succès:', newPixel);
-        } else {
-          // Pixel existant retourné (cette IP a déjà un pixel)
-          const existingPixel: PixelData = {
-            id: result.pixel_id,
-            x: result.x,
-            y: result.y,
-            color: result.color,
-            session_id: collaborativeArtService.getCurrentSessionId(),
-            contributor_name: t('pixel.art.contributor.you') || 'Vous',
-            created_at: result.created_at
-          };
-
-          setCurrentUserPixel(existingPixel);
-          setIpLimitReached(true);
-          
-          console.log('🔒 Pixel existant retourné (limite IP):', existingPixel);
-          setError(t('pixel.art.existing.pixel.alert'));
+      
+      if (newPixel) {
+        console.log('✅ Nouveau pixel créé:', newPixel);
+        
+        if (!newPixel.is_new_session) {
+          console.log('⚠️ Pixel existant retourné - pas de nouvelle session');
+          setShowExistingPixelAlert(true);
+          setTimeout(() => setShowExistingPixelAlert(false), 5000);
         }
-
-        // Recharger les statistiques et contributeurs
-        await loadStats();
-        const contributors = await collaborativeArtService.getRecentContributors(5);
-        setRecentContributors(contributors);
-
-      } else {
-        console.error('❌ Aucun résultat retourné par le service');
-        setError(t('pixel.art.error.create') || 'Impossible de créer le pixel. Vous avez peut-être déjà contribué.');
+        
+        // Convertir le résultat en PixelData
+        const pixelData: PixelData = {
+          id: newPixel.pixel_id,
+          x: newPixel.x,
+          y: newPixel.y,
+          color: newPixel.color,
+          session_id: collaborativeArtService.getCurrentSessionId(),
+          contributor_name: contributorName || 'Contributeur MedRecap+',
+          created_at: newPixel.created_at
+        };
+        
+        setUserPixel(pixelData);
+        
+        // Ajouter le pixel à la liste si c'est un nouveau
+        if (newPixel.is_new_session) {
+          setPixels(prevPixels => [...prevPixels, pixelData]);
+          
+          // Dessiner le pixel
+          drawPixel(pixelData);
+          
+          // Rafraîchir les statistiques
+          loadStats();
+          loadDetailedStats();
+          loadRecentContributors();
+        }
       }
     } catch (error) {
       console.error('❌ Erreur lors de la création du pixel:', error);
-      
-      if (error instanceof Error) {
-        if (error.message.includes('unique') || error.message.includes('déjà')) {
-          setError(t('pixel.art.existing.pixel.alert'));
-          setIpLimitReached(true);
-        } else {
-          setError(t('pixel.art.error.create') || 'Erreur lors de la création du pixel. Veuillez réessayer.');
-        }
-      } else {
-        setError(t('pixel.art.error.create') || 'Erreur lors de la création du pixel. Veuillez réessayer.');
-      }
+      setError(t('pixel.art.error.create'));
     } finally {
       setIsCreatingPixel(false);
     }
   };
-
-  const handleGoBack = () => {
-      window.location.href = '/';
-  };
-
-  const shareProject = () => {
-    const title = t('pixel.art.share.title') || 'Art Collaboratif MedRecap+ - 1,5 Million de Pixels';
-    const text = t('pixel.art.share.text') || 'Participez à la création d\'une œuvre d\'art collaborative ! Chaque session génère un pixel unique.';
+  
+  const drawAllPixels = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     
-    if (navigator.share) {
-      navigator.share({
-        title,
-        text,
-        url: window.location.href
-      });
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Set canvas background
+    ctx.fillStyle = canvasBackgroundColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw all pixels
+    let validPixelsCount = 0;
+    pixels.forEach(pixel => {
+      if (pixel && typeof pixel.x === 'number' && typeof pixel.y === 'number' && pixel.color) {
+        ctx.fillStyle = pixel.color;
+        ctx.fillRect(pixel.x, pixel.y, pixelSize, pixelSize);
+        
+        // Add a border to each pixel for better visibility
+        ctx.strokeStyle = canvasBackgroundColor === '#000000' ? '#FFFFFF' : '#000000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(pixel.x, pixel.y, pixelSize, pixelSize);
+        
+        validPixelsCount++;
+      } else {
+        console.warn('⚠️ Pixel invalide ignoré:', pixel);
+      }
+    });
+    
+    console.log(`✅ ${validPixelsCount}/${pixels.length} pixels valides dessinés sur le canvas`);
+    
+    // Draw user's pixel with a highlight if it exists
+    if (userPixel) {
+      // Draw a highlight around the user's pixel
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(userPixel.x - 2, userPixel.y - 2, pixelSize + 4, pixelSize + 4);
+      
+      // Draw the pixel itself
+      ctx.fillStyle = userPixel.color;
+      ctx.fillRect(userPixel.x, userPixel.y, pixelSize, pixelSize);
+      
+      // Add a second contrasting border
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(userPixel.x, userPixel.y, pixelSize, pixelSize);
+    }
+  };
+  
+  const drawPixel = (pixel: PixelData) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    if (pixel && typeof pixel.x === 'number' && typeof pixel.y === 'number' && pixel.color) {
+      ctx.fillStyle = pixel.color;
+      ctx.fillRect(pixel.x, pixel.y, pixelSize, pixelSize);
+      
+      // Add a border for better visibility
+      ctx.strokeStyle = canvasBackgroundColor === '#000000' ? '#FFFFFF' : '#000000';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(pixel.x, pixel.y, pixelSize, pixelSize);
+      
+      console.log(`✅ Pixel dessiné à (${pixel.x}, ${pixel.y}) avec couleur ${pixel.color}`);
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert(t('pixel.art.share.copied') || 'Lien copié dans le presse-papiers !');
+      console.warn('⚠️ Tentative de dessiner un pixel invalide:', pixel);
     }
   };
 
-  const downloadProgress = () => {
-    if (!canvasRef.current) return;
+  const toggleCanvasBackground = () => {
+    setCanvasBackgroundColor(prev => prev === '#FFFFFF' ? '#000000' : '#FFFFFF');
+  };
+  
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / (canvas.width / 1200));
+    const y = Math.floor((e.clientY - rect.top) / (canvas.height / 1250));
+    
+    // Find pixel at this position with larger detection area
+    const pixelAtPosition = pixels.find(p => 
+      Math.abs(p.x - x) <= hoverDetectionSize/2 && 
+      Math.abs(p.y - y) <= hoverDetectionSize/2
+    );
+    
+    if (pixelAtPosition) {
+      setHoveredPixel(pixelAtPosition);
+    } else {
+      setHoveredPixel(null);
+    }
+  };
+  
+  const handleCanvasMouseLeave = () => {
+    setHoveredPixel(null);
+  };
+  
+  const handleRefresh = async () => {
+    await collaborativeArtService.forceRefresh();
+    loadData();
+  };
+  
+  const handleShareClick = () => {
+    const url = window.location.href;
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url)
+        .then(() => {
+          setLinkCopied(true);
+          setTimeout(() => setLinkCopied(false), 3000);
+        })
+        .catch(err => {
+          console.error('❌ Erreur lors de la copie du lien:', err);
+        });
+    } else {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 3000);
+    }
+  };
+  
+  const handleDownload = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    // Create a temporary link
     const link = document.createElement('a');
-    link.download = `medrecap-collaborative-art-${new Date().toISOString().split('T')[0]}.png`;
-    link.href = canvasRef.current.toDataURL();
+    link.download = 'collaborative-pixel-art.png';
+    link.href = canvas.toDataURL('image/png');
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+  };
+  
+  const formatPercentage = (value: number) => {
+    return value.toFixed(4);
+  };
+  
+  const getColorClass = (color: string) => {
+    // Extract hex value without #
+    const hex = color.replace('#', '');
+    
+    // Convert hex to RGB
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    // Calculate luminance (simplified)
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    
+    // Return appropriate text color class
+    return luminance > 0.5 ? 'text-gray-900' : 'text-white';
+  };
+  
+  const handleTooltipModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setTooltipMode(e.target.value as 'all' | 'circles-only' | 'none');
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-teal-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg mb-2">
-            {t('pixel.art.loading')}
-          </p>
-          {loadingStep && (
-            <p className="text-sm text-purple-600">
-              {loadingStep}
-            </p>
-          )}
-          <div className="mt-4 bg-white rounded-lg p-4 shadow-sm max-w-md mx-auto">
-            <p className="text-xs text-gray-500">
-              🔄 Chargement des données depuis Supabase...
-            </p>
-            <div className="mt-2 bg-gray-200 rounded-full h-2">
-              <div className="bg-purple-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  const toggleLanguage = () => {
+    setLanguage(language === 'fr' ? 'en' : 'fr');
+  };
+  
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-teal-50">
-      {/* 🎉 BANNIÈRE DE CÉLÉBRATION - Affichée quand l'œuvre est terminée */}
-      {isCompleted && (
-        <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white py-3 px-4 text-center font-bold text-lg shadow-lg">
-          🎉 {t('pixel.art.completed.title')} - {t('pixel.art.completed.subtitle')} 🎉
-        </div>
-      )}
-
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       {/* Header */}
-      <header className={`backdrop-blur-md border-b border-gray-200 sticky top-0 z-50 ${
-        isCompleted 
-          ? 'bg-gradient-to-r from-yellow-100/90 to-orange-100/90' 
-          : 'bg-white/80'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap justify-center sm:justify-between items-center min-h-fit sm:h-16">
-            <button
-              onClick={handleGoBack}
-              className="w-min mx-auto sm:mx-0 flex justify-center items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-center"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>{t('pixel.art.back')}</span>
-            </button>
-            
-            <div className="flex items-center gap-3">
-              <div className={`flex items-center justify-center w-10 h-10 rounded-lg shadow-lg ${
-                isCompleted 
-                  ? 'bg-gradient-to-br from-yellow-500 to-orange-600' 
-                  : 'bg-gradient-to-br from-purple-600 to-blue-600'
-              }`}>
-                {isCompleted ? (
-                  <Award className="w-6 h-6 text-white" />
-                ) : (
-                  <Palette className="w-6 h-6 text-white" />
-                )}
-              </div>
-              <div>
-                <h1 className={`text-xl font-bold ${
-                  isCompleted ? 'text-orange-900' : 'text-gray-900'
-                }`}>
-                  {isCompleted ? '🏆 ' : '🏥 '}{t('pixel.art.title')}
-                </h1>
-                <p className={`text-sm ${
-                  isCompleted ? 'text-orange-700' : 'text-gray-600'
-                }`}>
-                  {isCompleted ? t('pixel.art.completed.subtitle') : t('pixel.art.subtitle')}
-                </p>
-              </div>
+      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-wrap items-center justify-between">
+            <div className="flex items-center">
+              <a 
+                href="/" 
+                className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium">{t('pixel.art.back')}</span>
+              </a>
+              <div className="h-6 border-l border-gray-300 mx-4"></div>
+              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Palette className="w-6 h-6 text-purple-600" />
+                <span>{t('pixel.art.title')}</span>
+                <span className="text-sm font-normal text-gray-500 hidden sm:inline">
+                  {t('pixel.art.subtitle')}
+                </span>
+              </h1>
             </div>
-
-            <div className="flex items-center gap-2">
-              <LanguageSelector className="mr-2" showLabel={false} />
+            
+            <div className="flex items-center gap-3 mt-3 sm:mt-0">
+              {/* Language Selector */}
               <button
-                onClick={shareProject}
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                title={t('pixel.art.share')}
+                onClick={toggleLanguage}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
               >
-                <Share2 className="w-5 h-5" />
-              </button>
-              <button
-                onClick={downloadProgress}
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                title={t('pixel.art.download')}
-              >
-                <Download className="w-5 h-5" />
+                <Globe className="w-4 h-4" />
+                <span>{language === 'fr' ? 'English' : 'Français'}</span>
               </button>
               
-                {/* Logo Bolt */}
-                <div className="flex justify-center">
-                  <a
-                    href="https://bolt.new"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Powered by Bolt"
-                  >
-                    <img src="/bolt.png" alt="Bolt Logo" className="max-h-10 w-auto" />
-                  </a>
-                </div>
+              <button
+                onClick={handleShareClick}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                {linkCopied ? <Check className="w-4 h-4 text-green-600" /> : <Share2 className="w-4 h-4" />}
+                <span>{linkCopied ? t('pixel.art.share.copied') : t('pixel.art.share')}</span>
+              </button>
+              
+              <button
+                onClick={handleDownload}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                <span>{t('pixel.art.download')}</span>
+              </button>
+              
+              <button
+                onClick={handleRefresh}
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={isLoading}
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <span>{t('pixel.art.realtime.refresh')}</span>
+              </button>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Error Banner */}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <p className="text-red-700">{error}</p>
-              <button
-                onClick={() => setError(null)}
-                className="ml-auto text-red-600 hover:text-red-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero Section */}
-        <div className="text-center mb-12">
-          <div className="flex justify-center mb-6">
-            <div className={`flex items-center justify-center w-20 h-20 rounded-2xl shadow-lg ${
-              isCompleted 
-                ? 'bg-gradient-to-br from-yellow-500 to-orange-600' 
-                : 'bg-gradient-to-br from-purple-600 to-blue-600'
-            }`}>
-              {isCompleted ? (
-                <Award className="w-10 h-10 text-white" />
-              ) : (
-                <ImageIcon className="w-10 h-10 text-white" />
-              )}
-            </div>
-          </div>
-          
-          <h1 className={`text-4xl md:text-5xl font-bold mb-4 ${
-            isCompleted ? 'text-orange-900' : 'text-gray-900'
-          }`}>
-            {isCompleted ? '🏆 ' : '🎨 '}{t('pixel.art.hero.title')}
-          </h1>
-          <p className={`text-xl mb-6 max-w-3xl mx-auto ${
-            isCompleted ? 'text-orange-700' : 'text-gray-600'
-          }`}>
-            {isCompleted ? t('pixel.art.completed.thanks.description') : t('pixel.art.hero.description')}
-          </p>
-
-          {/* Progress Stats */}
-          {stats && (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-8">
-                <div className={`rounded-xl p-4 shadow-sm border ${
-                  isCompleted 
-                    ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-orange-200' 
-                    : 'bg-white border-gray-200'
-                }`}>
-                  <div className={`text-2xl font-bold ${
-                    isCompleted ? 'text-orange-600' : 'text-purple-600'
-                  }`}>{stats.completedPixels.toLocaleString()}</div>
-                  <div className={`text-sm ${
-                    isCompleted ? 'text-orange-700' : 'text-gray-600'
-                  }`}>
-                    {t('pixel.art.stats.generated')}
-                  </div>
+        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-8 text-white mb-8 shadow-lg">
+          <div className="max-w-3xl">
+            <h2 className="text-3xl font-bold mb-4">{t('pixel.art.hero.title')}</h2>
+            <p className="text-lg text-purple-100 mb-6">{t('pixel.art.hero.description')}</p>
+            
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="w-5 h-5 text-purple-200" />
+                  <h3 className="font-semibold">{t('pixel.art.stats.generated')}</h3>
                 </div>
-                <div className={`rounded-xl p-4 shadow-sm border ${
-                  isCompleted 
-                    ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-orange-200' 
-                    : 'bg-white border-gray-200'
-                }`}>
-                  <div className={`text-2xl font-bold ${
-                    isCompleted ? 'text-orange-600' : 'text-blue-600'
-                  }`}>{stats.percentage.toFixed(2)}%</div>
-                  <div className={`text-sm ${
-                    isCompleted ? 'text-orange-700' : 'text-gray-600'
-                  }`}>
-                    {t('pixel.art.stats.progress')}
-                  </div>
-                </div>
-                <div className={`rounded-xl p-4 shadow-sm border ${
-                  isCompleted 
-                    ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-orange-200' 
-                    : 'bg-white border-gray-200'
-                }`}>
-                  <div className={`text-2xl font-bold ${
-                    isCompleted ? 'text-orange-600' : 'text-green-600'
-                  }`}>{stats.sessionsToday}</div>
-                  <div className={`text-sm ${
-                    isCompleted ? 'text-orange-700' : 'text-gray-600'
-                  }`}>
-                    {t('pixel.art.stats.sessions.today')}
-                  </div>
-                </div>
-                <div className={`rounded-xl p-4 shadow-sm border ${
-                  isCompleted 
-                    ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-orange-200' 
-                    : 'bg-white border-gray-200'
-                }`}>
-                  <div className={`text-2xl font-bold ${
-                    isCompleted ? 'text-orange-600' : 'text-orange-600'
-                  }`}>
-                    {isCompleted ? '0' : (stats.totalPixels - stats.completedPixels).toLocaleString()}
-                  </div>
-                  <div className={`text-sm ${
-                    isCompleted ? 'text-orange-700' : 'text-gray-600'
-                  }`}>
-                    {t('pixel.art.stats.remaining')}
-                  </div>
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="max-w-2xl mx-auto mb-8">
-                <div className={`rounded-full h-4 overflow-hidden ${
-                  isCompleted ? 'bg-orange-200' : 'bg-gray-200'
-                }`}>
-                  <div 
-                    className={`h-full transition-all duration-1000 ease-out ${
-                      isCompleted 
-                        ? 'bg-gradient-to-r from-yellow-500 to-orange-600' 
-                        : 'bg-gradient-to-r from-purple-600 to-blue-600'
-                    }`}
-                    style={{ width: `${Math.min(stats.percentage, 100)}%` }}
-                  ></div>
-                </div>
-                <p className={`text-sm mt-2 ${
-                  isCompleted ? 'text-orange-700' : 'text-gray-600'
-                }`}>
-                  {isCompleted 
-                    ? t('pixel.art.completed.progress.complete')
-                    : t('pixel.art.progress.estimated').replace('{days}', stats.estimatedDaysRemaining.toString())
-                  }
+                <p className="text-2xl font-bold">
+                  {isLoading ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : (
+                    stats?.completed_pixels.toLocaleString() || '0'
+                  )}
                 </p>
               </div>
-            </>
-          )}
-        </div>
-
-        <div className="grid lg:grid-cols-2 gap-12">
-          {/* Canvas Section - TAILLE AUGMENTÉE */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {t('pixel.art.realtime.title')}
-                </h2>
-                <button
-                  onClick={handleForceRefresh}
-                  disabled={isRefreshing}
-                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-                  title={t('pixel.art.realtime.refresh')}
-                >
-                  <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                </button>
+              
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <BarChart3 className="w-5 h-5 text-purple-200" />
+                  <h3 className="font-semibold">{t('pixel.art.stats.progress')}</h3>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoading ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : (
+                    `${formatPercentage(stats?.percentage || 0)}%`
+                  )}
+                </p>
               </div>
               
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-5 h-5 text-purple-200" />
+                  <h3 className="font-semibold">{t('pixel.art.stats.sessions.today')}</h3>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoading ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : (
+                    stats?.sessions_today.toLocaleString() || '0'
+                  )}
+                </p>
+              </div>
+              
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="w-5 h-5 text-purple-200" />
+                  <h3 className="font-semibold">
+                    {isArtComplete ? t('pixel.art.completed.days') : t('pixel.art.stats.remaining')}
+                  </h3>
+                </div>
+                <p className="text-2xl font-bold">
+                  {isLoading ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : isArtComplete ? (
+                    '0'
+                  ) : (
+                    ((stats?.total_pixels || 0) - (stats?.completed_pixels || 0)).toLocaleString()
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Canvas and Contribution Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          {/* Canvas Section */}
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-md p-6 border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Palette className="w-5 h-5 text-purple-600" />
+                {t('pixel.art.realtime.title')}
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleCanvasBackground}
+                  className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  {canvasBackgroundColor === '#FFFFFF' ? 'Black Background' : 'White Background'}
+                </button>
+                <button 
+                  onClick={() => setShowDebugInfo(!showDebugInfo)}
+                  className="p-1 text-gray-500 hover:text-gray-700 rounded-full"
+                  title="Toggle debug info"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center h-64">
+                <RefreshCw className="w-10 h-10 text-purple-600 animate-spin mb-4" />
+                <p className="text-gray-600">{t('pixel.art.loading')}</p>
+                <p className="text-sm text-purple-600 mt-2">{t('pixel.art.loading.supabase')}</p>
+              </div>
+            ) : (
               <div className="relative">
-                <canvas
-                  ref={canvasRef}
-                  className="w-full h-auto border border-gray-300 rounded-lg shadow-sm"
-                  style={{ imageRendering: 'pixelated' }}
+                <canvas 
+                  ref={canvasRef} 
+                  width={1200} 
+                  height={1250}
+                  className="w-full h-auto border border-gray-200 rounded-lg"
+                  style={{ background: canvasBackgroundColor }}
+                  onMouseMove={handleCanvasMouseMove}
+                  onMouseLeave={handleCanvasMouseLeave}
                 />
-                {isRefreshing && (
-                  <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg">
-                    <div className="flex items-center gap-2 text-purple-600">
-                      <Loader className="w-5 h-5 animate-spin" />
-                      <span className="text-sm font-medium">Rechargement...</span>
+                
+                {/* Hover Tooltip */}
+                {hoveredPixel && tooltipMode !== 'none' && (
+                  <div 
+                    className="absolute bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm pointer-events-none z-10"
+                    style={{
+                      left: `${(hoveredPixel.x / 1200) * 100}%`,
+                      top: `${(hoveredPixel.y / 1250) * 100}%`,
+                      transform: 'translate(-50%, -130%)'
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: hoveredPixel.color }}
+                      ></div>
+                      <span>{hoveredPixel.contributor_name || t('pixel.art.contributor.name')}</span>
+                    </div>
+                    <div className="text-xs text-gray-300 mt-1">
+                      ({hoveredPixel.x}, {hoveredPixel.y})
                     </div>
                   </div>
                 )}
+                
+                {/* Show All Tooltips */}
+                {tooltipMode === 'all' && pixels.map((pixel, index) => (
+                  <div 
+                    key={index}
+                    className="absolute bg-black bg-opacity-80 text-white px-2 py-1 rounded text-xs pointer-events-none z-10"
+                    style={{
+                      left: `${(pixel.x / 1200) * 100}%`,
+                      top: `${(pixel.y / 1250) * 100}%`,
+                      transform: 'translate(-50%, -130%)',
+                      maxWidth: '120px'
+                    }}
+                  >
+                    <div className="flex items-center gap-1">
+                      <div 
+                        className="w-2 h-2 rounded-full" 
+                        style={{ backgroundColor: pixel.color }}
+                      ></div>
+                      <span className="truncate">{pixel.contributor_name || t('pixel.art.contributor.name')}</span>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Visual Markers for Pixels - Circles Only Mode */}
+                {(tooltipMode === 'all' || tooltipMode === 'circles-only') && pixels.map((pixel, index) => (
+                  <div 
+                    key={`marker-${index}`}
+                    className="absolute w-4 h-4 rounded-full border-2 border-white pointer-events-none"
+                    style={{
+                      left: `${(pixel.x / 1200) * 100}%`,
+                      top: `${(pixel.y / 1250) * 100}%`,
+                      backgroundColor: pixel.color,
+                      transform: 'translate(-50%, -50%)',
+                      boxShadow: '0 0 0 1px rgba(0,0,0,0.3)'
+                    }}
+                  />
+                ))}
               </div>
+            )}
+            
+            <div className="mt-4 text-sm text-gray-600">
+              <p>{t('pixel.art.realtime.final')}</p>
+              <p className="flex items-center gap-2 mt-1 text-xs text-purple-600">
+                <Database className="w-3 h-3" />
+                {t('pixel.art.realtime.stored')}
+              </p>
+              <p className="flex items-center gap-2 mt-1 text-xs text-blue-600">
+                <Info className="w-3 h-3" />
+                {t('pixel.art.realtime.sizepixels')}
+              </p>
               
-              <div className="mt-4 text-center">
-                <p className="text-sm text-gray-600">
-                  {t('pixel.art.realtime.final')}
-                </p>
-                <p className="text-xs text-green-600 mt-1">
-                  ✅ {t('pixel.art.realtime.stored')} • {pixels.length} pixels chargés
-                </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  {t('pixel.art.realtime.sizepixels')}
-                </p>
+              <div className="mt-2">
+                <select
+                  value={tooltipMode}
+                  onChange={handleTooltipModeChange}
+                  className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="all">{t('pixel.art.tooltip.mode.all')}</option>
+                  <option value="circles-only">{t('pixel.art.tooltip.mode.circles')}</option>
+                  <option value="none">{t('pixel.art.tooltip.mode.none')}</option>
+                </select>
               </div>
             </div>
-
-            {/* Contributeurs récents */}
-            {recentContributors.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t('pixel.art.contributors.title')}
-                </h3>
-                <div className="space-y-2">
-                  {recentContributors.map((contributor, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <div 
-                        className="w-4 h-4 rounded-full border border-gray-300"
-                        style={{ backgroundColor: contributor.color }}
-                      ></div>
-                      <span className="text-sm text-gray-700">{contributor.contributor_name}</span>
-                      <span className="text-xs text-gray-500 ml-auto">
-                        {new Date(contributor.created_at).toLocaleTimeString()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+            
+            {/* Debug Info */}
+            {showDebugInfo && (
+              <div className="mt-4 p-4 bg-gray-100 rounded-lg text-xs font-mono">
+                <h4 className="font-bold mb-2">Debug Info:</h4>
+                <p>Pixels loaded: {pixels.length}</p>
+                <p>Canvas size: 1200×1250</p>
+                <p>Pixel size: {pixelSize}px</p>
+                <p>Hover detection: {hoverDetectionSize}px</p>
+                <p>Tooltip mode: {tooltipMode}</p>
+                <p>Background color: {canvasBackgroundColor}</p>
+                <p>User pixel: {userPixel ? `(${userPixel.x}, ${userPixel.y}) - ${userPixel.color}` : 'None'}</p>
+                <p>Session ID: {collaborativeArtService.getCurrentSessionId().substring(0, 10)}...</p>
+                <button 
+                  onClick={handleRefresh}
+                  className="mt-2 px-2 py-1 bg-blue-600 text-white rounded text-xs"
+                >
+                  Force Refresh
+                </button>
               </div>
             )}
           </div>
-
-          {/* Interaction Section */}
+          
+          {/* Contribution Section */}
           <div className="space-y-6">
-            {/* 🔒 Votre Contribution - AVEC PROTECTION IP */}
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            {/* Your Contribution */}
+            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-600" />
                 {t('pixel.art.contribution.title')}
-              </h2>
+              </h3>
               
-              {isCompleted ? (
-                // 🎉 AFFICHAGE QUAND L'ŒUVRE EST TERMINÉE
-                <div className="text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 border-4 border-yellow-500 rounded-lg flex items-center justify-center bg-gradient-to-br from-yellow-100 to-orange-100">
-                    <Award className="w-8 h-8 text-yellow-600" />
+              {userPixel ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg" style={{ backgroundColor: userPixel.color }}></div>
+                    <div>
+                      <p className="font-medium text-gray-900">{t('pixel.art.contribution.success')}</p>
+                      <p className="text-sm text-gray-600">
+                        {t('pixel.art.contribution.position', { x: userPixel.x, y: userPixel.y })}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <CheckCircle className="w-5 h-5 text-yellow-600" />
-                    <p className="text-yellow-700 font-medium">
-                      {t('pixel.art.completed.thanks')}
+                  
+                  <div className="bg-purple-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Database className="w-4 h-4 text-purple-600" />
+                      <p className="text-sm font-medium text-purple-800">{t('pixel.art.contribution.stored')}</p>
+                    </div>
+                    <p className="text-xs text-purple-700">
+                      {userPixel.contributor_name || t('pixel.art.contributor.name')}
+                      {userPixel.contributor_name === contributorName ? ` (${t('pixel.art.contributor.you')})` : ''}
                     </p>
                   </div>
-                  <p className="text-sm text-yellow-600 mb-4">
-                    {t('pixel.art.completed.no.more.pixels')}
-                  </p>
-                  
-                  {currentUserPixel && (
-                    <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                      <p className="text-sm text-yellow-800 mb-2">
-                        Votre contribution : Pixel à la position ({currentUserPixel.x}, {currentUserPixel.y})
-                      </p>
-                      <div 
-                        className="w-8 h-8 mx-auto rounded border-2 border-yellow-500"
-                        style={{ backgroundColor: currentUserPixel.color }}
-                      ></div>
-                    </div>
-                  )}
-                  
+                </div>
+              ) : isArtComplete ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Award className="w-5 h-5 text-yellow-600" />
+                    <p className="font-medium text-yellow-800">{t('pixel.art.completed.no.more.pixels')}</p>
+                  </div>
+                  <p className="text-sm text-yellow-700">{t('pixel.art.completed.thanks.description')}</p>
                   <button
                     onClick={() => setShowCompletionModal(true)}
-                    className="mt-4 px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-600 text-white rounded-lg font-semibold hover:from-yellow-600 hover:to-orange-700 transition-all transform hover:scale-105"
+                    className="mt-3 w-full px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors"
                   >
-                    🎉 {t('pixel.art.completed.view.celebration')}
+                    {t('pixel.art.completed.view.celebration')}
                   </button>
                 </div>
-              ) : currentUserPixel || ipLimitReached ? (
-                <div className="text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 border-4 border-gray-300 rounded-lg flex items-center justify-center">
-                    <div 
-                      className="w-8 h-8 rounded"
-                      style={{ backgroundColor: currentUserPixel?.color || selectedColor }}
-                    ></div>
-                  </div>
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <p className="text-green-600 font-medium">
-                      {currentUserPixel ? t('pixel.art.contribution.success') : 'Contribution déjà effectuée'}
-                    </p>
-                  </div>
-                  {currentUserPixel && (
-                    <>
-                      <p className="text-sm text-gray-600 mb-2">
-                        {t('pixel.art.contribution.position').replace('{x}', currentUserPixel.x.toString()).replace('{y}', currentUserPixel.y.toString())}
-                      </p>
-                      <p className="text-xs text-blue-600">
-                        {t('pixel.art.contribution.stored')}
-                      </p>
-                    </>
+              ) : (
+                <div className="space-y-4">
+                  {/* Alert for existing pixel */}
+                  {showExistingPixelAlert && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Info className="w-5 h-5 text-yellow-600" />
+                        <p className="font-medium text-yellow-800">{t('pixel.art.existing.pixel.alert')}</p>
+                      </div>
+                    </div>
                   )}
                   
-                  {/* 🔒 Message de protection IP */}
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Shield className="w-5 h-5 text-blue-600" />
-                      <span className="font-medium text-blue-800">{t('pixel.art.security.title')}</span>
-                    </div>
-                    <p className="text-sm text-blue-700">
-                      {t('pixel.art.security.description')}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <div className="mb-4">
-                    <p className="text-gray-600 mb-4">
-                      {t('pixel.art.contribution.choose')}
-                    </p>
-                    
-                    {/* Color Picker */}
-                    <div className="flex flex-wrap justify-center gap-2 mb-4">
-                      {predefinedColors.map((color, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setSelectedColor(color)}
-                          className={`w-8 h-8 rounded-lg border-2 transition-all ${
-                            selectedColor === color ? 'border-gray-800 scale-110' : 'border-gray-300'
-                          }`}
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
-                    </div>
-                    
-                    <input
-                      type="color"
-                      value={selectedColor}
-                      onChange={(e) => setSelectedColor(e.target.value)}
-                      className="w-16 h-8 rounded border border-gray-300 mb-4"
-                    />
+                  <p className="text-gray-600">{t('pixel.art.contribution.choose')}</p>
+                  
+                  {/* Color Picker */}
+                  <div className="grid grid-cols-5 gap-2">
+                    {['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', 
+                      '#EC4899', '#6366F1', '#F97316', '#14B8A6', '#000000'].map(color => (
+                      <button
+                        key={color}
+                        onClick={() => setSelectedColor(color)}
+                        className={`w-full aspect-square rounded-lg transition-all ${
+                          selectedColor === color ? 'ring-2 ring-offset-2 ring-gray-600 scale-110' : ''
+                        }`}
+                        style={{ backgroundColor: color }}
+                        aria-label={`Select color ${color}`}
+                      />
+                    ))}
                   </div>
                   
+                  {/* Contributor Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('pixel.art.contributor.name.label')}
+                    </label>
+                    <input
+                      type="text"
+                      value={contributorName}
+                      onChange={(e) => setContributorName(e.target.value)}
+                      placeholder={t('pixel.art.contributor.name.placeholder')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      maxLength={50}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t('pixel.art.contributor.name.help')}
+                    </p>
+                  </div>
+                  
+                  {/* Security Notice */}
+                  <div className="bg-blue-50 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Lock className="w-4 h-4 text-blue-600" />
+                      <p className="text-sm font-medium text-blue-800">{t('pixel.art.security.ip.title')}</p>
+                    </div>
+                    <p className="text-xs text-blue-700">
+                      {t('pixel.art.security.ip.description')}
+                    </p>
+                  </div>
+                  
+                  {/* Generate Button */}
                   <button
-                    onClick={generateUserPixel}
-                    disabled={isCreatingPixel || ipLimitReached}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    onClick={createPixel}
+                    disabled={isCreatingPixel}
+                    className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     {isCreatingPixel ? (
-                      <div className="flex items-center gap-2">
-                        <Loader className="w-5 h-5 animate-spin" />
-                        {t('pixel.art.contribution.creating')}
-                      </div>
+                      <>
+                        <RefreshCw className="w-5 h-5 animate-spin" />
+                        <span>{t('pixel.art.contribution.creating')}</span>
+                      </>
                     ) : (
                       <>
-                        🎨 {t('pixel.art.contribution.generate')}
+                        <Sparkles className="w-5 h-5" />
+                        <span>{t('pixel.art.contribution.generate')}</span>
                       </>
                     )}
                   </button>
                   
-                  {/* 🔒 Information de sécurité */}
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Shield className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm font-medium text-gray-700">{t('pixel.art.security.ip.title')}</span>
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+                      {error}
                     </div>
-                    <p className="text-xs text-gray-600">
-                      {t('pixel.art.security.ip.description')}
-                    </p>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
-
-            {/* Statistiques Avancées */}
-            {stats && (
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t('pixel.art.stats.advanced')}
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <div className="text-lg font-bold text-blue-600">
-                      {stats.pixelsThisWeek}
-                    </div>
-                    <div className="text-xs text-gray-600">
-                      {t('pixel.art.stats.week')}
-                    </div>
-                  </div>
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <div className="text-lg font-bold text-green-600">
-                      {stats.averagePixelsPerDay}
-                    </div>
-                    <div className="text-xs text-gray-600">
-                      {t('pixel.art.stats.average')}
-                    </div>
-                  </div>
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <div className="text-lg font-bold text-purple-600">
-                      {isCompleted ? t('pixel.art.completed.days') : stats.estimatedDaysRemaining}
-                    </div>
-                    <div className="text-xs text-gray-600">
-                      {t('pixel.art.stats.days.remaining')}
-                    </div>
-                  </div>
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <div className="text-lg font-bold text-orange-600">
-                      {(stats.percentage * 10).toFixed(1)}
-                    </div>
-                    <div className="text-xs text-gray-600">
-                      {t('pixel.art.stats.art.score')}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Comment ça marche */}
-            <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {t('pixel.art.how.title')}
+            
+            {/* Recent Contributors */}
+            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5 text-purple-600" />
+                {t('pixel.art.contributors.title')}
               </h3>
+              
               <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <div className="flex items-center justify-center w-6 h-6 bg-blue-600 text-white rounded-full text-xs font-bold">1</div>
-                  <p className="text-sm text-gray-700">
-                    {t('pixel.art.how.step1')}
+                {recentContributors.length > 0 ? (
+                  recentContributors.map((contributor, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <div 
+                        className="w-6 h-6 rounded-full" 
+                        style={{ backgroundColor: contributor.color }}
+                      ></div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {contributor.contributor_name || t('pixel.art.contributor.name')}
+                          {contributor.contributor_name === contributorName ? ` (${t('pixel.art.contributor.you')})` : ''}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(contributor.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm italic">
+                    {isLoading ? t('pixel.art.loading') : 'No contributors yet'}
                   </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="flex items-center justify-center w-6 h-6 bg-purple-600 text-white rounded-full text-xs font-bold">2</div>
-                  <p className="text-sm text-gray-700">
-                    {t('pixel.art.how.step2')}
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="flex items-center justify-center w-6 h-6 bg-green-600 text-white rounded-full text-xs font-bold">3</div>
-                  <p className="text-sm text-gray-700">
-                    {t('pixel.art.how.step3')}
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="flex items-center justify-center w-6 h-6 bg-orange-600 text-white rounded-full text-xs font-bold">4</div>
-                  <p className="text-sm text-gray-700">
-                    {t('pixel.art.how.step4')}
-                  </p>
-                </div>
+                )}
               </div>
             </div>
-
-            {/* Call to Action */}
-            <div className={`rounded-2xl p-6 text-white text-center ${
-              isCompleted 
-                ? 'bg-gradient-to-r from-yellow-500 to-orange-600' 
-                : 'bg-gradient-to-r from-purple-600 to-blue-600'
-            }`}>
-              <h3 className="text-xl font-bold mb-2">
-                {isCompleted ? t('pixel.art.completed.thanks.title') : t('pixel.art.cta.title')}
+            
+            {/* Advanced Stats */}
+            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-purple-600" />
+                {t('pixel.art.stats.advanced')}
               </h3>
-              <p className={`mb-4 ${
-                isCompleted ? 'text-yellow-100' : 'text-purple-100'
-              }`}>
-                {isCompleted ? t('pixel.art.completed.thanks.description') : t('pixel.art.cta.description')}
-              </p>
-              <a
-                href="/"
-                className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
-                  isCompleted 
-                    ? 'bg-white text-orange-600 hover:bg-gray-100' 
-                    : 'bg-white text-purple-600 hover:bg-gray-100'
-                }`}
-              >
-                <Zap className="w-5 h-5" />
-                {t('pixel.art.cta.back')}
-              </a>
+              
+              {detailedStats ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs font-medium text-gray-500 mb-1">{t('pixel.art.stats.week')}</p>
+                    <p className="text-lg font-bold text-gray-900">{detailedStats.pixelsThisWeek.toLocaleString()}</p>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs font-medium text-gray-500 mb-1">{t('pixel.art.stats.average')}</p>
+                    <p className="text-lg font-bold text-gray-900">{detailedStats.averagePixelsPerDay.toLocaleString()}</p>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs font-medium text-gray-500 mb-1">{t('pixel.art.stats.days.remaining')}</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {isArtComplete ? '0' : detailedStats.estimatedDaysRemaining.toLocaleString()}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs font-medium text-gray-500 mb-1">{t('pixel.art.stats.art.score')}</p>
+                    <p className="text-lg font-bold text-purple-600">
+                      {Math.floor(detailedStats.percentage * 10).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-24">
+                  <RefreshCw className="w-6 h-6 text-purple-600 animate-spin" />
+                </div>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Footer Info */}
-        <div className="mt-12 text-center">
-          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 max-w-4xl mx-auto">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              {t('pixel.art.storage.title')}
-            </h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
-              {t('pixel.art.storage.description')}
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="bg-green-50 rounded-lg p-4">
-                <div className="font-semibold text-green-800 mb-2">✅ {t('pixel.art.storage.persistent')}</div>
-                <div className="text-green-700">{t('pixel.art.storage.persistent.desc')}</div>
+        
+        {/* How It Works Section */}
+        <div className="bg-white rounded-xl shadow-md p-8 border border-gray-200 mb-8">
+          <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+            <Info className="w-6 h-6 text-purple-600" />
+            {t('pixel.art.how.title')}
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-purple-50 rounded-xl p-6">
+              <div className="flex items-center justify-center w-12 h-12 bg-purple-600 rounded-full mb-4">
+                <span className="text-xl font-bold text-white">1</span>
               </div>
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="font-semibold text-blue-800 mb-2">🔄 {t('pixel.art.storage.realtime')}</div>
-                <div className="text-blue-700">{t('pixel.art.storage.realtime.desc')}</div>
+              <p className="text-purple-900">{t('pixel.art.how.step1')}</p>
+            </div>
+            
+            <div className="bg-blue-50 rounded-xl p-6">
+              <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-full mb-4">
+                <span className="text-xl font-bold text-white">2</span>
               </div>
-              <div className="bg-purple-50 rounded-lg p-4">
-                <div className="font-semibold text-purple-800 mb-2">🔒 {t('pixel.art.storage.secure')}</div>
-                <div className="text-purple-700">{t('pixel.art.storage.secure.desc')}</div>
+              <p className="text-blue-900">{t('pixel.art.how.step2')}</p>
+            </div>
+            
+            <div className="bg-green-50 rounded-xl p-6">
+              <div className="flex items-center justify-center w-12 h-12 bg-green-600 rounded-full mb-4">
+                <span className="text-xl font-bold text-white">3</span>
+              </div>
+              <p className="text-green-900">{t('pixel.art.how.step3')}</p>
+            </div>
+            
+            <div className="bg-orange-50 rounded-xl p-6">
+              <div className="flex items-center justify-center w-12 h-12 bg-orange-600 rounded-full mb-4">
+                <span className="text-xl font-bold text-white">4</span>
+              </div>
+              <p className="text-orange-900">{t('pixel.art.how.step4')}</p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Storage Section */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-md p-8 text-white mb-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div>
+              <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
+                <Database className="w-6 h-6" />
+                {t('pixel.art.storage.title')}
+              </h3>
+              <p className="text-blue-100 max-w-2xl">
+                {t('pixel.art.storage.description')}
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="flex items-center justify-center w-10 h-10 bg-white/20 rounded-full mx-auto mb-2">
+                  <Database className="w-5 h-5 text-white" />
+                </div>
+                <p className="font-medium">{t('pixel.art.storage.persistent')}</p>
+                <p className="text-xs text-blue-200">{t('pixel.art.storage.persistent.desc')}</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="flex items-center justify-center w-10 h-10 bg-white/20 rounded-full mx-auto mb-2">
+                  <Rocket className="w-5 h-5 text-white" />
+                </div>
+                <p className="font-medium">{t('pixel.art.storage.realtime')}</p>
+                <p className="text-xs text-blue-200">{t('pixel.art.storage.realtime.desc')}</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="flex items-center justify-center w-10 h-10 bg-white/20 rounded-full mx-auto mb-2">
+                  <Lock className="w-5 h-5 text-white" />
+                </div>
+                <p className="font-medium">{t('pixel.art.storage.secure')}</p>
+                <p className="text-xs text-blue-200">{t('pixel.art.storage.secure.desc')}</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-6 mt-6 text-sm text-gray-500">
+          </div>
+        </div>
+        
+        {/* CTA Section */}
+        <div className="bg-white rounded-xl shadow-md p-8 border border-gray-200 text-center">
+          <h3 className="text-2xl font-bold text-gray-900 mb-4">{t('pixel.art.cta.title')}</h3>
+          <p className="text-gray-600 max-w-2xl mx-auto mb-6">{t('pixel.art.cta.description')}</p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">           
+            <a
+              href="/"
+              className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span>{t('pixel.art.cta.back')}</span>
+            </a>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-8 mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="mb-6 md:mb-0">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Palette className="w-6 h-6 text-purple-400" />
+                {t('pixel.art.title')}
+              </h3>
+              <p className="text-gray-400 mt-2">{t('pixel.art.subtitle')}</p>
+            </div>
+            
+            <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-400">
               <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4" />
+                <MapPin className="w-4 h-4" />
                 <span>{t('pixel.art.location')}</span>
               </div>
+              
               <div className="flex items-center gap-2">
-                <Heart className="w-4 h-4 text-red-500" />
+                <Heart className="w-4 h-4 text-red-400" />
                 <span>{t('pixel.art.made.passion')}</span>
               </div>
+              
               <div className="flex items-center gap-2">
-                <Award className="w-4 h-4" />
+                <Rocket className="w-4 h-4 text-blue-400" />
                 <span>{t('pixel.art.innovation')}</span>
               </div>
+              
+              {/* Language Selector in Footer */}
+              <button
+                onClick={toggleLanguage}
+                className="flex items-center gap-2 px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <Globe className="w-4 h-4" />
+                <span>{language === 'fr' ? 'English' : 'Français'}</span>
+              </button>
             </div>
           </div>
+          
+          <div className="border-t border-gray-800 mt-8 pt-6 text-center text-sm text-gray-500">
+            <p>© 2025 MedRecap+ • {t('pixel.art.title')}</p>
+          </div>
         </div>
-      </div>
+      </footer>
 
-      {/* 🎉 MODAL DE CÉLÉBRATION D'ACHÈVEMENT */}
+      {/* Completion Modal */}
       {showCompletionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[9999]">
-          <div className="bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 rounded-3xl p-8 max-w-2xl w-full text-center text-white shadow-2xl relative overflow-hidden">
-            {/* Particules animées */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {[...Array(20)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute animate-bounce"
-                  style={{
-                    left: `${Math.random() * 100}%`,
-                    top: `${Math.random() * 100}%`,
-                    animationDelay: `${Math.random() * 2}s`,
-                    animationDuration: `${2 + Math.random() * 2}s`
-                  }}
-                >
-                  {i % 3 === 0 ? '⭐' : i % 3 === 1 ? '✨' : '🎊'}
-                </div>
-              ))}
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-8 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Award className="w-10 h-10 text-yellow-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900">{t('pixel.art.completed.modal.title')}</h3>
+              <p className="text-gray-600 mt-2">{t('pixel.art.completed.modal.description')}</p>
             </div>
-
-            {/* Contenu principal */}
-            <div className="relative z-10">
-              <div className="text-8xl mb-6 animate-pulse">🏆</div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <p className="text-sm text-gray-500">{t('pixel.art.completed.modal.total.pixels')}</p>
+                <p className="text-xl font-bold text-gray-900">1,500,000</p>
+              </div>
               
-              <h2 className="text-4xl md:text-5xl font-bold mb-4 animate-bounce">
-                {t('pixel.art.completed.modal.title')}
-              </h2>
+              <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <p className="text-sm text-gray-500">{t('pixel.art.completed.modal.completion')}</p>
+                <p className="text-xl font-bold text-green-600">100%</p>
+              </div>
+            </div>
+            
+            <div className="bg-yellow-50 rounded-lg p-4 mb-6">
+              <h4 className="font-semibold text-yellow-800 mb-2">{t('pixel.art.completed.modal.thanks.title')}</h4>
+              <p className="text-sm text-yellow-700">{t('pixel.art.completed.modal.thanks.message')}</p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleDownload}
+                className="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <Download className="w-5 h-5" />
+                <span>{t('pixel.art.completed.modal.download')}</span>
+              </button>
               
-              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 mb-6">
-                <h3 className="text-2xl font-bold mb-4">
-                  🎯 {t('pixel.art.completed.modal.achievement')}
-                </h3>
-                
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-white/10 rounded-lg p-4">
-                    <div className="text-3xl font-bold">{stats?.totalPixels.toLocaleString()}</div>
-                    <div className="text-sm opacity-90">{t('pixel.art.completed.modal.total.pixels')}</div>
-                  </div>
-                  <div className="bg-white/10 rounded-lg p-4">
-                    <div className="text-3xl font-bold">100%</div>
-                    <div className="text-sm opacity-90">{t('pixel.art.completed.modal.completion')}</div>
-                  </div>
-                </div>
-                
-                <p className="text-lg leading-relaxed opacity-95">
-                  {t('pixel.art.completed.modal.description')}
-                </p>
-              </div>
-
-              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 mb-6">
-                <h3 className="text-xl font-bold mb-3">
-                  🙏 {t('pixel.art.completed.modal.thanks.title')}
-                </h3>
-                <p className="text-sm leading-relaxed opacity-90">
-                  {t('pixel.art.completed.modal.thanks.message')}
-                </p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button
-                  onClick={downloadProgress}
-                  className="px-8 py-4 bg-white hover:bg-gray-100 text-orange-600 rounded-xl font-bold transition-colors shadow-lg flex items-center justify-center gap-2"
-                >
-                  <Download className="w-5 h-5" />
-                  {t('pixel.art.completed.modal.download')}
-                </button>
-                <button
-                  onClick={shareProject}
-                  className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-bold transition-colors shadow-lg flex items-center justify-center gap-2"
-                >
-                  <Share2 className="w-5 h-5" />
-                  {t('pixel.art.completed.modal.share')}
-                </button>
-                <button
-                  onClick={() => setShowCompletionModal(false)}
-                  className="px-8 py-4 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-bold transition-colors shadow-lg"
-                >
-                  {t('pixel.art.completed.modal.continue')}
-                </button>
-              </div>
+              <button
+                onClick={handleShareClick}
+                className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <Share2 className="w-5 h-5" />
+                <span>{t('pixel.art.completed.modal.share')}</span>
+              </button>
+              
+              <button
+                onClick={() => setShowCompletionModal(false)}
+                className="flex-1 px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-colors"
+              >
+                {t('pixel.art.completed.modal.continue')}
+              </button>
             </div>
           </div>
         </div>

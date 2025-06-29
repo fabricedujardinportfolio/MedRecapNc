@@ -321,6 +321,24 @@ export const translations = {
     
     'notifications.filters.reset': 'Réinitialiser les filtres',
 
+    // Notification Details Modal
+    'notifications.details.title': 'Détails de la notification',
+    'notifications.details.close': 'Fermer',
+    'notifications.details.mark_read': 'Marquer comme lu',
+    'notifications.details.priority': 'Priorité:',
+    'notifications.details.category': 'Catégorie:',
+    'notifications.details.patient': 'Patient concerné',
+    'notifications.details.date': 'Date:',
+    'notifications.details.action_required': 'Action requise',
+    'notifications.details.action_message': 'Cette notification nécessite une action de votre part.',
+    'notifications.priority.critical': 'Critique',
+    'notifications.priority.high': 'Haute',
+    'notifications.priority.medium': 'Moyenne',
+    'notifications.priority.low': 'Basse',
+    'notifications.category.medical': 'Médical',
+    'notifications.category.administrative': 'Administratif',
+    'notifications.category.system': 'Système',
+    'notifications.category.security': 'Sécurité',
 
     // Footer
     'footer.description': 'Système professionnel de gestion des dossiers patients pour la Nouvelle-Calédonie.',
@@ -430,6 +448,11 @@ export const translations = {
     'pixel.art.completed.modal.download': 'Télécharger l\'Œuvre',
     'pixel.art.completed.modal.share': 'Partager la Réussite',
     'pixel.art.completed.modal.continue': 'Continuer à Explorer',
+    
+    // Nouvelles traductions pour les options de tooltips
+    'pixel.art.tooltip.mode.all': 'Afficher tous les tooltips',
+    'pixel.art.tooltip.mode.circles': 'Cercles uniquement',
+    'pixel.art.tooltip.mode.none': 'Tout masquer',
 
     // Common
     'common.loading': 'Chargement...',
@@ -457,7 +480,25 @@ export const translations = {
     'common.diagnosis': 'Diagnostic',
     'common.treatment': 'Traitement',
     'common.notes': 'Notes',
-    'common.status': 'Statut'
+    'common.status': 'Statut',
+    'common.address': 'Adresse',
+    'common.phone': 'Téléphone',
+    'common.email': 'Email',
+    'common.emergency': 'Contact d\'urgence',
+    'common.blood': 'Groupe sanguin',
+    'common.service': 'Service',
+    'common.admission': 'Mode d\'admission',
+    'common.diagnosis': 'Diagnostic',
+    'common.none': 'Aucun',
+    'common.since': 'Depuis',
+    'common.no.treatments': 'Aucun traitement en cours',
+    'common.surgical.history': 'Antécédents chirurgicaux',
+    'common.paid': 'Payé',
+    'common.remaining': 'Restant',
+    'common.details': 'Détails',
+    'common.time': 'Horaire',
+    'common.type': 'Type',
+    'common.doctor': 'Médecin'
   },
   en: {
     // Login Form
@@ -782,6 +823,24 @@ export const translations = {
     
     'notifications.filters.reset': 'Reset filters',
 
+    // Notification Details Modal
+    'notifications.details.title': 'Notification Details',
+    'notifications.details.close': 'Close',
+    'notifications.details.mark_read': 'Mark as read',
+    'notifications.details.priority': 'Priority:',
+    'notifications.details.category': 'Category:',
+    'notifications.details.patient': 'Patient concerned',
+    'notifications.details.date': 'Date:',
+    'notifications.details.action_required': 'Action required',
+    'notifications.details.action_message': 'This notification requires action from you.',
+    'notifications.priority.critical': 'Critical',
+    'notifications.priority.high': 'High',
+    'notifications.priority.medium': 'Medium',
+    'notifications.priority.low': 'Low',
+    'notifications.category.medical': 'Medical',
+    'notifications.category.administrative': 'Administrative',
+    'notifications.category.system': 'System',
+    'notifications.category.security': 'Security',
 
     // Footer
     'footer.description': 'Professional patient record management system for New Caledonia.',
@@ -891,6 +950,11 @@ export const translations = {
     'pixel.art.completed.modal.download': 'Download Artwork',
     'pixel.art.completed.modal.share': 'Share Success',
     'pixel.art.completed.modal.continue': 'Continue Exploring',
+    
+    // Nouvelles traductions pour les options de tooltips
+    'pixel.art.tooltip.mode.all': 'Show all tooltips',
+    'pixel.art.tooltip.mode.circles': 'Circles only',
+    'pixel.art.tooltip.mode.none': 'Hide all',
 
     // Common
     'common.loading': 'Loading...',
@@ -918,7 +982,25 @@ export const translations = {
     'common.diagnosis': 'Diagnosis',
     'common.treatment': 'Treatment',
     'common.notes': 'Notes',
-    'common.status': 'Status'
+    'common.status': 'Status',
+    'common.address': 'Address',
+    'common.phone': 'Phone',
+    'common.email': 'Email',
+    'common.emergency': 'Emergency contact',
+    'common.blood': 'Blood type',
+    'common.service': 'Department',
+    'common.admission': 'Admission mode',
+    'common.diagnosis': 'Diagnosis',
+    'common.none': 'None',
+    'common.since': 'Since',
+    'common.no.treatments': 'No current treatments',
+    'common.surgical.history': 'Surgical history',
+    'common.paid': 'Paid',
+    'common.remaining': 'Remaining',
+    'common.details': 'Details',
+    'common.time': 'Time',
+    'common.type': 'Type',
+    'common.doctor': 'Doctor'
   }
 };
 
