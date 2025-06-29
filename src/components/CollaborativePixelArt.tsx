@@ -21,7 +21,8 @@ import {
   MapPin,
   Heart,
   Eye,
-  EyeOff
+  EyeOff,
+  ChevronDown
 } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { collaborativeArtService, PixelData, ArtProjectStats } from '../services/collaborativeArtService';
@@ -54,7 +55,7 @@ export const CollaborativePixelArt: React.FC = () => {
   const [isArtComplete, setIsArtComplete] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [hoveredPixel, setHoveredPixel] = useState<PixelData | null>(null);
-  const [showAllTooltips, setShowAllTooltips] = useState(false);
+  const [tooltipMode, setTooltipMode] = useState<'none' | 'hover' | 'all'>('hover');
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pixelSize = 4; // Increased size for better visibility
@@ -284,7 +285,7 @@ export const CollaborativePixelArt: React.FC = () => {
   };
   
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (showAllTooltips) return; // Ne pas changer le pixel survolé si tous les tooltips sont affichés
+    if (tooltipMode !== 'hover') return; // Ne pas changer le pixel survolé si les tooltips sont désactivés ou tous affichés
     
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -307,7 +308,7 @@ export const CollaborativePixelArt: React.FC = () => {
   };
   
   const handleCanvasMouseLeave = () => {
-    if (!showAllTooltips) {
+    if (tooltipMode === 'hover') {
       setHoveredPixel(null);
     }
   };
@@ -375,8 +376,13 @@ export const CollaborativePixelArt: React.FC = () => {
     return luminance > 0.5 ? 'text-gray-900' : 'text-white';
   };
   
-  const toggleAllTooltips = () => {
-    setShowAllTooltips(!showAllTooltips);
+  const handleTooltipModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setTooltipMode(e.target.value as 'none' | 'hover' | 'all');
+    
+    // Reset hovered pixel when changing modes
+    if (e.target.value !== 'hover') {
+      setHoveredPixel(null);
+    }
   };
   
   return (
@@ -404,18 +410,20 @@ export const CollaborativePixelArt: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-3 mt-3 sm:mt-0">
-              <button
-                onClick={toggleAllTooltips}
-                className={`flex items-center gap-2 px-3 py-1.5 text-sm ${
-                  showAllTooltips 
-                    ? 'bg-purple-100 text-purple-700' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                } rounded-lg transition-colors`}
-                title={showAllTooltips ? "Hide all tooltips" : "Show all tooltips"}
-              >
-                {showAllTooltips ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                <span>{showAllTooltips ? "Hide Tooltips" : "Show Tooltips"}</span>
-              </button>
+              <div className="relative">
+                <select
+                  value={tooltipMode}
+                  onChange={handleTooltipModeChange}
+                  className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="none">No Tooltips</option>
+                  <option value="hover">Hover Tooltips</option>
+                  <option value="all">Show All Tooltips</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
               
               <button
                 onClick={handleShareClick}
@@ -544,7 +552,8 @@ export const CollaborativePixelArt: React.FC = () => {
                 {t('pixel.art.realtime.title')}
               </h3>
               <div className="text-xs text-gray-500">
-                {t('pixel.art.hover.instruction')}
+                {tooltipMode === 'hover' ? t('pixel.art.hover.instruction') : 
+                 tooltipMode === 'all' ? 'Showing all tooltips' : 'Tooltips disabled'}
               </div>
             </div>
             
@@ -566,7 +575,7 @@ export const CollaborativePixelArt: React.FC = () => {
                 />
                 
                 {/* Hover Tooltip */}
-                {hoveredPixel && (
+                {tooltipMode === 'hover' && hoveredPixel && (
                   <div 
                     className="absolute bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm pointer-events-none z-10"
                     style={{
@@ -589,7 +598,7 @@ export const CollaborativePixelArt: React.FC = () => {
                 )}
                 
                 {/* Show All Tooltips */}
-                {showAllTooltips && pixels.map((pixel, index) => (
+                {tooltipMode === 'all' && pixels.map((pixel, index) => (
                   <div 
                     key={index}
                     className="absolute bg-black bg-opacity-80 text-white px-2 py-1 rounded text-xs pointer-events-none z-10"
