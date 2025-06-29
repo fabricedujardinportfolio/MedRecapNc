@@ -56,9 +56,10 @@ export const CollaborativePixelArt: React.FC = () => {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [hoveredPixel, setHoveredPixel] = useState<PixelData | null>(null);
   const [tooltipMode, setTooltipMode] = useState<'none' | 'hover' | 'all'>('hover');
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const pixelSize = 4; // Increased size for better visibility
+  const pixelSize = 2; // Smaller size for better visibility of the overall image
   const hoverDetectionSize = 12; // Larger detection area for hover
   
   // Load all pixels and stats on mount
@@ -253,6 +254,10 @@ export const CollaborativePixelArt: React.FC = () => {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
+    // Set canvas background to white for better visibility
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
     // Draw all pixels
     let validPixelsCount = 0;
     pixels.forEach(pixel => {
@@ -266,6 +271,18 @@ export const CollaborativePixelArt: React.FC = () => {
     });
     
     console.log(`✅ ${validPixelsCount}/${pixels.length} pixels valides dessinés sur le canvas`);
+    
+    // Draw user's pixel with a highlight if it exists
+    if (userPixel) {
+      // Draw a highlight around the user's pixel
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(userPixel.x - 1, userPixel.y - 1, pixelSize + 2, pixelSize + 2);
+      
+      // Draw the pixel itself
+      ctx.fillStyle = userPixel.color;
+      ctx.fillRect(userPixel.x, userPixel.y, pixelSize, pixelSize);
+    }
   };
   
   const drawPixel = (pixel: PixelData) => {
@@ -551,9 +568,18 @@ export const CollaborativePixelArt: React.FC = () => {
                 <Palette className="w-5 h-5 text-purple-600" />
                 {t('pixel.art.realtime.title')}
               </h3>
-              <div className="text-xs text-gray-500">
-                {tooltipMode === 'hover' ? t('pixel.art.hover.instruction') : 
-                 tooltipMode === 'all' ? 'Showing all tooltips' : 'Tooltips disabled'}
+              <div className="flex items-center gap-2">
+                <div className="text-xs text-gray-500">
+                  {tooltipMode === 'hover' ? t('pixel.art.hover.instruction') : 
+                   tooltipMode === 'all' ? 'Showing all tooltips' : 'Tooltips disabled'}
+                </div>
+                <button 
+                  onClick={() => setShowDebugInfo(!showDebugInfo)}
+                  className="p-1 text-gray-500 hover:text-gray-700 rounded-full"
+                  title="Toggle debug info"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
               </div>
             </div>
             
@@ -618,6 +644,21 @@ export const CollaborativePixelArt: React.FC = () => {
                     </div>
                   </div>
                 ))}
+                
+                {/* Visual Markers for Pixels */}
+                {tooltipMode === 'all' && pixels.map((pixel, index) => (
+                  <div 
+                    key={`marker-${index}`}
+                    className="absolute w-3 h-3 rounded-full border-2 border-white pointer-events-none"
+                    style={{
+                      left: `${(pixel.x / 1200) * 100}%`,
+                      top: `${(pixel.y / 1250) * 100}%`,
+                      backgroundColor: pixel.color,
+                      transform: 'translate(-50%, -50%)',
+                      boxShadow: '0 0 0 1px rgba(0,0,0,0.3)'
+                    }}
+                  />
+                ))}
               </div>
             )}
             
@@ -632,6 +673,26 @@ export const CollaborativePixelArt: React.FC = () => {
                 {t('pixel.art.realtime.sizepixels')}
               </p>
             </div>
+            
+            {/* Debug Info */}
+            {showDebugInfo && (
+              <div className="mt-4 p-4 bg-gray-100 rounded-lg text-xs font-mono">
+                <h4 className="font-bold mb-2">Debug Info:</h4>
+                <p>Pixels loaded: {pixels.length}</p>
+                <p>Canvas size: 1200×1250</p>
+                <p>Pixel size: {pixelSize}px</p>
+                <p>Hover detection: {hoverDetectionSize}px</p>
+                <p>Tooltip mode: {tooltipMode}</p>
+                <p>User pixel: {userPixel ? `(${userPixel.x}, ${userPixel.y}) - ${userPixel.color}` : 'None'}</p>
+                <p>Session ID: {collaborativeArtService.getCurrentSessionId().substring(0, 10)}...</p>
+                <button 
+                  onClick={handleRefresh}
+                  className="mt-2 px-2 py-1 bg-blue-600 text-white rounded text-xs"
+                >
+                  Force Refresh
+                </button>
+              </div>
+            )}
           </div>
           
           {/* Contribution Section */}
