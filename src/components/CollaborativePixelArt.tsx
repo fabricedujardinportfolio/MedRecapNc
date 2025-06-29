@@ -57,7 +57,7 @@ export const CollaborativePixelArt: React.FC = () => {
   const [hoveredPixel, setHoveredPixel] = useState<PixelData | null>(null);
   const [tooltipMode, setTooltipMode] = useState<'all' | 'circles-only'>('all');
   const [showDebugInfo, setShowDebugInfo] = useState(false);
-  const [canvasBackgroundColor, setCanvasBackgroundColor] = useState('#000000');
+  const [canvasBackgroundColor, setCanvasBackgroundColor] = useState('#FFFFFF');
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pixelSize = 10; // Increased pixel size for better visibility
@@ -573,11 +573,6 @@ export const CollaborativePixelArt: React.FC = () => {
                 >
                   {canvasBackgroundColor === '#FFFFFF' ? 'Black Background' : 'White Background'}
                 </button>
-                <div className="text-xs text-gray-500">
-                  {tooltipMode === 'all' ? 'Showing all tooltips' : 
-                   tooltipMode === 'circles-only' ? 'Showing circles only' : 
-                   'Tooltips disabled'}
-                </div>
                 <button 
                   onClick={() => setShowDebugInfo(!showDebugInfo)}
                   className="p-1 text-gray-500 hover:text-gray-700 rounded-full"
