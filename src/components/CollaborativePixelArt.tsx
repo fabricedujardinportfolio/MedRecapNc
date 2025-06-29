@@ -55,7 +55,7 @@ export const CollaborativePixelArt: React.FC = () => {
   const [isArtComplete, setIsArtComplete] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [hoveredPixel, setHoveredPixel] = useState<PixelData | null>(null);
-  const [tooltipMode, setTooltipMode] = useState<'all' | 'circles-only'>('all');
+  const [tooltipMode, setTooltipMode] = useState<'all' | 'circles-only' | 'none'>('all');
   const [showDebugInfo, setShowDebugInfo] = useState(false);
   const [canvasBackgroundColor, setCanvasBackgroundColor] = useState('#FFFFFF');
   const [showExistingPixelAlert, setShowExistingPixelAlert] = useState(false);
@@ -419,7 +419,7 @@ export const CollaborativePixelArt: React.FC = () => {
   };
   
   const handleTooltipModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setTooltipMode(e.target.value as 'all' | 'circles-only');
+    setTooltipMode(e.target.value as 'all' | 'circles-only' | 'none');
   };
   
   return (
@@ -594,7 +594,7 @@ export const CollaborativePixelArt: React.FC = () => {
                 />
                 
                 {/* Hover Tooltip */}
-                {hoveredPixel && (
+                {hoveredPixel && tooltipMode !== 'none' && (
                   <div 
                     className="absolute bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm pointer-events-none z-10"
                     style={{
@@ -674,6 +674,7 @@ export const CollaborativePixelArt: React.FC = () => {
                 >
                   <option value="all">Show All Tooltips</option>
                   <option value="circles-only">Circles Only</option>
+                  <option value="none">Hide All</option>
                 </select>
               </div>
             </div>
