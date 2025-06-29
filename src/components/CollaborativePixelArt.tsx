@@ -55,7 +55,7 @@ export const CollaborativePixelArt: React.FC = () => {
   const [isArtComplete, setIsArtComplete] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [hoveredPixel, setHoveredPixel] = useState<PixelData | null>(null);
-  const [tooltipMode, setTooltipMode] = useState<'none' | 'hover' | 'all' | 'circles-only'>('all');
+  const [tooltipMode, setTooltipMode] = useState<'all' | 'circles-only'>('all');
   const [showDebugInfo, setShowDebugInfo] = useState(false);
   const [canvasBackgroundColor, setCanvasBackgroundColor] = useState('#000000');
   
@@ -324,8 +324,6 @@ export const CollaborativePixelArt: React.FC = () => {
   };
   
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (tooltipMode !== 'hover') return; // Ne pas changer le pixel survolé si les tooltips sont désactivés ou tous affichés
-    
     const canvas = canvasRef.current;
     if (!canvas) return;
     
@@ -347,9 +345,7 @@ export const CollaborativePixelArt: React.FC = () => {
   };
   
   const handleCanvasMouseLeave = () => {
-    if (tooltipMode === 'hover') {
-      setHoveredPixel(null);
-    }
+    setHoveredPixel(null);
   };
   
   const handleRefresh = async () => {
@@ -416,12 +412,7 @@ export const CollaborativePixelArt: React.FC = () => {
   };
   
   const handleTooltipModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setTooltipMode(e.target.value as 'none' | 'hover' | 'all' | 'circles-only');
-    
-    // Reset hovered pixel when changing modes
-    if (e.target.value !== 'hover') {
-      setHoveredPixel(null);
-    }
+    setTooltipMode(e.target.value as 'all' | 'circles-only');
   };
   
   return (
@@ -449,22 +440,6 @@ export const CollaborativePixelArt: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-3 mt-3 sm:mt-0">
-              <div className="relative">
-                <select
-                  value={tooltipMode}
-                  onChange={handleTooltipModeChange}
-                  className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="none">No Tooltips</option>
-                  <option value="hover">Hover Tooltips</option>
-                  <option value="all">Show All Tooltips</option>
-                  <option value="circles-only">Circles Only</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                  <ChevronDown className="w-4 h-4" />
-                </div>
-              </div>
-              
               <button
                 onClick={handleShareClick}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
@@ -599,8 +574,7 @@ export const CollaborativePixelArt: React.FC = () => {
                   {canvasBackgroundColor === '#FFFFFF' ? 'Black Background' : 'White Background'}
                 </button>
                 <div className="text-xs text-gray-500">
-                  {tooltipMode === 'hover' ? t('pixel.art.hover.instruction') : 
-                   tooltipMode === 'all' ? 'Showing all tooltips' : 
+                  {tooltipMode === 'all' ? 'Showing all tooltips' : 
                    tooltipMode === 'circles-only' ? 'Showing circles only' : 
                    'Tooltips disabled'}
                 </div>
@@ -633,7 +607,7 @@ export const CollaborativePixelArt: React.FC = () => {
                 />
                 
                 {/* Hover Tooltip */}
-                {tooltipMode === 'hover' && hoveredPixel && (
+                {hoveredPixel && (
                   <div 
                     className="absolute bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm pointer-events-none z-10"
                     style={{
@@ -704,6 +678,17 @@ export const CollaborativePixelArt: React.FC = () => {
                 <Info className="w-3 h-3" />
                 {t('pixel.art.realtime.sizepixels')}
               </p>
+              
+              <div className="mt-2">
+                <select
+                  value={tooltipMode}
+                  onChange={handleTooltipModeChange}
+                  className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="all">Show All Tooltips</option>
+                  <option value="circles-only">Circles Only</option>
+                </select>
+              </div>
             </div>
             
             {/* Debug Info */}
