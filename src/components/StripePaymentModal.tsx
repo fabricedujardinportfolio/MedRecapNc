@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Euro, Calendar, User, CreditCard, Check, AlertCircle, ExternalLink } from 'lucide-react';
+import { X, CreditCard, Check, AlertCircle, ExternalLink } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { FactureData } from '../services/patientService';
