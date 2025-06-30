@@ -117,7 +117,7 @@ export const CollaborativePixelArt: React.FC = () => {
     if (pixels.length > 0 && canvasRef.current) {
       drawAllPixels();
     }
-  }, [pixels, pixelSize, canvasBackgroundColor]);
+  }, [pixels, canvasBackgroundColor]);
   
   // Check if art is complete based on stats
   useEffect(() => {
