@@ -436,6 +436,26 @@ class PatientService {
     }
   }
 
+  // Supprimer une consultation
+  async deleteConsultation(consultationId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('consultations')
+        .delete()
+        .eq('id', consultationId);
+
+      if (error) {
+        console.error('Erreur lors de la suppression de la consultation:', error);
+        throw error;
+      }
+
+      console.log('✅ Consultation supprimée avec succès:', consultationId);
+    } catch (error) {
+      console.error('Erreur service suppression consultation:', error);
+      throw error;
+    }
+  }
+
   // Créer une nouvelle facture avec external_id automatique
   async createFacture(factureData: Omit<FactureData, 'id' | 'external_id'>): Promise<FactureData> {
     try {
@@ -508,6 +528,26 @@ class PatientService {
     }
   }
 
+  // Supprimer une facture
+  async deleteFacture(factureId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('factures')
+        .delete()
+        .eq('id', factureId);
+
+      if (error) {
+        console.error('Erreur lors de la suppression de la facture:', error);
+        throw error;
+      }
+
+      console.log('✅ Facture supprimée avec succès:', factureId);
+    } catch (error) {
+      console.error('Erreur service suppression facture:', error);
+      throw error;
+    }
+  }
+
   // Créer un nouveau rendez-vous avec external_id automatique
   async createRendezVous(rdvData: Omit<RendezVousData, 'id' | 'external_id'>): Promise<RendezVousData> {
     try {
@@ -538,6 +578,26 @@ class PatientService {
       return data;
     } catch (error) {
       console.error('Erreur service création rendez-vous:', error);
+      throw error;
+    }
+  }
+
+  // Supprimer un rendez-vous
+  async deleteRendezVous(rendezVousId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('rendez_vous')
+        .delete()
+        .eq('id', rendezVousId);
+
+      if (error) {
+        console.error('Erreur lors de la suppression du rendez-vous:', error);
+        throw error;
+      }
+
+      console.log('✅ Rendez-vous supprimé avec succès:', rendezVousId);
+    } catch (error) {
+      console.error('Erreur service suppression rendez-vous:', error);
       throw error;
     }
   }

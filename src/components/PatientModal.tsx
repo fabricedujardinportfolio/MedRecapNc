@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Calendar, MapPin, Phone, Heart, FileText, Stethoscope, Euro, Clock, Bot, Video, AlertTriangle, Edit, Plus, Eye } from 'lucide-react';
+import { X, User, Calendar, MapPin, Phone, Heart, FileText, Stethoscope, Euro, Clock, Bot, Video, AlertTriangle, Edit, Plus, Eye, Trash2 } from 'lucide-react';
 import { Patient, Consultation, Facture, RendezVous } from '../types/Patient';
 import { PatientData, ConsultationData, FactureData, RendezVousData, patientService } from '../services/patientService';
 import { TavusVideoAgent } from './TavusVideoAgent';
@@ -9,6 +9,9 @@ import { RendezVousModal } from './RendezVousModal';
 import { useLanguage } from '../hooks/useLanguage';
 import { format } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
+import { EditConsultationModal } from './EditConsultationModal';
+import { EditFactureModal } from './EditFactureModal';
+import { EditRendezVousModal } from './EditRendezVousModal';
 
 interface PatientModalProps {
   patient: Patient;
@@ -35,6 +38,14 @@ export const PatientModal: React.FC<PatientModalProps> = ({
   const [rendezVous, setRendezVous] = useState<RendezVousData[]>([]);
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
+  const [selectedConsultation, setSelectedConsultation] = useState<ConsultationData | null>(null);
+  const [selectedFacture, setSelectedFacture] = useState<FactureData | null>(null);
+  const [selectedRendezVous, setSelectedRendezVous] = useState<RendezVousData | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<{
+    type: 'consultation' | 'facture' | 'rendez-vous';
+    id: string;
+    visible: boolean;
+  } | null>(null);
 
   // 🔧 NOUVEAU : Charger les données complètes du patient pour l'IA
   useEffect(() => {
@@ -323,6 +334,39 @@ export const PatientModal: React.FC<PatientModalProps> = ({
       case 'annule': return 'bg-red-100 text-red-800';
       case 'reporte': return 'bg-yellow-100 text-yellow-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const handleDeleteConsultation = async (id: string) => {
+    try {
+      await patientService.deleteConsultation(id);
+      setConsultations(prev => prev.filter(c => c.id !== id));
+      setShowDeleteConfirmation(null);
+      handleDataUpdated();
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la consultation:', error);
+    }
+  };
+
+  const handleDeleteFacture = async (id: string) => {
+    try {
+      await patientService.deleteFacture(id);
+      setFactures(prev => prev.filter(f => f.id !== id));
+      setShowDeleteConfirmation(null);
+      handleDataUpdated();
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la facture:', error);
+    }
+  };
+
+  const handleDeleteRendezVous = async (id: string) => {
+    try {
+      await patientService.deleteRendezVous(id);
+      setRendezVous(prev => prev.filter(r => r.id !== id));
+      setShowDeleteConfirmation(null);
+      handleDataUpdated();
+    } catch (error) {
+      console.error('Erreur lors de la suppression du rendez-vous:', error);
     }
   };
 
@@ -741,6 +785,26 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                             )}
                           </div>
 
+                          <div className="flex gap-2 mb-4 md:mb-0">
+                            <button
+                              onClick={() => setSelectedConsultation(consultation)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title={t('common.edit')}
+                            >
+                              <Edit className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => setShowDeleteConfirmation({
+                                type: 'consultation',
+                                id: consultation.id || '',
+                                visible: true
+                              })}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title={t('common.delete')}
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -831,6 +895,27 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                               </div>
                             )}
                           </div>
+
+                          <div className="flex gap-2 mb-4 md:mb-0">
+                            <button
+                              onClick={() => setSelectedFacture(facture)}
+                              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                              title={t('common.edit')}
+                            >
+                              <Edit className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => setShowDeleteConfirmation({
+                                type: 'facture',
+                                id: facture.id || '',
+                                visible: true
+                              })}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title={t('common.delete')}
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -914,6 +999,27 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                               </div>
                             )}
                           </div>
+
+                          <div className="flex gap-2 mb-4 md:mb-0">
+                            <button
+                              onClick={() => setSelectedRendezVous(rdv)}
+                              className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                              title={t('common.edit')}
+                            >
+                              <Edit className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => setShowDeleteConfirmation({
+                                type: 'rendez-vous',
+                                id: rdv.id || '',
+                                visible: true
+                              })}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title={t('common.delete')}
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -979,6 +1085,94 @@ export const PatientModal: React.FC<PatientModalProps> = ({
           }}
           patientId={patient.id}
         />
+      )}
+
+      {/* Edit Modals */}
+      {selectedConsultation && (
+        <EditConsultationModal
+          consultation={selectedConsultation}
+          isOpen={!!selectedConsultation}
+          onClose={() => setSelectedConsultation(null)}
+          onConsultationUpdated={() => {
+            handleDataUpdated();
+            setSelectedConsultation(null);
+          }}
+        />
+      )}
+
+      {selectedFacture && (
+        <EditFactureModal
+          facture={selectedFacture}
+          isOpen={!!selectedFacture}
+          onClose={() => setSelectedFacture(null)}
+          onFactureUpdated={() => {
+            handleDataUpdated();
+            setSelectedFacture(null);
+          }}
+        />
+      )}
+
+      {selectedRendezVous && (
+        <EditRendezVousModal
+          rendezVous={selectedRendezVous}
+          isOpen={!!selectedRendezVous}
+          onClose={() => setSelectedRendezVous(null)}
+          onRendezVousUpdated={() => {
+            handleDataUpdated();
+            setSelectedRendezVous(null);
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmation && showDeleteConfirmation.visible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              {language === 'fr' ? 'Confirmer la suppression' : 'Confirm deletion'}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {showDeleteConfirmation.type === 'consultation' && (
+                language === 'fr' 
+                  ? 'Êtes-vous sûr de vouloir supprimer cette consultation ? Cette action est irréversible.'
+                  : 'Are you sure you want to delete this consultation? This action cannot be undone.'
+              )}
+              {showDeleteConfirmation.type === 'facture' && (
+                language === 'fr'
+                  ? 'Êtes-vous sûr de vouloir supprimer cette facture ? Cette action est irréversible.'
+                  : 'Are you sure you want to delete this invoice? This action cannot be undone.'
+              )}
+              {showDeleteConfirmation.type === 'rendez-vous' && (
+                language === 'fr'
+                  ? 'Êtes-vous sûr de vouloir supprimer ce rendez-vous ? Cette action est irréversible.'
+                  : 'Are you sure you want to delete this appointment? This action cannot be undone.'
+              )}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirmation(null)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                {language === 'fr' ? 'Annuler' : 'Cancel'}
+              </button>
+              <button
+                onClick={() => {
+                  if (showDeleteConfirmation.type === 'consultation') {
+                    handleDeleteConsultation(showDeleteConfirmation.id);
+                  } else if (showDeleteConfirmation.type === 'facture') {
+                    handleDeleteFacture(showDeleteConfirmation.id);
+                  } else if (showDeleteConfirmation.type === 'rendez-vous') {
+                    handleDeleteRendezVous(showDeleteConfirmation.id);
+                  }
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                {language === 'fr' ? 'Supprimer' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
