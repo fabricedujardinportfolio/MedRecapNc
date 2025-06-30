@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginForm } from './components/LoginForm';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
@@ -10,6 +11,9 @@ import { LanguageProvider } from './components/LanguageProvider';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
+import { SubscriptionPage } from './pages/SubscriptionPage';
+import { PaymentSuccess } from './pages/PaymentSuccess';
+import { PaymentCancel } from './pages/PaymentCancel';
 
 function App() {
   const { user, login, logout, isLoading, isAuthenticated } = useAuth();
@@ -60,42 +64,50 @@ function App() {
   }
 
   return (
-    <LanguageProvider>
-      <NotificationProvider>
-        <ErrorBoundary>
-          {!isAuthenticated || !user ? (
-            <LoginForm onLogin={login} isLoading={isLoading} />
-          ) : (
-            <div className="min-h-screen bg-gray-50 flex flex-col">
-              <Header user={user} onLogout={logout} />
-              <main className="flex-1">
-                <ErrorBoundary fallback={
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-                      <h3 className="text-lg font-semibold text-red-800 mb-2">
-                        Erreur dans le tableau de bord
-                      </h3>
-                      <p className="text-red-600">
-                        Une erreur est survenue lors du chargement du tableau de bord. 
-                        Veuillez rafraîchir la page ou contacter le support technique.
-                      </p>
+    <Router>
+      <LanguageProvider>
+        <NotificationProvider>
+          <ErrorBoundary>
+            {!isAuthenticated || !user ? (
+              <Routes>
+                <Route path="/login" element={<LoginForm onLogin={login} isLoading={isLoading} />} />
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            ) : (
+              <div className="min-h-screen bg-gray-50 flex flex-col">
+                <Header user={user} onLogout={logout} />
+                <main className="flex-1">
+                  <ErrorBoundary fallback={
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                        <h3 className="text-lg font-semibold text-red-800 mb-2">
+                          Erreur dans le tableau de bord
+                        </h3>
+                        <p className="text-red-600">
+                          Une erreur est survenue lors du chargement du tableau de bord. 
+                          Veuillez rafraîchir la page ou contacter le support technique.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                }>
-                  {/* Affichage conditionnel selon le type d'utilisateur */}
-                  {user.type === 'cabinet' ? (
-                    <CabinetDashboard />
-                  ) : (
-                    <Dashboard />
-                  )}
-                </ErrorBoundary>
-              </main>
-              <Footer />
-            </div>
-          )}
-        </ErrorBoundary>
-      </NotificationProvider>
-    </LanguageProvider>
+                  }>
+                    <Routes>
+                      <Route path="/dashboard" element={
+                        user.type === 'cabinet' ? <CabinetDashboard /> : <Dashboard />
+                      } />
+                      <Route path="/subscription" element={<SubscriptionPage />} />
+                      <Route path="/payment-success" element={<PaymentSuccess />} />
+                      <Route path="/payment-cancel" element={<PaymentCancel />} />
+                      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                    </Routes>
+                  </ErrorBoundary>
+                </main>
+                <Footer />
+              </div>
+            )}
+          </ErrorBoundary>
+        </NotificationProvider>
+      </LanguageProvider>
+    </Router>
   );
 }
 
