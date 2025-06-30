@@ -17,13 +17,6 @@ export const translations = {
     'login.demo.admin': 'Admin Tech:',
     'login.demo.auditor': 'Auditeur:',
     'login.demo.cabinet': 'Médecin de Cabinet:',
-    'login.demo.description.superadmin': 'Accès complet système hospitalier',
-    'login.demo.description.admin': 'Gestion technique hospitalière',
-    'login.demo.description.auditor': 'Consultation logs et rapports',
-    'login.demo.description.cabinet': 'Gestion cabinet médical complet',
-    'login.footer.built': 'Développé avec ❤️ par',
-    'login.footer.copyright': '© 2025 MedRecap+ - Nouvelle-Calédonie',
-    'login.language.label': 'Langue / Language',
     'login.types.title': 'Types de comptes :',
     'login.types.superadmin': 'Super Admin:',
     'login.types.admin': 'Admin Tech:',
@@ -33,6 +26,9 @@ export const translations = {
     'login.types.description.admin': 'Gestion technique hospitalière',
     'login.types.description.auditor': 'Consultation logs et rapports',
     'login.types.description.cabinet': 'Gestion cabinet médical complet',
+    'login.footer.built': 'Développé avec ❤️ par',
+    'login.footer.copyright': '© 2025 MedRecap+ - Nouvelle-Calédonie',
+    'login.language.label': 'Langue / Language',
 
     // Header
     'header.title': 'MedRecap+',
@@ -518,7 +514,32 @@ export const translations = {
     'common.details': 'Détails',
     'common.time': 'Horaire',
     'common.type': 'Type',
-    'common.doctor': 'Médecin'
+    'common.doctor': 'Médecin',
+
+    // Payment
+    'payment.title': 'Paiement par Carte',
+    'payment.invoice': 'Facture',
+    'payment.summary': 'Résumé de la facture',
+    'payment.invoice_number': 'Numéro de facture',
+    'payment.total_amount': 'Montant total',
+    'payment.amount_paid': 'Montant déjà payé',
+    'payment.amount_to_pay': 'Montant à payer',
+    'payment.card_details': 'Détails de la carte',
+    'payment.demo_mode': 'Mode démonstration - Aucune carte réelle ne sera débitée',
+    'payment.card_number': 'Numéro de carte',
+    'payment.test_card': 'Carte de test Stripe',
+    'payment.expiry': 'Date d\'expiration',
+    'payment.cvc': 'CVC',
+    'payment.pay_now': 'Payer maintenant',
+    'payment.processing': 'Traitement en cours...',
+    'payment.initializing': 'Initialisation...',
+    'payment.success.title': 'Paiement réussi !',
+    'payment.success.message': 'Votre paiement a été traité avec succès.',
+    'payment.success.reference': 'Référence de paiement',
+    'payment.error.title': 'Échec du paiement',
+    'payment.error.message': 'Une erreur est survenue lors du traitement de votre paiement.',
+    'payment.retry': 'Réessayer',
+    'payment.pay': 'Payer'
   },
   en: {
     // Login Form
@@ -538,13 +559,6 @@ export const translations = {
     'login.demo.admin': 'Tech Admin:',
     'login.demo.auditor': 'Auditor:',
     'login.demo.cabinet': 'Practice Doctor:',
-    'login.demo.description.superadmin': 'Full hospital system access',
-    'login.demo.description.admin': 'Hospital technical management',
-    'login.demo.description.auditor': 'Logs and reports consultation',
-    'login.demo.description.cabinet': 'Complete medical practice management',
-    'login.footer.built': 'Built with ❤️ with',
-    'login.footer.copyright': '© 2025 MedRecap+ - New Caledonia',
-    'login.language.label': 'Language / Langue',
     'login.types.title': 'Account Types:',
     'login.types.superadmin': 'Super Admin:',
     'login.types.admin': 'Tech Admin:',
@@ -554,6 +568,9 @@ export const translations = {
     'login.types.description.admin': 'Hospital technical management',
     'login.types.description.auditor': 'Logs and reports consultation',
     'login.types.description.cabinet': 'Complete medical practice management',
+    'login.footer.built': 'Built with ❤️ with',
+    'login.footer.copyright': '© 2025 MedRecap+ - New Caledonia',
+    'login.language.label': 'Language / Langue',
 
 
     // Header
@@ -1040,7 +1057,32 @@ export const translations = {
     'common.details': 'Details',
     'common.time': 'Time',
     'common.type': 'Type',
-    'common.doctor': 'Doctor'
+    'common.doctor': 'Doctor',
+
+    // Payment
+    'payment.title': 'Card Payment',
+    'payment.invoice': 'Invoice',
+    'payment.summary': 'Invoice summary',
+    'payment.invoice_number': 'Invoice number',
+    'payment.total_amount': 'Total amount',
+    'payment.amount_paid': 'Amount already paid',
+    'payment.amount_to_pay': 'Amount to pay',
+    'payment.card_details': 'Card details',
+    'payment.demo_mode': 'Demo mode - No real card will be charged',
+    'payment.card_number': 'Card number',
+    'payment.test_card': 'Stripe test card',
+    'payment.expiry': 'Expiry date',
+    'payment.cvc': 'CVC',
+    'payment.pay_now': 'Pay now',
+    'payment.processing': 'Processing...',
+    'payment.initializing': 'Initializing...',
+    'payment.success.title': 'Payment successful!',
+    'payment.success.message': 'Your payment has been processed successfully.',
+    'payment.success.reference': 'Payment reference',
+    'payment.error.title': 'Payment failed',
+    'payment.error.message': 'An error occurred while processing your payment.',
+    'payment.retry': 'Try again',
+    'payment.pay': 'Pay'
   }
 };
 
