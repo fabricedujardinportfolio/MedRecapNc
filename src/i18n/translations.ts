@@ -17,13 +17,6 @@ export const translations = {
     'login.demo.admin': 'Admin Tech:',
     'login.demo.auditor': 'Auditeur:',
     'login.demo.cabinet': 'Médecin de Cabinet:',
-    'login.demo.description.superadmin': 'Accès complet système hospitalier',
-    'login.demo.description.admin': 'Gestion technique hospitalière',
-    'login.demo.description.auditor': 'Consultation logs et rapports',
-    'login.demo.description.cabinet': 'Gestion cabinet médical complet',
-    'login.footer.built': 'Développé avec ❤️ par',
-    'login.footer.copyright': '© 2025 MedRecap+ - Nouvelle-Calédonie',
-    'login.language.label': 'Langue / Language',
     'login.types.title': 'Types de comptes :',
     'login.types.superadmin': 'Super Admin:',
     'login.types.admin': 'Admin Tech:',
@@ -33,6 +26,9 @@ export const translations = {
     'login.types.description.admin': 'Gestion technique hospitalière',
     'login.types.description.auditor': 'Consultation logs et rapports',
     'login.types.description.cabinet': 'Gestion cabinet médical complet',
+    'login.footer.built': 'Développé avec ❤️ par',
+    'login.footer.copyright': '© 2025 MedRecap+ - Nouvelle-Calédonie',
+    'login.language.label': 'Langue / Language',
 
     // Header
     'header.title': 'MedRecap+',
@@ -137,8 +133,11 @@ export const translations = {
     'patient.modal.new.invoice': 'Nouvelle facture',
     'patient.modal.new.appointment': 'Nouveau rendez-vous',
     'patient.modal.no.consultations': 'Aucune consultation enregistrée',
+    'patient.modal.no.consultations.subtitle': 'Commencez par créer une nouvelle consultation',
     'patient.modal.no.invoices': 'Aucune facture enregistrée',
+    'patient.modal.no.invoices.subtitle': 'Commencez par créer une nouvelle facture',
     'patient.modal.no.appointments': 'Aucun rendez-vous programmé',
+    'patient.modal.no.appointments.subtitle': 'Commencez par créer un nouveau rendez-vous',
 
     // Services
     'service.cardiology': 'Cardiologie',
@@ -189,12 +188,6 @@ export const translations = {
     'consultation.weight': 'Poids (kg)',
     'consultation.pricing': 'Tarification',
     'consultation.fee': 'Tarif (€)',
-    'common.cancel': 'Annuler',
-    'common.save': 'Sauvegarder',
-    'common.updating': 'Mise à jour...',
-    // Pour les erreurs génériques
-    'common.error': 'Erreur',
-    
 
     // Invoice Status
     'invoice': 'Facture',
@@ -474,6 +467,29 @@ export const translations = {
     'pixel.art.tooltip.mode.circles': 'Cercles uniquement',
     'pixel.art.tooltip.mode.none': 'Tout masquer',
 
+    // Payment
+    'payment.title': 'Paiement Sécurisé',
+    'payment.subtitle': 'Règlement de facture par carte bancaire',
+    'payment.invoice_details': 'Détails de la facture',
+    'payment.invoice_number': 'Numéro de facture',
+    'payment.date': 'Date',
+    'payment.total_amount': 'Montant total',
+    'payment.amount_to_pay': 'Montant à payer',
+    'payment.card_details': 'Détails de la carte',
+    'payment.secure_processing': 'Paiement sécurisé traité par Stripe. Vos données de carte ne sont jamais stockées sur nos serveurs.',
+    'payment.pay_now': 'Payer {amount}€',
+    'payment.processing': 'Traitement...',
+    'payment.cancel': 'Annuler',
+    'payment.close': 'Fermer',
+    'payment.powered_by_stripe': 'Paiement sécurisé par',
+    'payment.pay': 'Payer',
+    'payment.error.title': 'Erreur de paiement',
+    'payment.error.generic': 'Une erreur est survenue lors du traitement du paiement.',
+    'payment.error.card_element': 'Élément de carte non trouvé.',
+    'payment.error.intent': 'Erreur lors de la création de l\'intention de paiement.',
+    'payment.success.title': 'Paiement réussi !',
+    'payment.success.message': 'Votre paiement a été traité avec succès. La facture a été mise à jour.',
+
     // Common
     'common.loading': 'Chargement...',
     'common.error': 'Erreur',
@@ -538,13 +554,6 @@ export const translations = {
     'login.demo.admin': 'Tech Admin:',
     'login.demo.auditor': 'Auditor:',
     'login.demo.cabinet': 'Practice Doctor:',
-    'login.demo.description.superadmin': 'Full hospital system access',
-    'login.demo.description.admin': 'Hospital technical management',
-    'login.demo.description.auditor': 'Logs and reports consultation',
-    'login.demo.description.cabinet': 'Complete medical practice management',
-    'login.footer.built': 'Built with ❤️ with',
-    'login.footer.copyright': '© 2025 MedRecap+ - New Caledonia',
-    'login.language.label': 'Language / Langue',
     'login.types.title': 'Account Types:',
     'login.types.superadmin': 'Super Admin:',
     'login.types.admin': 'Tech Admin:',
@@ -554,6 +563,9 @@ export const translations = {
     'login.types.description.admin': 'Hospital technical management',
     'login.types.description.auditor': 'Logs and reports consultation',
     'login.types.description.cabinet': 'Complete medical practice management',
+    'login.footer.built': 'Built with ❤️ with',
+    'login.footer.copyright': '© 2025 MedRecap+ - New Caledonia',
+    'login.language.label': 'Language / Langue',
 
 
     // Header
@@ -659,8 +671,11 @@ export const translations = {
     'patient.modal.new.invoice': 'New invoice',
     'patient.modal.new.appointment': 'New appointment',
     'patient.modal.no.consultations': 'No consultations recorded',
+    'patient.modal.no.consultations.subtitle': 'Start by creating a new consultation',
     'patient.modal.no.invoices': 'No invoices recorded',
+    'patient.modal.no.invoices.subtitle': 'Start by creating a new invoice',
     'patient.modal.no.appointments': 'No appointments scheduled',
+    'patient.modal.no.appointments.subtitle': 'Start by creating a new appointment',
 
     // Services
     'service.cardiology': 'Cardiology',
@@ -711,11 +726,6 @@ export const translations = {
     'consultation.weight': 'Weight (kg)',
     'consultation.pricing': 'Pricing',
     'consultation.fee': 'Fee (€)',
-    'common.cancel': 'Cancel',
-    'common.save': 'Save',
-    'common.updating': 'Updating...',
-    // For generic errors
-    'common.error': 'Error',
 
     // Invoice Status
     'invoice': 'Invoice',
@@ -995,6 +1005,29 @@ export const translations = {
     'pixel.art.tooltip.mode.all': 'Show all tooltips',
     'pixel.art.tooltip.mode.circles': 'Circles only',
     'pixel.art.tooltip.mode.none': 'Hide all',
+
+    // Payment
+    'payment.title': 'Secure Payment',
+    'payment.subtitle': 'Invoice payment by credit card',
+    'payment.invoice_details': 'Invoice Details',
+    'payment.invoice_number': 'Invoice number',
+    'payment.date': 'Date',
+    'payment.total_amount': 'Total amount',
+    'payment.amount_to_pay': 'Amount to pay',
+    'payment.card_details': 'Card Details',
+    'payment.secure_processing': 'Secure payment processed by Stripe. Your card data is never stored on our servers.',
+    'payment.pay_now': 'Pay {amount}€',
+    'payment.processing': 'Processing...',
+    'payment.cancel': 'Cancel',
+    'payment.close': 'Close',
+    'payment.powered_by_stripe': 'Secure payment by',
+    'payment.pay': 'Pay',
+    'payment.error.title': 'Payment Error',
+    'payment.error.generic': 'An error occurred while processing your payment.',
+    'payment.error.card_element': 'Card element not found.',
+    'payment.error.intent': 'Error creating payment intent.',
+    'payment.success.title': 'Payment Successful!',
+    'payment.success.message': 'Your payment has been processed successfully. The invoice has been updated.',
 
     // Common
     'common.loading': 'Loading...',

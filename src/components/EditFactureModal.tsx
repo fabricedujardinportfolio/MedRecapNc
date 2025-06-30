@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Euro, Calendar, User, Save } from 'lucide-react';
+import { X, FileText, Euro, Calendar, User, Save, CreditCard } from 'lucide-react';
 import { FactureData, patientService, supabase } from '../services/patientService';
 import { useLanguage } from '../hooks/useLanguage';
+import { StripePaymentModal } from './StripePaymentModal';
 
 interface EditFactureModalProps {
   facture: FactureData;
@@ -21,6 +22,7 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [patients, setPatients] = useState<Array<{id: string, nom: string, prenom: string}>>([]);
   const [isLoadingPatients, setIsLoadingPatients] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   
   const [formData, setFormData] = useState<FactureData>({
     ...facture,
@@ -173,375 +175,413 @@ export const EditFactureModal: React.FC<EditFactureModalProps> = ({
     }));
   };
 
+  const handlePaymentComplete = () => {
+    // Refresh the invoice data
+    onFactureUpdated();
+    setShowPaymentModal(false);
+  };
+
   if (!isOpen) return null;
 
+  // Add patient name to facture for Stripe payment
+  const factureWithPatientName = {
+    ...formData,
+    patient_name: patients.find(p => p.id === formData.patient_id)
+      ? `${patients.find(p => p.id === formData.patient_id)?.prenom} ${patients.find(p => p.id === formData.patient_id)?.nom}`
+      : undefined
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center justify-center w-12 h-12 bg-purple-600 rounded-xl">
-              <FileText className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                {t('invoice.edit')}
-              </h2>
-              <p className="text-gray-600">
-                {t('invoice')} {formData.numero}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-6 h-6 text-gray-500" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-          <div className="space-y-6">
-            {/* Informations générales */}
-            <div className="bg-gray-50 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <User className="w-5 h-5 text-purple-600" />
-                {t('common.general_info')}
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('invoice.number')}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.numero}
-                    onChange={(e) => setFormData(prev => ({ ...prev, numero: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('invoice.patient')}
-                  </label>
-                  <select
-                    value={formData.patient_id}
-                    onChange={(e) => setFormData(prev => ({ ...prev, patient_id: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    required
-                  >
-                    <option value="">{t('invoice.select_patient')}</option>
-                    {isLoadingPatients ? (
-                      <option value="" disabled>{t('invoice.loading_patients')}</option>
-                    ) : (
-                      patients.map(patient => (
-                        <option key={patient.id} value={patient.id}>
-                          {patient.prenom} {patient.nom}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('invoice.date')}
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('invoice.due_date')}
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.date_echeance}
-                    onChange={(e) => setFormData(prev => ({ ...prev, date_echeance: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    required
-                  />
-                </div>
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center justify-center w-12 h-12 bg-purple-600 rounded-xl">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {t('invoice.edit')}
+                </h2>
+                <p className="text-gray-600">
+                  {t('invoice')} {formData.numero}</p>
               </div>
             </div>
-
-            {/* Détails de facturation */}
-            <div className="bg-blue-50 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <Euro className="w-5 h-5 text-blue-600" />
-                  {t('invoice.billing_details')}
-                </h3>
-                <button
-                  type="button"
-                  onClick={addDetail}
-                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >{t('invoice.add_line')}
-                </button>
-              </div>
-              
-              <div className="space-y-3">
-                {formData.details.map((detail, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 items-center">
-                    <div className="col-span-5">
-                      <input
-                        type="text"
-                        placeholder={t('invoice.description')}
-                        value={detail.description}
-                        onChange={(e) => updateDetail(index, 'description', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <input
-                        type="number"
-                        placeholder={t('invoice.quantity')}
-                        value={detail.quantite}
-                        onChange={(e) => updateDetail(index, 'quantite', parseInt(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        min="1"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <input
-                        type="number"
-                        placeholder={t('invoice.unit_price')}
-                        value={detail.prix_unitaire}
-                        onChange={(e) => updateDetail(index, 'prix_unitaire', parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        step="0.01"
-                        min="0"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <input
-                        type="number"
-                        value={detail.total.toFixed(2)}
-                        readOnly
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-sm"
-                      />
-                    </div>
-                    <div className="col-span-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newDetails = formData.details.filter((_, i) => i !== index);
-                          setFormData(prev => ({ ...prev, details: newDetails }));
-                          
-                          // Recalculer le montant total
-                          const montantTotal = newDetails.reduce((sum, d) => sum + d.total, 0);
-                          setFormData(prev => ({ 
-                            ...prev, 
-                            montant_total: montantTotal,
-                            montant_restant: montantTotal - prev.montant_paye
-                          }));
-                        }}
-                        className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-blue-200">
-                <div className="flex justify-end">
-                  <div className="text-right">
-                    <p className="text-lg font-semibold text-gray-900">
-                      Total: {formData.montant_total.toFixed(2)} €
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Paiement et remboursement */}
-            <div className="bg-green-50 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-green-600" />
-                {t('invoice.payment_and_reimbursement')}
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('invoice.amount_paid')}
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.montant_paye}
-                    onChange={(e) => updateMontantPaye(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    step="0.01"
-                    min="0"
-                    max={formData.montant_total}
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('invoice.amount_due')}
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.montant_restant.toFixed(2)}
-                    readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('invoice.status')}
-                  </label>
-                  <select
-                    value={formData.statut}
-                    onChange={(e) => setFormData(prev => ({ ...prev, statut: e.target.value as any }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  >
-                    <option value="en_attente">{t('invoice.status_pending')}</option>
-                    <option value="partiellement_payee">{t('invoice.status_partial')}</option>
-                    <option value="payee">{t('invoice.status_paid')}</option>
-                    <option value="en_retard">{t('invoice.status_late')}</option>
-                    <option value="annulee">{t('invoice.status_cancelled')}</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('invoice.payment_method')}
-                  </label>
-                  <select
-                    value={formData.methode_paiement || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, methode_paiement: e.target.value || undefined }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  >
-                    <option value="">{t('common.select')}</option>
-                    <option value="especes">{t('invoice.method_cash')}</option>
-                    <option value="carte">{t('invoice.method_card')}</option>
-                    <option value="cheque">{t('invoice.method_cheque')}</option>
-                    <option value="virement">{t('invoice.method_transfer')}</option>
-                    <option value="securite_sociale">{t('invoice.method_social_security')}</option>
-                  </select>
-                </div>
-              </div>
-              
-              <h4 className="text-sm font-medium text-gray-700 mb-2">{t('invoice.reimbursement')}</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    {t('invoice.social_security')}
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.remboursement_securite_sociale}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      remboursement_securite_sociale: parseFloat(e.target.value) || 0
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    step="0.01"
-                    min="0"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    {t('invoice.mutual_insurance')}
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.remboursement_mutuelle}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      remboursement_mutuelle: parseFloat(e.target.value) || 0
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    step="0.01"
-                    min="0"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    {t('invoice.out_of_pocket')}
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.remboursement_reste_a_charge}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      remboursement_reste_a_charge: parseFloat(e.target.value) || 0
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    step="0.01"
-                    min="0"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('common.notes_optional')}
-              </label>
-              <textarea
-                value={formData.notes || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                rows={3}
-                placeholder={t('common.notes_placeholder')}
-              />
-            </div>
-            
-            {/* Error Display */}
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-sm">{error}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
             <button
-              type="button"
               onClick={onClose}
-              className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              disabled={isLoading}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              {t('common.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors flex items-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  {t('common.updating')}
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  {t('common.save')}
-                </>
-              )}
+              <X className="w-6 h-6 text-gray-500" />
             </button>
           </div>
-        </form>
+
+          {/* Content */}
+          <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+            <div className="space-y-6">
+              {/* Informations générales */}
+              <div className="bg-gray-50 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <User className="w-5 h-5 text-purple-600" />
+                  {t('common.general_info')}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('invoice.number')}
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.numero}
+                      onChange={(e) => setFormData(prev => ({ ...prev, numero: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('invoice.patient')}
+                    </label>
+                    <select
+                      value={formData.patient_id}
+                      onChange={(e) => setFormData(prev => ({ ...prev, patient_id: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="">{t('invoice.select_patient')}</option>
+                      {isLoadingPatients ? (
+                        <option value="" disabled>{t('invoice.loading_patients')}</option>
+                      ) : (
+                        patients.map(patient => (
+                          <option key={patient.id} value={patient.id}>
+                            {patient.prenom} {patient.nom}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('invoice.date')}
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('invoice.due_date')}
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.date_echeance}
+                      onChange={(e) => setFormData(prev => ({ ...prev, date_echeance: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Détails de facturation */}
+              <div className="bg-blue-50 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <Euro className="w-5 h-5 text-blue-600" />
+                    {t('invoice.billing_details')}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={addDetail}
+                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >{t('invoice.add_line')}
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  {formData.details.map((detail, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-2 items-center">
+                      <div className="col-span-5">
+                        <input
+                          type="text"
+                          placeholder={t('invoice.description')}
+                          value={detail.description}
+                          onChange={(e) => updateDetail(index, 'description', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <input
+                          type="number"
+                          placeholder={t('invoice.quantity')}
+                          value={detail.quantite}
+                          onChange={(e) => updateDetail(index, 'quantite', parseInt(e.target.value) || 0)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          min="1"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <input
+                          type="number"
+                          placeholder={t('invoice.unit_price')}
+                          value={detail.prix_unitaire}
+                          onChange={(e) => updateDetail(index, 'prix_unitaire', parseFloat(e.target.value) || 0)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <input
+                          type="number"
+                          value={detail.total.toFixed(2)}
+                          readOnly
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-sm"
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newDetails = formData.details.filter((_, i) => i !== index);
+                            setFormData(prev => ({ ...prev, details: newDetails }));
+                            
+                            // Recalculer le montant total
+                            const montantTotal = newDetails.reduce((sum, d) => sum + d.total, 0);
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              montant_total: montantTotal,
+                              montant_restant: montantTotal - prev.montant_paye
+                            }));
+                          }}
+                          className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-blue-200">
+                  <div className="flex justify-end">
+                    <div className="text-right">
+                      <p className="text-lg font-semibold text-gray-900">
+                        Total: {formData.montant_total.toFixed(2)} €
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Paiement et remboursement */}
+              <div className="bg-green-50 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-green-600" />
+                  {t('invoice.payment_and_reimbursement')}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('invoice.amount_paid')}
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.montant_paye}
+                      onChange={(e) => updateMontantPaye(parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      step="0.01"
+                      min="0"
+                      max={formData.montant_total}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('invoice.amount_due')}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={formData.montant_restant.toFixed(2)}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
+                      />
+                      {formData.montant_restant > 0 && formData.statut !== 'payee' && (
+                        <button
+                          type="button"
+                          onClick={() => setShowPaymentModal(true)}
+                          className="flex items-center gap-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                        >
+                          <CreditCard className="w-4 h-4" />
+                          <span>{t('payment.pay')}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('invoice.status')}
+                    </label>
+                    <select
+                      value={formData.statut}
+                      onChange={(e) => setFormData(prev => ({ ...prev, statut: e.target.value as any }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    >
+                      <option value="en_attente">{t('invoice.status_pending')}</option>
+                      <option value="partiellement_payee">{t('invoice.status_partial')}</option>
+                      <option value="payee">{t('invoice.status_paid')}</option>
+                      <option value="en_retard">{t('invoice.status_late')}</option>
+                      <option value="annulee">{t('invoice.status_cancelled')}</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('invoice.payment_method')}
+                    </label>
+                    <select
+                      value={formData.methode_paiement || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, methode_paiement: e.target.value || undefined }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    >
+                      <option value="">{t('common.select')}</option>
+                      <option value="especes">{t('invoice.method_cash')}</option>
+                      <option value="carte">{t('invoice.method_card')}</option>
+                      <option value="cheque">{t('invoice.method_cheque')}</option>
+                      <option value="virement">{t('invoice.method_transfer')}</option>
+                      <option value="securite_sociale">{t('invoice.method_social_security')}</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <h4 className="text-sm font-medium text-gray-700 mb-2">{t('invoice.reimbursement')}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      {t('invoice.social_security')}
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.remboursement_securite_sociale}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        remboursement_securite_sociale: parseFloat(e.target.value) || 0
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      step="0.01"
+                      min="0"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      {t('invoice.mutual_insurance')}
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.remboursement_mutuelle}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        remboursement_mutuelle: parseFloat(e.target.value) || 0
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      step="0.01"
+                      min="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      {t('invoice.out_of_pocket')}
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.remboursement_reste_a_charge}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        remboursement_reste_a_charge: parseFloat(e.target.value) || 0
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      step="0.01"
+                      min="0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('common.notes_optional')}
+                </label>
+                <textarea
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  rows={3}
+                  placeholder={t('common.notes_placeholder')}
+                />
+              </div>
+              
+              {/* Error Display */}
+              {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-700 text-sm">{error}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                disabled={isLoading}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    {t('common.updating')}
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    {t('common.save')}
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+
+      {/* Stripe Payment Modal */}
+      {showPaymentModal && (
+        <StripePaymentModal
+          facture={factureWithPatientName}
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          onPaymentComplete={handlePaymentComplete}
+        />
+      )}
+    </>
   );
 };
