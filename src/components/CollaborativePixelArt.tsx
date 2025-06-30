@@ -451,7 +451,7 @@ export const CollaborativePixelArt: React.FC = () => {
               </h1>
             </div>
             
-            <div className="flex items-center gap-3 mt-3 sm:mt-0">
+            <div className="flex flex-wrap items-center gap-3 mt-3 sm:mt-0">
               {/* Language Selector */}
               <button
                 onClick={toggleLanguage}
